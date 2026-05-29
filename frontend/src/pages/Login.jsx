@@ -28,7 +28,7 @@ export default function Login({ onLoginSuccess, onCancel }) {
         throw new Error(data.error || 'Credenciales incorrectas.');
       }
 
-      onLoginSuccess(data.token, data.username);
+      onLoginSuccess(data.token, data.username, data.role);
     } catch (err) {
       setError(err.message);
     } finally {

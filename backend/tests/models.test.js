@@ -8,7 +8,9 @@ import { Order } from '../models/Order.js';
 import { Product } from '../models/Product.js';
 import { CalendarEvent } from '../models/CalendarEvent.js';
 import { Settings } from '../models/Settings.js';
+import { User } from '../models/User.js';
 import { getDatabaseConnection } from '../db/connection.js';
+import bcryptjs from 'bcryptjs';
 
 test.describe('Pruebas Unitarias de Modelos de Negocio (POO)', () => {
   
@@ -297,4 +299,67 @@ test.describe('Pruebas Unitarias de Modelos de Negocio (POO)', () => {
       assert.strictEqual(hatchEvent.title, 'Eclosión Estimada (120 huevos)');
     });
   });
+
+  // --- PRUEBAS MODELO USER ---
+  test.describe('Modelo User (Roles y Gestión)', () => {
+    test('Debe inicializar la base de datos con el usuario admin como super_admin', async () => {
+      const admin = await User.findByUsername('admin');
+      assert.ok(admin);
+      assert.strictEqual(admin.role, 'super_admin');
+    });
+
+    test('Debe crear, guardar y encontrar un usuario por username y id', async () => {
+      const newUser = new User({
+        username: 'diego',
+        password: 'hashedpassword',
+        role: 'admin'
+      });
+      await newUser.save();
+
+      const foundByUsername = await User.findByUsername('diego');
+      assert.ok(foundByUsername);
+      assert.strictEqual(foundByUsername.username, 'diego');
+      assert.strictEqual(foundByUsername.role, 'admin');
+
+      const foundById = await User.findById(newUser.id);
+      assert.ok(foundById);
+      assert.strictEqual(foundById.username, 'diego');
+    });
+
+    test('Debe cambiar la contraseña cifrada', async () => {
+      const user = new User({
+        username: 'juan',
+        password: 'oldpassword',
+        role: 'admin'
+      });
+      await user.save();
+
+      await user.changePassword('newsecurepassword');
+      
+      const updatedUser = await User.findById(user.id);
+      assert.ok(updatedUser);
+      assert.notStrictEqual(updatedUser.password, 'newsecurepassword'); // Debe estar hasheada
+      
+      const isMatch = await bcryptjs.compare('newsecurepassword', updatedUser.password);
+      assert.ok(isMatch);
+    });
+
+    test('Debe eliminar un usuario correctamente', async () => {
+      const user = new User({
+        username: 'temp',
+        password: 'pwd',
+        role: 'admin'
+      });
+      await user.save();
+
+      const created = await User.findById(user.id);
+      assert.ok(created);
+
+      await User.delete(user.id);
+
+      const deleted = await User.findById(user.id);
+      assert.strictEqual(deleted, null);
+    });
+  });
 });
+

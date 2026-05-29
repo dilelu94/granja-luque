@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 
-export default function SettingsPage({ token }) {
+export default function SettingsPage({ token, role }) {
+  // --- Configuraciones Generales ---
   const [settings, setSettings] = useState({
     admin_whatsapp: '',
     whatsapp_bot_url: '',
@@ -15,12 +16,31 @@ export default function SettingsPage({ token }) {
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
 
+  // --- Cambio de Contraseña ---
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [pwMessage, setPwMessage] = useState('');
+  const [pwError, setPwError] = useState('');
+  const [pwLoading, setPwLoading] = useState(false);
+
+  // --- Gestión de Usuarios (super_admin) ---
+  const [users, setUsers] = useState([]);
+  const [usersLoading, setUsersLoading] = useState(false);
+  const [usersError, setUsersError] = useState('');
+  const [showUserModal, setShowUserModal] = useState(false);
+  const [editingUser, setEditingUser] = useState(null); // null = crear
+  const [userForm, setUserForm] = useState({ username: '', password: '', role: 'admin' });
+  const [userFormError, setUserFormError] = useState('');
+  const [userFormLoading, setUserFormLoading] = useState(false);
+
   const headers = {
     'Content-Type': 'application/json',
     'Authorization': `Bearer ${token}`
   };
 
   useEffect(() => {
+    // Cargar configuraciones
     fetch('/api/settings', { headers })
       .then(res => res.json())
       .then(data => {
@@ -37,6 +57,30 @@ export default function SettingsPage({ token }) {
       });
   }, [token]);
 
+  // Cargar usuarios si es super_admin
+  const fetchUsers = () => {
+    if (role !== 'super_admin') return;
+    setUsersLoading(true);
+    fetch('/api/users', { headers })
+      .then(res => {
+        if (!res.ok) throw new Error('No se pudieron obtener los usuarios.');
+        return res.json();
+      })
+      .then(data => {
+        setUsers(data);
+        setUsersLoading(false);
+      })
+      .catch(err => {
+        setUsersError(err.message);
+        setUsersLoading(false);
+      });
+  };
+
+  useEffect(() => {
+    fetchUsers();
+  }, [role, token]);
+
+  // Guardar configuraciones
   const handleSubmit = async (e) => {
     e.preventDefault();
     setMessage('');
@@ -59,10 +103,108 @@ export default function SettingsPage({ token }) {
     }
   };
 
+  // Cambiar contraseña
+  const handlePasswordChange = async (e) => {
+    e.preventDefault();
+    setPwMessage('');
+    setPwError('');
+
+    if (newPassword !== confirmPassword) {
+      setPwError('La nueva contraseña y la confirmación no coinciden.');
+      return;
+    }
+
+    setPwLoading(true);
+    try {
+      const res = await fetch('/api/auth/change-password', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ currentPassword, newPassword })
+      });
+      const data = await res.json();
+
+      if (!res.ok) throw new Error(data.error || 'Error al cambiar contraseña.');
+
+      setPwMessage('Contraseña modificada exitosamente. 🔑');
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+    } catch (err) {
+      setPwError(err.message);
+    } finally {
+      setPwLoading(false);
+    }
+  };
+
+  // Abrir modal creación
+  const handleOpenCreateModal = () => {
+    setEditingUser(null);
+    setUserForm({ username: '', password: '', role: 'admin' });
+    setUserFormError('');
+    setShowUserModal(true);
+  };
+
+  // Abrir modal edición
+  const handleOpenEditModal = (u) => {
+    setEditingUser(u);
+    setUserForm({ username: u.username, password: '', role: u.role });
+    setUserFormError('');
+    setShowUserModal(true);
+  };
+
+  // Guardar usuario
+  const handleUserFormSubmit = async (e) => {
+    e.preventDefault();
+    setUserFormError('');
+    setUserFormLoading(true);
+
+    try {
+      const url = editingUser ? `/api/users/${editingUser.id}` : '/api/users';
+      const method = editingUser ? 'PUT' : 'POST';
+
+      const bodyData = { ...userForm };
+      if (editingUser && !bodyData.password) {
+        delete bodyData.password; // no sobreescribir clave si está vacía
+      }
+
+      const res = await fetch(url, {
+        method,
+        headers,
+        body: JSON.stringify(bodyData)
+      });
+      const data = await res.json();
+
+      if (!res.ok) throw new Error(data.error || 'Error al procesar usuario.');
+
+      setShowUserModal(false);
+      fetchUsers();
+    } catch (err) {
+      setUserFormError(err.message);
+    } finally {
+      setUserFormLoading(false);
+    }
+  };
+
+  // Eliminar usuario
+  const handleDeleteUser = async (userId) => {
+    if (!window.confirm('¿Estás seguro de que deseas eliminar este usuario administrador?')) return;
+    try {
+      const res = await fetch(`/api/users/${userId}`, {
+        method: 'DELETE',
+        headers
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Error al eliminar usuario.');
+      fetchUsers();
+    } catch (err) {
+      alert(err.message);
+    }
+  };
+
   if (loading) return <p style={{ color: 'var(--text-secondary)' }}>Cargando configuraciones...</p>;
 
   return (
-    <div style={{ maxWidth: '700px' }}>
+    <div style={{ maxWidth: '800px', paddingBottom: '3rem' }}>
       <h2 style={{ marginBottom: '2rem', fontFamily: 'var(--font-heading)', fontSize: '1.8rem' }}>
         Configuración del Sistema ⚙️
       </h2>
@@ -78,8 +220,8 @@ export default function SettingsPage({ token }) {
         </div>
       )}
 
+      {/* --- FORMULARIO CONFIGURACIONES DE NEGOCIO --- */}
       <form onSubmit={handleSubmit}>
-        
         {/* Sección: General */}
         <div className="glass-card" style={{ marginBottom: '1.5rem' }}>
           <h3 style={{ marginBottom: '1.25rem', fontFamily: 'var(--font-heading)', color: 'var(--accent-green)' }}>General & WhatsApp</h3>
@@ -190,7 +332,7 @@ export default function SettingsPage({ token }) {
         </div>
 
         {/* Sección: Mercado Pago */}
-        <div className="glass-card" style={{ marginBottom: '2rem' }}>
+        <div className="glass-card" style={{ marginBottom: '1.5rem' }}>
           <h3 style={{ marginBottom: '1.25rem', fontFamily: 'var(--font-heading)', color: 'var(--accent-blue)' }}>Integración Mercado Pago</h3>
           
           <div className="form-group">
@@ -224,10 +366,227 @@ export default function SettingsPage({ token }) {
           </div>
         </div>
 
-        <button type="submit" className="btn btn-primary" style={{ width: '100%', fontSize: '1.1rem' }}>
-          💾 Guardar Cambios
+        <button type="submit" className="btn btn-primary" style={{ width: '100%', fontSize: '1.1rem', marginBottom: '2rem' }}>
+          💾 Guardar Configuraciones de Granja
         </button>
       </form>
+
+      {/* --- SECCIÓN: CAMBIO DE CONTRASEÑA --- */}
+      <div className="glass-card" style={{ marginBottom: '1.5rem' }}>
+        <h3 style={{ marginBottom: '1.25rem', fontFamily: 'var(--font-heading)', color: 'var(--accent-gold)' }}>Seguridad de la Cuenta 🔑</h3>
+
+        {pwMessage && (
+          <div className="glass-card" style={{ borderColor: 'var(--accent-green)', background: 'var(--accent-green-glow)', color: '#a7f3d0', padding: '0.75rem 1rem', marginBottom: '1rem' }}>
+            {pwMessage}
+          </div>
+        )}
+        {pwError && (
+          <div className="glass-card" style={{ borderColor: 'var(--accent-red)', background: 'var(--accent-red-glow)', color: '#f87171', padding: '0.75rem 1rem', marginBottom: '1rem' }}>
+            {pwError}
+          </div>
+        )}
+
+        <form onSubmit={handlePasswordChange}>
+          <div className="form-group">
+            <label htmlFor="current_pw">Contraseña Actual</label>
+            <input 
+              type="password" 
+              id="current_pw"
+              className="form-control"
+              required
+              value={currentPassword}
+              onChange={e => setCurrentPassword(e.target.value)}
+              placeholder="••••••••"
+            />
+          </div>
+
+          <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap' }}>
+            <div className="form-group" style={{ flex: '1', minWidth: '200px' }}>
+              <label htmlFor="new_pw">Nueva Contraseña</label>
+              <input 
+                type="password" 
+                id="new_pw"
+                className="form-control"
+                required
+                value={newPassword}
+                onChange={e => setNewPassword(e.target.value)}
+                placeholder="Mínimo 6 caracteres"
+              />
+            </div>
+            <div className="form-group" style={{ flex: '1', minWidth: '200px' }}>
+              <label htmlFor="confirm_pw">Confirmar Nueva Contraseña</label>
+              <input 
+                type="password" 
+                id="confirm_pw"
+                className="form-control"
+                required
+                value={confirmPassword}
+                onChange={e => setConfirmPassword(e.target.value)}
+                placeholder="Repite la contraseña"
+              />
+            </div>
+          </div>
+
+          <button type="submit" className="btn btn-gold" style={{ width: '100%', marginTop: '0.5rem' }} disabled={pwLoading}>
+            {pwLoading ? 'Modificando...' : '🔑 Actualizar Contraseña'}
+          </button>
+        </form>
+      </div>
+
+      {/* --- SECCIÓN: GESTIÓN DE USUARIOS (SÓLO SUPER_ADMIN) --- */}
+      {role === 'super_admin' && (
+        <div className="glass-card" style={{ marginBottom: '1.5rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
+            <h3 style={{ fontFamily: 'var(--font-heading)', color: 'var(--accent-green)', margin: '0' }}>
+              Gestión de Usuarios Administradores 👥
+            </h3>
+            <button className="btn btn-primary" onClick={handleOpenCreateModal}>
+              👤 Agregar Administrador
+            </button>
+          </div>
+
+          {usersError && (
+            <div className="glass-card" style={{ borderColor: 'var(--accent-red)', background: 'var(--accent-red-glow)', color: '#f87171', padding: '1rem', marginBottom: '1rem' }}>
+              {usersError}
+            </div>
+          )}
+
+          {usersLoading ? (
+            <p style={{ color: 'var(--text-secondary)' }}>Cargando lista de usuarios...</p>
+          ) : (
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '0.5rem' }}>
+                <thead>
+                  <tr style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.1)', textAlign: 'left' }}>
+                    <th style={{ padding: '0.75rem 0.5rem', color: 'var(--text-muted)', fontSize: '0.85rem' }}>Usuario</th>
+                    <th style={{ padding: '0.75rem 0.5rem', color: 'var(--text-muted)', fontSize: '0.85rem' }}>Rol</th>
+                    <th style={{ padding: '0.75rem 0.5rem', color: 'var(--text-muted)', fontSize: '0.85rem', textAlign: 'right' }}>Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {users.map(u => (
+                    <tr key={u.id} style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.05)' }}>
+                      <td style={{ padding: '0.75rem 0.5rem', fontWeight: 'bold' }}>{u.username}</td>
+                      <td style={{ padding: '0.75rem 0.5rem' }}>
+                        <span 
+                          style={{
+                            padding: '0.25rem 0.5rem',
+                            borderRadius: '4px',
+                            fontSize: '0.75rem',
+                            fontWeight: 'bold',
+                            background: u.role === 'super_admin' ? 'rgba(16, 185, 129, 0.15)' : 'rgba(59, 130, 246, 0.15)',
+                            color: u.role === 'super_admin' ? 'var(--accent-green)' : '#60a5fa',
+                            border: u.role === 'super_admin' ? '1px solid var(--accent-green)' : '1px solid #3b82f6'
+                          }}
+                        >
+                          {u.role === 'super_admin' ? 'Super Administrador' : 'Administrador'}
+                        </span>
+                      </td>
+                      <td style={{ padding: '0.75rem 0.5rem', textAlign: 'right' }}>
+                        <div style={{ display: 'inline-flex', gap: '0.5rem' }}>
+                          <button 
+                            className="btn btn-secondary" 
+                            style={{ padding: '0.35rem 0.75rem', fontSize: '0.8rem' }}
+                            onClick={() => handleOpenEditModal(u)}
+                          >
+                            Editar
+                          </button>
+                          <button 
+                            className="btn btn-danger" 
+                            style={{ padding: '0.35rem 0.75rem', fontSize: '0.8rem' }}
+                            onClick={() => handleDeleteUser(u.id)}
+                          >
+                            Eliminar
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* --- MODAL PARA CREAR / EDITAR USUARIO --- */}
+      {showUserModal && (
+        <div className="modal-overlay">
+          <div className="modal-content" style={{ maxWidth: '450px' }}>
+            <h3 style={{ fontFamily: 'var(--font-heading)', marginBottom: '1.5rem', color: 'var(--accent-green)' }}>
+              {editingUser ? 'Editar Administrador' : 'Nuevo Administrador'} 👤
+            </h3>
+
+            {userFormError && (
+              <div className="glass-card" style={{ borderColor: 'var(--accent-red)', background: 'var(--accent-red-glow)', color: '#f87171', padding: '0.75rem 1rem', marginBottom: '1.25rem' }}>
+                {userFormError}
+              </div>
+            )}
+
+            <form onSubmit={handleUserFormSubmit}>
+              <div className="form-group">
+                <label htmlFor="modal_username">Nombre de Usuario</label>
+                <input 
+                  type="text"
+                  id="modal_username"
+                  className="form-control"
+                  required
+                  value={userForm.username}
+                  onChange={e => setUserForm({ ...userForm, username: e.target.value })}
+                  placeholder="ej: diegoluque"
+                />
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="modal_password">
+                  {editingUser ? 'Nueva Contraseña (dejar en blanco para mantener actual)' : 'Contraseña'}
+                </label>
+                <input 
+                  type="password"
+                  id="modal_password"
+                  className="form-control"
+                  required={!editingUser}
+                  value={userForm.password}
+                  onChange={e => setUserForm({ ...userForm, password: e.target.value })}
+                  placeholder="••••••••"
+                />
+              </div>
+
+              <div className="form-group" style={{ marginBottom: '2rem' }}>
+                <label htmlFor="modal_role">Rol del Usuario</label>
+                <select 
+                  id="modal_role"
+                  className="form-control"
+                  value={userForm.role}
+                  onChange={e => setUserForm({ ...userForm, role: e.target.value })}
+                >
+                  <option value="admin">Administrador (Normal)</option>
+                  <option value="super_admin">Super Administrador (Acceso total)</option>
+                </select>
+              </div>
+
+              <div style={{ display: 'flex', gap: '1rem' }}>
+                <button 
+                  type="button" 
+                  className="btn btn-secondary" 
+                  style={{ flex: '1' }} 
+                  onClick={() => setShowUserModal(false)}
+                >
+                  Cancelar
+                </button>
+                <button 
+                  type="submit" 
+                  className="btn btn-primary" 
+                  style={{ flex: '1' }}
+                  disabled={userFormLoading}
+                >
+                  {userFormLoading ? 'Guardando...' : 'Guardar'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

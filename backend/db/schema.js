@@ -95,6 +95,9 @@ export async function initializeDatabase() {
   await addColumnIfNotExists(db, 'products', 'label_cost', 'REAL NOT NULL DEFAULT 0.0');
   await addColumnIfNotExists(db, 'products', 'egg_count', 'INTEGER NOT NULL DEFAULT 0');
 
+  // --- MIGRACIONES PARA LA TABLA USERS (Roles) ---
+  await addColumnIfNotExists(db, 'users', 'role', "TEXT CHECK(role IN ('super_admin', 'admin')) NOT NULL DEFAULT 'admin'");
+
   // 7. Tabla de Pedidos de Venta
   await db.exec(`
     CREATE TABLE IF NOT EXISTS orders (
@@ -162,8 +165,11 @@ export async function initializeDatabase() {
   if (!existingAdmin) {
     const salt = await bcryptjs.genSalt(10);
     const hashedPassword = await bcryptjs.hash(adminPass, salt);
-    await db.run('INSERT INTO users (username, password) VALUES (?, ?)', [adminUser, hashedPassword]);
-    console.log(`Usuario administrador por defecto creado: ${adminUser}`);
+    await db.run("INSERT INTO users (username, password, role) VALUES (?, ?, 'super_admin')", [adminUser, hashedPassword]);
+    console.log(`Usuario administrador por defecto creado: ${adminUser} (super_admin)`);
+  } else {
+    // Asegurar que el usuario administrador inicial tenga el rol de super_admin
+    await db.run("UPDATE users SET role = 'super_admin' WHERE id = 1");
   }
 
   // Insertar configuraciones iniciales

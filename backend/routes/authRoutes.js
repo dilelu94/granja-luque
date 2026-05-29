@@ -2,6 +2,7 @@ import express from 'express';
 import jwt from 'jsonwebtoken';
 import bcryptjs from 'bcryptjs';
 import { getDatabaseConnection } from '../db/connection.js';
+import { User } from '../models/User.js';
 
 const router = express.Router();
 const JWT_SECRET = process.env.JWT_SECRET || 'super_secret_jwt_key_change_me_in_production';
@@ -38,8 +39,7 @@ router.post('/login', async (req, res) => {
   }
 
   try {
-    const db = await getDatabaseConnection();
-    const user = await db.get('SELECT * FROM users WHERE username = ?', [username]);
+    const user = await User.findByUsername(username);
 
     if (!user) {
       return res.status(401).json({ error: 'Credenciales inválidas.' });
@@ -50,10 +50,14 @@ router.post('/login', async (req, res) => {
       return res.status(401).json({ error: 'Credenciales inválidas.' });
     }
 
-    // Generar Token JWT
-    const token = jwt.sign({ id: user.id, username: user.username }, JWT_SECRET, { expiresIn: '7d' });
+    // Generar Token JWT incluyendo el rol
+    const token = jwt.sign(
+      { id: user.id, username: user.username, role: user.role },
+      JWT_SECRET,
+      { expiresIn: '7d' }
+    );
 
-    res.json({ token, username: user.username });
+    res.json({ token, username: user.username, role: user.role });
   } catch (error) {
     console.error('Error en login:', error);
     res.status(500).json({ error: 'Error interno del servidor.' });
@@ -65,7 +69,38 @@ router.post('/login', async (req, res) => {
  * Verification route to check if token is still valid.
  */
 router.get('/verify', authenticateToken, (req, res) => {
-  res.json({ valid: true, username: req.user.username });
+  res.json({ valid: true, username: req.user.username, role: req.user.role });
+});
+
+/**
+ * POST /api/auth/change-password
+ * Change password route for the current authenticated user.
+ */
+router.post('/change-password', authenticateToken, async (req, res) => {
+  const { currentPassword, newPassword } = req.body;
+
+  if (!currentPassword || !newPassword) {
+    return res.status(400).json({ error: 'Contraseña actual y nueva contraseña requeridas.' });
+  }
+
+  try {
+    const user = await User.findById(req.user.id);
+    if (!user) {
+      return res.status(404).json({ error: 'Usuario no encontrado.' });
+    }
+
+    const isMatch = await bcryptjs.compare(currentPassword, user.password);
+    if (!isMatch) {
+      return res.status(400).json({ error: 'La contraseña actual ingresada es incorrecta.' });
+    }
+
+    await user.changePassword(newPassword);
+    res.json({ message: 'Contraseña cambiada con éxito.' });
+  } catch (error) {
+    console.error('Error al cambiar contraseña:', error);
+    res.status(500).json({ error: 'Error interno del servidor.' });
+  }
 });
 
 export default router;
+

@@ -10,6 +10,7 @@ import SettingsPage from './pages/SettingsPage';
 export default function App() {
   const [token, setToken] = useState(localStorage.getItem('token') || null);
   const [username, setUsername] = useState(localStorage.getItem('username') || '');
+  const [role, setRole] = useState(localStorage.getItem('role') || 'admin');
   const [view, setView] = useState('shop'); // 'shop', 'login', 'dashboard', 'orders', 'inventory', 'calendar', 'settings'
 
   // Si hay un cambio en el token, verificar validez al arrancar
@@ -19,8 +20,16 @@ export default function App() {
         headers: { 'Authorization': `Bearer ${token}` }
       })
         .then(res => {
-          if (!res.ok) {
+          if (res.ok) {
+            return res.json();
+          } else {
             handleLogout();
+          }
+        })
+        .then(data => {
+          if (data && data.role) {
+            localStorage.setItem('role', data.role);
+            setRole(data.role);
           }
         })
         .catch(() => {
@@ -29,19 +38,23 @@ export default function App() {
     }
   }, [token]);
 
-  const handleLoginSuccess = (newToken, newUsername) => {
+  const handleLoginSuccess = (newToken, newUsername, newRole) => {
     localStorage.setItem('token', newToken);
     localStorage.setItem('username', newUsername);
+    localStorage.setItem('role', newRole || 'admin');
     setToken(newToken);
     setUsername(newUsername);
+    setRole(newRole || 'admin');
     setView('dashboard'); // Redirigir al dashboard tras loguear
   };
 
   const handleLogout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('username');
+    localStorage.removeItem('role');
     setToken(null);
     setUsername('');
+    setRole('admin');
     setView('shop');
   };
 
@@ -66,7 +79,7 @@ export default function App() {
       case 'calendar':
         return token ? <CalendarView token={token} /> : <Login onLoginSuccess={handleLoginSuccess} onCancel={handleCancelLogin} />;
       case 'settings':
-        return token ? <SettingsPage token={token} /> : <Login onLoginSuccess={handleLoginSuccess} onCancel={handleCancelLogin} />;
+        return token ? <SettingsPage token={token} role={role} /> : <Login onLoginSuccess={handleLoginSuccess} onCancel={handleCancelLogin} />;
       default:
         return <Shop onAdminLoginClick={() => setView('login')} />;
     }
