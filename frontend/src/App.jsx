@@ -6,6 +6,8 @@ import Inventory from './pages/Inventory';
 import Orders from './pages/Orders';
 import CalendarView from './pages/CalendarView';
 import SettingsPage from './pages/SettingsPage';
+import Projections from './pages/Projections';
+
 
 export default function App() {
   const [token, setToken] = useState(localStorage.getItem('token') || null);
@@ -80,7 +82,10 @@ export default function App() {
         return token ? <CalendarView token={token} /> : <Login onLoginSuccess={handleLoginSuccess} onCancel={handleCancelLogin} />;
       case 'settings':
         return token ? <SettingsPage token={token} role={role} /> : <Login onLoginSuccess={handleLoginSuccess} onCancel={handleCancelLogin} />;
+      case 'projections':
+        return token ? <Projections token={token} /> : <Login onLoginSuccess={handleLoginSuccess} onCancel={handleCancelLogin} />;
       default:
+
         return <Shop onAdminLoginClick={() => setView('login')} />;
     }
   };
@@ -140,12 +145,21 @@ export default function App() {
           </button>
 
           <button 
+            className={`btn ${view === 'projections' ? 'btn-primary' : 'btn-secondary'}`} 
+            style={{ justifyContent: 'flex-start', width: '100%' }}
+            onClick={() => setView('projections')}
+          >
+            📈 Proyecciones
+          </button>
+
+          <button 
             className={`btn ${view === 'settings' ? 'btn-primary' : 'btn-secondary'}`} 
             style={{ justifyContent: 'flex-start', width: '100%' }}
             onClick={() => setView('settings')}
           >
             ⚙️ Configuración
           </button>
+
         </nav>
 
         <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>

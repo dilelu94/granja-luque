@@ -361,5 +361,21 @@ test.describe('Pruebas Unitarias de Modelos de Negocio (POO)', () => {
       assert.strictEqual(deleted, null);
     });
   });
+
+  // --- PRUEBAS PROYECCIONES ---
+  test.describe('Datos Base de Proyecciones', () => {
+    test('Debe inicializar y retornar correctamente las constantes de proyección en settings', async () => {
+      const db = await getDatabaseConnection();
+      
+      const capacity = await db.get("SELECT value FROM settings WHERE key = 'incubator_capacity'");
+      assert.strictEqual(capacity.value, '24');
+
+      const hatchRate = await db.get("SELECT value FROM settings WHERE key = 'hatch_rate'");
+      assert.strictEqual(hatchRate.value, '0.70');
+
+      const kwhCost = await db.get("SELECT value FROM settings WHERE key = 'electricity_kwh_cost'");
+      assert.strictEqual(kwhCost.value, '60.0');
+    });
+  });
 });
 

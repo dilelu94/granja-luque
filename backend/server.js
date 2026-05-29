@@ -14,6 +14,7 @@ import orderRoutes from './routes/orderRoutes.js';
 import calendarRoutes from './routes/calendarRoutes.js';
 import settingRoutes from './routes/settingRoutes.js';
 import userRoutes from './routes/userRoutes.js';
+import projectionsRoutes from './routes/projectionsRoutes.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -47,6 +48,7 @@ app.use('/api/orders', orderRoutes);
 app.use('/api/calendar', calendarRoutes);
 app.use('/api/settings', settingRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/projections', projectionsRoutes);
 
 // Servir frontend compilado en entorno de producción
 const distPath = path.join(__dirname, '../frontend/dist');

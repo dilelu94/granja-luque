@@ -179,7 +179,15 @@ export async function initializeDatabase() {
     { key: 'feed_consumption_adult', value: '0.025' }, // 25 gramos por codorniz adulta
     { key: 'feed_consumption_chick', value: '0.015' },  // 15 gramos por codorniz polluelo
     { key: 'egg_base_cost', value: '15.0' },             // Costo base estimado de producción de un huevo suelto ($15 ARS)
-    { key: 'shipping_default_cost', value: '1500.0' }     // Cargo estándar de envío a domicilio
+    { key: 'shipping_default_cost', value: '1500.0' },   // Cargo estándar de envío a domicilio
+    { key: 'incubator_capacity', value: '24' },
+    { key: 'hatch_rate', value: '0.70' },
+    { key: 'cage_build_time_days', value: '7' },
+    { key: 'electricity_kwh_cost', value: '60.0' },
+    { key: 'cage_bulb_wattage', value: '100' },
+    { key: 'cage_light_hours', value: '16' },
+    { key: 'cost_fertile_egg', value: '50.0' },
+    { key: 'cost_adult_quail', value: '1200.0' }
   ];
 
   for (const s of defaultSettings) {
