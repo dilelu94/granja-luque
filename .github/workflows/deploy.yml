@@ -6,30 +6,39 @@ on:
 
 jobs:
   deploy:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
 
     steps:
     - uses: actions/checkout@v4
 
-    - name: Deploy to Server via SSH
-      uses: appleboy/ssh-action@v1.0.3
+    - name: Use Node.js 22.x
+      uses: actions/setup-node@v4
       with:
-        host: ${{ secrets.SERVER_HOST }}
-        username: ${{ secrets.SERVER_USER }}
-        key: ${{ secrets.SERVER_SSH_KEY }}
-        port: 22
-        script: |
-          # 1. Navegar al directorio de despliegue en el servidor Oracle Cloud
-          cd ${{ secrets.SERVER_DEPLOY_PATH }}
-          
-          # 2. Descargar últimos cambios
-          git pull origin main
-          
-          # 3. Instalar dependencias globales, de backend y frontend
-          npm run install:all
-          
-          # 4. Compilar frontend de producción
-          npm run build:frontend
-          
-          # 5. Reiniciar o arrancar la aplicación usando PM2
-          pm2 restart granja-app || pm2 start backend/server.js --name granja-app
+        node-version: 22.x
+        cache: 'npm'
+
+    - name: Install build dependencies
+      run: npm run install:all
+
+    - name: Build frontend
+      run: npm run build:frontend
+
+    - name: Deploy files to production directory
+      run: |
+        rsync -av --delete \
+          --exclude='node_modules' \
+          --exclude='database.sqlite*' \
+          --exclude='.env' \
+          --exclude='.git' \
+          ./ /home/ubuntu/granja-luque/
+
+    - name: Install production dependencies in deploy path
+      run: |
+        cd /home/ubuntu/granja-luque
+        npm install --omit=dev && npm install --omit=dev --prefix backend
+
+    - name: Restart or start the application using PM2
+      run: |
+        cd /home/ubuntu/granja-luque
+        pm2 restart granja-app || pm2 start backend/server.js --name granja-app
+
