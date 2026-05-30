@@ -1,6 +1,6 @@
 # Granja Luque 🥚🚜 - Sistema de Control y Ventas
 
-Este es un sistema full-stack de gestión para granja de codornices, diseñado para correr en un servidor Oracle ARM Always Free.
+Este es un sistema full-stack de gestión para granja de codornices, diseñado para correr en un servidor Oracle AMD Always Free.
 
 ## 🌟 Características
 
