@@ -106,6 +106,23 @@ test.describe('Pruebas Unitarias de Modelos de Negocio (POO)', () => {
       assert.strictEqual(batch.currentQuantity, 95);
       assert.ok(batch.notes.includes('Baja registrada: 5 aves'));
     });
+
+    test('Debe restar cantidad y registrar motivo personalizado en caso de faena', async () => {
+      const batch = new QuailBatch({
+        name: 'Lote Test Faena',
+        type: 'adult',
+        initial_quantity: 50,
+        current_quantity: 50,
+        birth_date: '2026-01-01'
+      });
+      await batch.save();
+
+      await batch.recordReduction(10, 'Faena / Consumo', 'para el domingo');
+
+      assert.strictEqual(batch.currentQuantity, 40);
+      assert.ok(batch.notes.includes('Motivo: Faena / Consumo'));
+      assert.ok(batch.notes.includes('para el domingo'));
+    });
   });
 
   // --- PRUEBAS FEEDSTOCK ---
@@ -157,6 +174,42 @@ test.describe('Pruebas Unitarias de Modelos de Negocio (POO)', () => {
       assert.strictEqual(purchase.quantity_kg, 25.0);
       assert.strictEqual(purchase.price, 24000.0);
       assert.strictEqual(purchase.shipping_cost, 5000.0);
+    });
+
+    test('Debe descontar automáticamente el alimento según el tiempo transcurrido', async () => {
+      // 1. Crear un lote activo
+      const batch = new QuailBatch({
+        name: 'Lote Comilón',
+        type: 'adult',
+        initial_quantity: 100,
+        current_quantity: 100,
+        birth_date: '2026-01-01' // Adultos
+      });
+      await batch.save(); // consume 100 * 0.025 = 2.5 kg/día
+
+      // 2. Establecer stock de ponedora en 50kg, y simular que se actualizó hace 2 días
+      const feed = await FeedStock.getByType('ponedora');
+      feed.quantity = 50.0;
+      
+      const twoDaysAgo = new Date();
+      twoDaysAgo.setDate(twoDaysAgo.getDate() - 2);
+      feed.lastUpdated = twoDaysAgo.toISOString();
+      await feed.save(); 
+      
+      // Forzar fecha en base de datos para simular tiempo transcurrido
+      const db = await getDatabaseConnection();
+      await db.run('UPDATE feed_stock SET quantity = 50.0, last_updated = ? WHERE id = ?', [twoDaysAgo.toISOString(), feed.id]);
+
+      // 3. Ejecutar deducción automática
+      const settings = {
+        feed_consumption_adult: '0.025',
+        feed_consumption_chick: '0.015'
+      };
+      await FeedStock.deductAutomaticConsumption(settings);
+
+      // 4. Verificar que se restaron 2 días de consumo: 2.5kg * 2 = 5kg => Stock final aprox: 45kg
+      const updatedFeed = await FeedStock.getByType('ponedora');
+      assert.ok(updatedFeed.quantity <= 45.01 && updatedFeed.quantity >= 44.95);
     });
   });
 

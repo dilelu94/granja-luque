@@ -1,5 +1,14 @@
 import React, { useState, useEffect } from 'react';
 
+const formatDate = (dateStr) => {
+  if (!dateStr) return '';
+  const parts = dateStr.split('-');
+  if (parts.length === 3) {
+    return `${parts[2]}/${parts[1]}/${parts[0]}`;
+  }
+  return dateStr;
+};
+
 export default function Dashboard({ token }) {
   const [stats, setStats] = useState({
     quails: { chick: 0, adult: 0, total: 0 },
@@ -219,7 +228,7 @@ export default function Dashboard({ token }) {
                 <tbody>
                   {stats.eggs.history.slice(-7).map((row, idx) => (
                     <tr key={idx}>
-                      <td>{row.date}</td>
+                      <td>{formatDate(row.date)}</td>
                       <td>{row.adultQuailsCount}</td>
                       <td style={{ fontWeight: '600' }}>{row.quantityCollected}</td>
                       <td style={{ color: 'var(--accent-red)' }}>{row.quantityBroken}</td>

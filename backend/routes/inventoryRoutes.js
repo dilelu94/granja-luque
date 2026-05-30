@@ -171,11 +171,11 @@ router.post('/quail-batches', authenticateToken, async (req, res) => {
 
 /**
  * POST /api/inventory/quail-batches/:id/mortality
- * ADMIN ONLY: Log quails mortality.
+ * ADMIN ONLY: Log quails mortality or reduction.
  */
 router.post('/quail-batches/:id/mortality', authenticateToken, async (req, res) => {
   const { id } = req.params;
-  const { count } = req.body;
+  const { count, reason, notes } = req.body;
 
   if (count === undefined || Number(count) <= 0) {
     return res.status(400).json({ error: 'Cantidad de bajas debe ser mayor a 0.' });
@@ -187,7 +187,7 @@ router.post('/quail-batches/:id/mortality', authenticateToken, async (req, res) 
       return res.status(404).json({ error: 'Lote no encontrado.' });
     }
 
-    await batch.recordMortality(Number(count));
+    await batch.recordReduction(Number(count), reason || 'Muerte', notes || '');
     res.json({ message: 'Bajas registradas con éxito.', batch });
   } catch (error) {
     console.error('Error al registrar bajas:', error);
@@ -201,7 +201,7 @@ router.post('/quail-batches/:id/mortality', authenticateToken, async (req, res) 
  */
 router.put('/quail-batches/:id', authenticateToken, async (req, res) => {
   const { id } = req.params;
-  const { name, type, currentQuantity, birthDate, status, notes } = req.body;
+  const { name, type, initialQuantity, currentQuantity, birthDate, status, notes } = req.body;
 
   try {
     const batch = await QuailBatch.getById(id);
@@ -211,6 +211,7 @@ router.put('/quail-batches/:id', authenticateToken, async (req, res) => {
 
     batch.name = name !== undefined ? name : batch.name;
     batch.type = type !== undefined ? type : batch.type;
+    batch.initialQuantity = initialQuantity !== undefined ? Number(initialQuantity) : batch.initialQuantity;
     batch.currentQuantity = currentQuantity !== undefined ? Number(currentQuantity) : batch.currentQuantity;
     batch.birthDate = birthDate !== undefined ? birthDate : batch.birthDate;
     batch.status = status !== undefined ? status : batch.status;
@@ -235,11 +236,12 @@ router.put('/quail-batches/:id', authenticateToken, async (req, res) => {
 
 /**
  * GET /api/inventory/feed
- * ADMIN ONLY: Get feed stocks and depletion forecasts.
+ * ADMIN ONLY: Get feed stocks and depletion forecasts, with automatic consumption deduction.
  */
 router.get('/feed', authenticateToken, async (req, res) => {
   try {
     const settings = await Settings.getAll();
+    await FeedStock.deductAutomaticConsumption(settings); // Descontar consumo automáticamente
     const estimates = await FeedStock.calculateEstimates(settings);
     res.json(estimates);
   } catch (error) {
@@ -249,11 +251,26 @@ router.get('/feed', authenticateToken, async (req, res) => {
 });
 
 /**
+ * GET /api/inventory/feed/purchases
+ * ADMIN ONLY: Get recent feed purchases.
+ */
+router.get('/feed/purchases', authenticateToken, async (req, res) => {
+  try {
+    const db = await getDatabaseConnection();
+    const rows = await db.all('SELECT * FROM feed_purchases ORDER BY purchase_date DESC, id DESC LIMIT 20');
+    res.json(rows);
+  } catch (error) {
+    console.error('Error al obtener compras de alimento:', error);
+    res.status(500).json({ error: 'Error al obtener historial de compras.' });
+  }
+});
+
+/**
  * POST /api/inventory/feed/buy
  * ADMIN ONLY: Register feed purchase (adds stock).
  */
 router.post('/feed/buy', authenticateToken, async (req, res) => {
-  const { type, quantity, price, shippingCost } = req.body;
+  const { type, quantity, price, shippingCost, purchaseDate } = req.body;
 
   if (!type || quantity === undefined || Number(quantity) <= 0) {
     return res.status(400).json({ error: 'Faltan campos (tipo de alimento: iniciador/ponedora, cantidad en kg > 0).' });
@@ -261,7 +278,7 @@ router.post('/feed/buy', authenticateToken, async (req, res) => {
 
   try {
     const feed = await FeedStock.getByType(type);
-    await feed.addStock(Number(quantity), Number(price || 0.0), Number(shippingCost || 0.0));
+    await feed.addStock(Number(quantity), Number(price || 0.0), Number(shippingCost || 0.0), purchaseDate);
     res.json({ message: `Compra registrada: +${quantity} kg de alimento ${type}.`, stock: feed.quantity });
   } catch (error) {
     console.error('Error al registrar compra de alimento:', error);

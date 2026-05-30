@@ -122,8 +122,11 @@ export default function Projections({ token }) {
   if (growthMethod === 'buy_adults') {
     birdCost = quailGap * costAdultQuail;
   } else {
-    // Para incubación propia
-    fertileEggsNeeded = Math.ceil(quailGap / hatchDecimal);
+    // Para incubación propia, consideramos que solo el 50% de los nacidos serán hembras ponedoras
+    const femaleRatio = 0.5;
+    fertileEggsNeeded = Math.ceil(quailGap / (hatchDecimal * femaleRatio));
+    const chicksHatched = Math.ceil(fertileEggsNeeded * hatchDecimal);
+
     incubatorBatches = Math.ceil(fertileEggsNeeded / incubatorCapacity);
     incubatorDays = incubatorBatches * 17;
 
@@ -131,9 +134,9 @@ export default function Projections({ token }) {
       birdCost = fertileEggsNeeded * costFertileEgg;
     } // else 'incubate_own' -> $0 costo de huevo
 
-    // Costo de alimento Iniciador durante 35 días de crianza
+    // Costo de alimento Iniciador durante 35 días de crianza para TODOS los polluelos nacidos (machos + hembras)
     // Consumo diario estimado polluelo: 15g (0.015kg)
-    rearingFeedKg = quailGap * 0.015 * 35;
+    rearingFeedKg = chicksHatched * 0.015 * 35;
     rearingFeedCost = rearingFeedKg * baseData.feedCostIniciadorPerKg;
   }
 
@@ -467,7 +470,7 @@ export default function Projections({ token }) {
             </div>
             {growthMethod !== 'buy_adults' && (
               <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>
-                Con tu tasa de eclosión ({hatchRate}%), necesitas incubar un estimado de {fertileEggsNeeded} huevos ({incubatorBatches} tandas de 17 días).
+                Con tu tasa de eclosión ({hatchRate}%) y un ratio del 50% de hembras, necesitas incubar un estimado de {fertileEggsNeeded} huevos ({incubatorBatches} tandas de 17 días).
               </div>
             )}
           </div>

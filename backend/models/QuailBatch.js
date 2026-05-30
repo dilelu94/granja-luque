@@ -126,19 +126,36 @@ export class QuailBatch {
   }
 
   /**
-   * Records mortality in the batch, decreasing the quantity.
-   * @param {number} count Number of deceased quails
+   * Records reduction/baja in the batch, decreasing the quantity.
+   * @param {number} count Number of quails
+   * @param {string} reason Reason of the reduction ('Muerte' | 'Faena')
+   * @param {string} userNotes Custom notes
    */
-  async recordMortality(count) {
+  async recordReduction(count, reason = 'Muerte', userNotes = '') {
     if (count <= 0) return;
     this.currentQuantity = Math.max(0, this.currentQuantity - count);
-    const mortalityNote = `\n[${new Date().toISOString().split('T')[0]}] Baja registrada: ${count} aves.`;
-    this.notes += mortalityNote;
+    const today = new Date();
+    const day = String(today.getDate()).padStart(2, '0');
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const year = today.getFullYear();
+    const dateStr = `${day}/${month}/${year}`;
+    const detail = userNotes ? ` (${userNotes})` : '';
+    const noteStr = `\n[${dateStr}] Baja registrada: ${count} aves. Motivo: ${reason}.${detail}`;
+    this.notes += noteStr;
     if (this.currentQuantity === 0) {
       this.status = 'retired';
     }
     await this.save();
   }
+
+  /**
+   * Records mortality in the batch, decreasing the quantity.
+   * @param {number} count Number of deceased quails
+   */
+  async recordMortality(count) {
+    return this.recordReduction(count, 'Muerte', '');
+  }
+
 
   // --- STATICS ---
 

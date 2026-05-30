@@ -1,5 +1,14 @@
 import React, { useState, useEffect } from 'react';
 
+const formatDate = (dateStr) => {
+  if (!dateStr) return '';
+  const parts = dateStr.split('-');
+  if (parts.length === 3) {
+    return `${parts[2]}/${parts[1]}/${parts[0]}`;
+  }
+  return dateStr;
+};
+
 export default function CalendarView({ token }) {
   const [events, setEvents] = useState([]);
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -283,7 +292,7 @@ export default function CalendarView({ token }) {
         <div className="modal-overlay">
           <div className="modal-content" style={{ maxWidth: '450px' }}>
             <h3 style={{ marginBottom: '1rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem' }}>
-              Eventos para el {selectedDayEvents.date}
+              Eventos para el {formatDate(selectedDayEvents.date)}
             </h3>
 
             {selectedDayEvents.list.length === 0 ? (

@@ -178,7 +178,7 @@ export async function initializeDatabase() {
     { key: 'whatsapp_bot_url', value: '' },
     { key: 'feed_consumption_adult', value: '0.025' }, // 25 gramos por codorniz adulta
     { key: 'feed_consumption_chick', value: '0.015' },  // 15 gramos por codorniz polluelo
-    { key: 'egg_base_cost', value: '15.0' },             // Costo base estimado de producción de un huevo suelto ($15 ARS)
+    { key: 'egg_base_cost', value: '120.0' },            // Costo base estimado de producción de un huevo suelto ($120 ARS)
     { key: 'shipping_default_cost', value: '1500.0' },   // Cargo estándar de envío a domicilio
     { key: 'incubator_capacity', value: '24' },
     { key: 'hatch_rate', value: '0.70' },
@@ -186,13 +186,18 @@ export async function initializeDatabase() {
     { key: 'electricity_kwh_cost', value: '60.0' },
     { key: 'cage_bulb_wattage', value: '100' },
     { key: 'cage_light_hours', value: '16' },
-    { key: 'cost_fertile_egg', value: '50.0' },
-    { key: 'cost_adult_quail', value: '1200.0' }
+    { key: 'cost_fertile_egg', value: '250.0' },
+    { key: 'cost_adult_quail', value: '15000.0' }
   ];
 
   for (const s of defaultSettings) {
     await db.run('INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)', [s.key, s.value]);
   }
+
+  // Migración de configuraciones existentes con valores genéricos antiguos
+  await db.run("UPDATE settings SET value = '120.0' WHERE key = 'egg_base_cost' AND value = '15.0'");
+  await db.run("UPDATE settings SET value = '250.0' WHERE key = 'cost_fertile_egg' AND value = '50.0'");
+  await db.run("UPDATE settings SET value = '15000.0' WHERE key = 'cost_adult_quail' AND value = '1200.0'");
 
   // Insertar registros de alimentos por defecto si no existen
   const now = new Date().toISOString();
@@ -204,7 +209,7 @@ export async function initializeDatabase() {
     {
       name: 'Maple de 30 Huevos de Codorniz',
       description: 'Huevos frescos de codorniz, seleccionados diariamente de nuestra granja.',
-      price: 1500.0,
+      price: 11250.0,
       stock: 50,
       category: 'eggs',
       image_url: 'https://images.unsplash.com/photo-1598965402089-897ce52e8355?q=80&w=400&auto=format&fit=crop',
@@ -216,7 +221,7 @@ export async function initializeDatabase() {
     {
       name: 'Paquete de 12 Huevos de Codorniz',
       description: 'Caja plástica de 12 huevos frescos seleccionados.',
-      price: 700.0,
+      price: 4500.0,
       stock: 30,
       category: 'eggs',
       image_url: 'https://images.unsplash.com/photo-1598965402089-897ce52e8355?q=80&w=400&auto=format&fit=crop',
@@ -228,7 +233,7 @@ export async function initializeDatabase() {
     {
       name: 'Paquete de 6 Huevos de Codorniz',
       description: 'Caja plástica de 6 huevos frescos (tamaño degustación).',
-      price: 400.0,
+      price: 2500.0,
       stock: 20,
       category: 'eggs',
       image_url: 'https://images.unsplash.com/photo-1598965402089-897ce52e8355?q=80&w=400&auto=format&fit=crop',
@@ -248,4 +253,10 @@ export async function initializeDatabase() {
       `, [p.name, p.description, p.price, p.stock, p.category, p.image_url, p.status, p.container_cost, p.label_cost, p.egg_count]);
     }
   }
+
+  // Migración de productos existentes con valores genéricos antiguos
+  await db.run("UPDATE products SET price = 11250.0 WHERE name = 'Maple de 30 Huevos de Codorniz' AND price = 1500.0");
+  await db.run("UPDATE products SET price = 4500.0 WHERE name = 'Paquete de 12 Huevos de Codorniz' AND price = 700.0");
+  await db.run("UPDATE products SET price = 2500.0 WHERE name = 'Paquete de 6 Huevos de Codorniz' AND price = 400.0");
 }
+

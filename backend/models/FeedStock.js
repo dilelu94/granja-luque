@@ -35,18 +35,20 @@ export class FeedStock {
    * @param {number} kg 
    * @param {number} price Cost of the feed bag/amount
    * @param {number} shippingCost Cost of shipping/flete
+   * @param {string} purchaseDate Optional custom date YYYY-MM-DD
    */
-  async addStock(kg, price = 0.0, shippingCost = 0.0) {
+  async addStock(kg, price = 0.0, shippingCost = 0.0, purchaseDate = null) {
     if (kg <= 0) return;
     this.quantity += kg;
     await this.save();
 
     // Registrar la compra en el historial de gastos
     const db = await getDatabaseConnection();
+    const dateToUse = purchaseDate || new Date().toISOString().split('T')[0];
     await db.run(
       `INSERT INTO feed_purchases (feed_type, quantity_kg, price, shipping_cost, purchase_date)
        VALUES (?, ?, ?, ?, ?)`,
-      [this.type, kg, price, shippingCost, new Date().toISOString().split('T')[0]]
+      [this.type, kg, price, shippingCost, dateToUse]
     );
   }
 
@@ -120,28 +122,98 @@ export class FeedStock {
       ? Math.round((layingStock.quantity / dailyLayingNeed) * 10) / 10 
       : null;
 
+    // Obtener costo de última compra de alimento Ponedora e Iniciador para calcular costo por Kg
+    const db = await getDatabaseConnection();
+    const lastPonedora = await db.get(`
+      SELECT price, quantity_kg, shipping_cost 
+      FROM feed_purchases 
+      WHERE feed_type = 'ponedora' 
+      ORDER BY purchase_date DESC, id DESC 
+      LIMIT 1
+    `);
+    const lastInitiator = await db.get(`
+      SELECT price, quantity_kg, shipping_cost 
+      FROM feed_purchases 
+      WHERE feed_type = 'iniciador' 
+      ORDER BY purchase_date DESC, id DESC 
+      LIMIT 1
+    `);
+    
+    let feedCostPonedoraPerKg = 1160.0; // default ($24000 + $5000 flete) / 25kg
+    if (lastPonedora && lastPonedora.quantity_kg > 0) {
+      feedCostPonedoraPerKg = (lastPonedora.price + lastPonedora.shipping_cost) / lastPonedora.quantity_kg;
+    }
+
+    let feedCostIniciadorPerKg = 1480.0; // default ($27000 + $10000 flete) / 25kg
+    if (lastInitiator && lastInitiator.quantity_kg > 0) {
+      feedCostIniciadorPerKg = (lastInitiator.price + lastInitiator.shipping_cost) / lastInitiator.quantity_kg;
+    }
+
     return {
       initiator: {
         stock: initiatorStock.quantity,
         dailyConsumption: dailyInitiatorNeed,
-        daysLeft: daysLeftInitiator
+        daysLeft: daysLeftInitiator,
+        costPerKg: feedCostIniciadorPerKg
       },
       ponedora: {
         stock: layingStock.quantity,
         dailyConsumption: dailyLayingNeed,
-        daysLeft: daysLeftLaying
+        daysLeft: daysLeftLaying,
+        costPerKg: feedCostPonedoraPerKg
       }
     };
   }
 
   /**
+   * Automatically deducts feed stock based on elapsed time since last_updated.
+   * Runs whenever the dashboard or inventory feed status is queried.
+   */
+  static async deductAutomaticConsumption(settings) {
+    const activeBatches = await QuailBatch.getAllActive();
+    
+    let dailyInitiatorNeed = 0;
+    let dailyLayingNeed = 0;
+
+    activeBatches.forEach(batch => {
+      const consumption = batch.getDailyFeedConsumption(settings);
+      if (batch.getFeedType() === 'iniciador') {
+        dailyInitiatorNeed += consumption;
+      } else {
+        dailyLayingNeed += consumption;
+      }
+    });
+
+    const initiatorStock = await FeedStock.getByType('iniciador');
+    const layingStock = await FeedStock.getByType('ponedora');
+
+    const now = new Date();
+
+    // Iniciador
+    const lastInit = new Date(initiatorStock.lastUpdated);
+    const diffInitDays = (now - lastInit) / (1000 * 60 * 60 * 24);
+    if (diffInitDays > 0) {
+      if (dailyInitiatorNeed > 0) {
+        const consumed = dailyInitiatorNeed * diffInitDays;
+        initiatorStock.quantity = Math.max(0, initiatorStock.quantity - consumed);
+      }
+      await initiatorStock.save();
+    }
+
+    // Ponedora
+    const lastLaying = new Date(layingStock.lastUpdated);
+    const diffLayingDays = (now - lastLaying) / (1000 * 60 * 60 * 24);
+    if (diffLayingDays > 0) {
+      if (dailyLayingNeed > 0) {
+        const consumed = dailyLayingNeed * diffLayingDays;
+        layingStock.quantity = Math.max(0, layingStock.quantity - consumed);
+      }
+      await layingStock.save();
+    }
+  }
+
+  /**
    * Automatically deducts feed stock based on one day of consumption.
-   * This can be run by a cron task or when the admin opens the dashboard.
-   * To prevent duplicate deductions, we should track when the last deduction was made,
-   * or just let the user run it/view estimates.
-   * For simplicity and accuracy in a farm system, daily consumption is usually deducted
-   * automatically per day elapsed, or manually updated.
-   * Let's implement a method that calculates consumption since a specific date and deducts it.
    */
   static async deductDailyConsumption(daysCount = 1, settings) {
     const estimates = await FeedStock.calculateEstimates(settings);
@@ -157,3 +229,4 @@ export class FeedStock {
     }
   }
 }
+

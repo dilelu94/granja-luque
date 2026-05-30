@@ -1,5 +1,14 @@
 import React, { useState, useEffect } from 'react';
 
+const formatDate = (dateStr) => {
+  if (!dateStr) return '';
+  const parts = dateStr.split('-');
+  if (parts.length === 3) {
+    return `${parts[2]}/${parts[1]}/${parts[0]}`;
+  }
+  return dateStr;
+};
+
 export default function Inventory({ token }) {
   const [activeTab, setActiveTab] = useState('birds'); // 'birds' | 'feed' | 'products'
   const [batches, setBatches] = useState([]);
@@ -9,6 +18,7 @@ export default function Inventory({ token }) {
   
   // Modals / Forms States
   const [showBatchModal, setShowBatchModal] = useState(false);
+  const [showEditBatchModal, setShowEditBatchModal] = useState(false);
   const [showMortalityModal, setShowMortalityModal] = useState(false);
   const [showEggModal, setShowEggModal] = useState(false);
   const [showPackModal, setShowPackModal] = useState(false);
@@ -17,12 +27,14 @@ export default function Inventory({ token }) {
 
   // Form inputs
   const [batchForm, setBatchForm] = useState({ name: '', type: 'chick', initialQuantity: '', birthDate: '', notes: '' });
+  const [editBatchForm, setEditBatchForm] = useState({ id: '', name: '', type: 'chick', initialQuantity: '', currentQuantity: '', birthDate: '', status: 'active', notes: '' });
   const [selectedBatchId, setSelectedBatchId] = useState(null);
-  const [mortalityCount, setMortalityCount] = useState('');
+  const [mortalityForm, setMortalityForm] = useState({ count: '', reason: 'Muerte / Enfermedad', notes: '' });
   
   const [eggForm, setEggForm] = useState({ date: new Date().toISOString().split('T')[0], quantityCollected: '', quantityBroken: '', notes: '' });
   const [packForm, setPackForm] = useState({ productId: '', packagesCount: '', eggsPerPackage: '30' });
-  const [feedForm, setFeedForm] = useState({ type: 'ponedora', action: 'buy', quantity: '', price: '', shippingCost: '' });
+  const [feedForm, setFeedForm] = useState({ type: 'ponedora', action: 'buy', quantity: '', price: '', shippingCost: '', purchaseDate: new Date().toISOString().split('T')[0] });
+  const [feedPurchases, setFeedPurchases] = useState([]);
   
   // Producto Form (Crear / Editar)
   const [productForm, setProductForm] = useState({
@@ -59,6 +71,11 @@ export default function Inventory({ token }) {
       const resFeed = await fetch('/api/inventory/feed', { headers });
       const dataFeed = await resFeed.json();
       setFeed(dataFeed);
+
+      // 2.5. Historial de Compras de Alimentos
+      const resFeedPurchases = await fetch('/api/inventory/feed/purchases', { headers });
+      const dataFeedPurchases = await resFeedPurchases.json();
+      setFeedPurchases(dataFeedPurchases);
 
       // 3. Productos
       const resProducts = await fetch('/api/inventory/products/admin', { headers });
@@ -116,6 +133,48 @@ export default function Inventory({ token }) {
     }
   };
 
+  // Editar lote de codornices
+  const handleEditBatchClick = (batch) => {
+    setEditBatchForm({
+      id: batch.id,
+      name: batch.name,
+      type: batch.type,
+      initialQuantity: batch.initialQuantity,
+      currentQuantity: batch.currentQuantity,
+      birthDate: batch.birthDate,
+      status: batch.status,
+      notes: batch.notes || ''
+    });
+    setShowEditBatchModal(true);
+  };
+
+  const handleSaveBatch = async (e) => {
+    e.preventDefault();
+    try {
+      const res = await fetch(`/api/inventory/quail-batches/${editBatchForm.id}`, {
+        method: 'PUT',
+        headers,
+        body: JSON.stringify({
+          name: editBatchForm.name,
+          type: editBatchForm.type,
+          initialQuantity: Number(editBatchForm.initialQuantity),
+          currentQuantity: Number(editBatchForm.currentQuantity),
+          birthDate: editBatchForm.birthDate,
+          status: editBatchForm.status,
+          notes: editBatchForm.notes
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+
+      showNotification('Lote de aves actualizado con éxito.');
+      setShowEditBatchModal(false);
+      fetchData();
+    } catch (err) {
+      showNotification(err.message, true);
+    }
+  };
+
   // 2. Guardar bajas / mortalidad
   const handleRecordMortality = async (e) => {
     e.preventDefault();
@@ -123,14 +182,18 @@ export default function Inventory({ token }) {
       const res = await fetch(`/api/inventory/quail-batches/${selectedBatchId}/mortality`, {
         method: 'POST',
         headers,
-        body: JSON.stringify({ count: mortalityCount })
+        body: JSON.stringify({
+          count: Number(mortalityForm.count),
+          reason: mortalityForm.reason,
+          notes: mortalityForm.notes
+        })
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
 
       showNotification(`Bajas registradas con éxito para el lote.`);
       setShowMortalityModal(false);
-      setMortalityCount('');
+      setMortalityForm({ count: '', reason: 'Muerte / Enfermedad', notes: '' });
       fetchData();
     } catch (err) {
       showNotification(err.message, true);
@@ -188,7 +251,8 @@ export default function Inventory({ token }) {
       type: feedForm.type,
       quantity: Number(feedForm.quantity),
       price: feedForm.action === 'buy' ? Number(feedForm.price || 0) : 0,
-      shippingCost: feedForm.action === 'buy' ? Number(feedForm.shippingCost || 0) : 0
+      shippingCost: feedForm.action === 'buy' ? Number(feedForm.shippingCost || 0) : 0,
+      purchaseDate: feedForm.action === 'buy' ? feedForm.purchaseDate : new Date().toISOString().split('T')[0]
     };
 
     try {
@@ -202,7 +266,7 @@ export default function Inventory({ token }) {
 
       showNotification('Movimiento de alimento registrado con éxito.');
       setShowFeedModal(false);
-      setFeedForm({ type: 'ponedora', action: 'buy', quantity: '', price: '', shippingCost: '' });
+      setFeedForm({ type: 'ponedora', action: 'buy', quantity: '', price: '', shippingCost: '', purchaseDate: new Date().toISOString().split('T')[0] });
       fetchData();
     } catch (err) {
       showNotification(err.message, true);
@@ -405,25 +469,34 @@ export default function Inventory({ token }) {
                         </td>
                         <td>{batch.initialQuantity}</td>
                         <td style={{ fontWeight: 'bold' }}>{batch.currentQuantity}</td>
-                        <td>{batch.birthDate}</td>
+                        <td>{formatDate(batch.birthDate)}</td>
                         <td>
                           <span className={`badge ${batch.status === 'active' ? 'badge-paid' : 'badge-cancelled'}`}>
                             {batch.status === 'active' ? 'Activo' : batch.status === 'sold' ? 'Vendido' : 'Retirado'}
                           </span>
                         </td>
                         <td>
-                          {batch.status === 'active' && (
+                          <div style={{ display: 'flex', gap: '0.35rem' }}>
+                            {batch.status === 'active' && (
+                              <button 
+                                className="btn btn-danger" 
+                                style={{ padding: '0.25rem 0.5rem', fontSize: '0.8rem' }}
+                                onClick={() => {
+                                  setSelectedBatchId(batch.id);
+                                  setShowMortalityModal(true);
+                                }}
+                              >
+                                💀 Bajas
+                              </button>
+                            )}
                             <button 
-                              className="btn btn-danger" 
+                              className="btn btn-secondary" 
                               style={{ padding: '0.25rem 0.5rem', fontSize: '0.8rem' }}
-                              onClick={() => {
-                                setSelectedBatchId(batch.id);
-                                setShowMortalityModal(true);
-                              }}
+                              onClick={() => handleEditBatchClick(batch)}
                             >
-                              💀 Registrar Bajas
+                              ✏️ Editar
                             </button>
-                          )}
+                          </div>
                         </td>
                       </tr>
                     );
@@ -441,38 +514,89 @@ export default function Inventory({ token }) {
       {activeTab === 'feed' && (
         <div>
           <div style={{ display: 'flex', gap: '1.5rem', marginBottom: '2rem', flexWrap: 'wrap' }}>
-            <div className="glass-card" style={{ flex: '1', minWidth: '280px', display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
-              <div style={{ fontSize: '3rem' }}>🌾</div>
+            <div className="glass-card" style={{ flex: '1', minWidth: '240px', display: 'flex', alignItems: 'center', gap: '1.5rem', borderLeft: '5px solid var(--accent-green)' }}>
+              <div style={{ fontSize: '3rem' }}>⚖️</div>
               <div>
-                <h3 style={{ fontSize: '1rem', color: 'var(--text-secondary)' }}>Alimento Ponedoras</h3>
-                <div style={{ fontSize: '1.8rem', fontWeight: 'bold', color: 'var(--accent-gold)' }}>{feed.ponedora.stock} kg</div>
+                <h3 style={{ fontSize: '1rem', color: 'var(--text-secondary)' }}>Total Stock Alimento</h3>
+                <div style={{ fontSize: '1.8rem', fontWeight: 'bold', color: 'var(--accent-green)' }}>
+                  {((feed.ponedora?.stock || 0) + (feed.initiator?.stock || 0)).toFixed(1)} kg
+                </div>
                 <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-                  Consumo: {feed.ponedora.dailyConsumption || 0} kg/día
+                  Ponedoras + Iniciador
                 </div>
               </div>
             </div>
 
-            <div className="glass-card" style={{ flex: '1', minWidth: '280px', display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
+            <div className="glass-card" style={{ flex: '1', minWidth: '240px', display: 'flex', alignItems: 'center', gap: '1.5rem', borderLeft: '5px solid var(--accent-gold)' }}>
+              <div style={{ fontSize: '3rem' }}>🌾</div>
+              <div>
+                <h3 style={{ fontSize: '1rem', color: 'var(--text-secondary)' }}>Alimento Ponedoras</h3>
+                <div style={{ fontSize: '1.8rem', fontWeight: 'bold', color: 'var(--accent-gold)' }}>{(feed.ponedora?.stock || 0).toFixed(1)} kg</div>
+                <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                  Consumo: {(feed.ponedora?.dailyConsumption || 0).toFixed(2)} kg/día
+                </div>
+              </div>
+            </div>
+
+            <div className="glass-card" style={{ flex: '1', minWidth: '240px', display: 'flex', alignItems: 'center', gap: '1.5rem', borderLeft: '5px solid var(--accent-blue)' }}>
               <div style={{ fontSize: '3rem' }}>🧪</div>
               <div>
                 <h3 style={{ fontSize: '1rem', color: 'var(--text-secondary)' }}>Alimento Iniciador</h3>
-                <div style={{ fontSize: '1.8rem', fontWeight: 'bold', color: 'var(--accent-blue)' }}>{feed.initiator.stock} kg</div>
+                <div style={{ fontSize: '1.8rem', fontWeight: 'bold', color: 'var(--accent-blue)' }}>{(feed.initiator?.stock || 0).toFixed(1)} kg</div>
                 <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-                  Consumo: {feed.initiator.dailyConsumption || 0} kg/día
+                  Consumo: {(feed.initiator?.dailyConsumption || 0).toFixed(2)} kg/día
                 </div>
               </div>
             </div>
           </div>
 
           <div className="glass-card">
-            <h3 style={{ marginBottom: '1.25rem', fontFamily: 'var(--font-heading)' }}>Últimas compras registradas</h3>
-            <p style={{ color: 'var(--text-secondary)' }}>
-              (Los fletes y costos registrados se guardan en el libro de gastos).
+            <h3 style={{ marginBottom: '1.25rem', fontFamily: 'var(--font-heading)' }}>Historial de Compras de Alimento</h3>
+            <p style={{ color: 'var(--text-secondary)', marginBottom: '1.5rem' }}>
+              Registro de fletes y costos por llegada de alimiento (los costos se guardan en el libro de gastos).
             </p>
-            {/* Si agregamos una tabla para ver las compras, sería perfecto. Mostraremos un mensaje por ahora */}
-            <div style={{ textAlign: 'center', padding: '2rem 0', color: 'var(--text-muted)' }}>
-              💡 Puedes cargar fletes y precios en el botón **Cargar Alimento** de arriba.
-            </div>
+            {feedPurchases.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '2rem 0', color: 'var(--text-muted)' }}>
+                💡 No hay compras registradas. Puedes cargar fletes y precios en el botón **Cargar Alimento** de arriba.
+              </div>
+            ) : (
+              <div className="table-container">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Fecha de Llegada</th>
+                      <th>Alimento</th>
+                      <th>Cantidad</th>
+                      <th>Precio Pagado</th>
+                      <th>Flete / Envío</th>
+                      <th>Costo Total</th>
+                      <th>Costo por Kg</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {feedPurchases.map(purchase => {
+                      const totalCost = purchase.price + purchase.shipping_cost;
+                      const costPerKg = purchase.quantity_kg > 0 ? (totalCost / purchase.quantity_kg).toFixed(2) : 0;
+                      return (
+                        <tr key={purchase.id}>
+                          <td style={{ fontWeight: '600' }}>{formatDate(purchase.purchase_date)}</td>
+                          <td>
+                            <span className={`badge ${purchase.feed_type === 'iniciador' ? 'badge-approved' : 'badge-pending'}`}>
+                              {purchase.feed_type === 'iniciador' ? 'Iniciador' : 'Ponedora'}
+                            </span>
+                          </td>
+                          <td style={{ fontWeight: '600' }}>{purchase.quantity_kg} kg</td>
+                          <td>${purchase.price}</td>
+                          <td>${purchase.shipping_cost}</td>
+                          <td style={{ fontWeight: 'bold', color: 'var(--accent-gold)' }}>${totalCost}</td>
+                          <td style={{ color: 'var(--text-secondary)' }}>${costPerKg}/kg</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -498,15 +622,32 @@ export default function Inventory({ token }) {
 
           <div style={{
             background: 'rgba(255, 255, 255, 0.02)',
-            padding: '1rem',
+            padding: '1.25rem 1rem',
             borderRadius: 'var(--border-radius-sm)',
             border: '1px solid var(--border-color)',
             fontSize: '0.85rem',
             color: 'var(--text-secondary)',
-            marginBottom: '1.5rem'
+            marginBottom: '1.5rem',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '0.5rem'
           }}>
-            📋 **Cálculo de Margen**: Basado en un **Costo Unitario de Huevo de Codorniz de $ {eggUnitCost} ARS** (configurable en Ajustes).
-            El costo de materia prima se calcula automáticamente: `Cantidad de Huevos * Costo Unitario`.
+            <div>
+              📋 **Cálculo de Margen**: Basado en un **Costo Unitario de Huevo de Codorniz de $ {eggUnitCost} ARS** (configurable en Ajustes).
+              El costo de materia prima se calcula automáticamente: `Cantidad de Huevos * Costo Unitario`.
+            </div>
+            {feed.ponedora && (
+              <div style={{
+                marginTop: '0.5rem',
+                paddingTop: '0.5rem',
+                borderTop: '1px solid rgba(255, 255, 255, 0.05)',
+                color: 'var(--text-muted)'
+              }}>
+                💡 **Incidencia del Alimento**: Una codorniz adulta come aprox. <strong>{(Number(settings.feed_consumption_adult || 0.025) * 1000)}g</strong> al día. 
+                Con el precio actual del alimento Ponedora (<strong>${Number(feed.ponedora.costPerKg || 1160.0).toFixed(2)}/kg</strong>) y una tasa de postura estimada del 80%, 
+                el costo de alimento necesario para producir 1 huevo es de aproximadamente <strong>${((Number(settings.feed_consumption_adult || 0.025) * Number(feed.ponedora.costPerKg || 1160.0)) / 0.8).toFixed(2)} ARS</strong>.
+              </div>
+            )}
           </div>
 
           <div className="table-container">
@@ -808,24 +949,48 @@ export default function Inventory({ token }) {
       )}
 
       {/* =======================================================
-          MODAL: REGISTRAR MORTALIDAD
+          MODAL: REGISTRAR MORTALIDAD (BAJAS)
          ======================================================= */}
       {showMortalityModal && (
         <div className="modal-overlay">
           <div className="modal-content">
-            <h3 style={{ marginBottom: '1.5rem' }}>Registrar Bajas (Mortalidad)</h3>
+            <h3 style={{ marginBottom: '1.5rem' }}>Registrar Bajas / Descarte</h3>
             <form onSubmit={handleRecordMortality}>
               <div className="form-group">
-                <label>Cantidad de Aves Muertas</label>
+                <label>Cantidad de Aves</label>
                 <input 
                   type="number" 
                   className="form-control" 
                   placeholder="1" 
                   required
-                  value={mortalityCount}
-                  onChange={e => setMortalityCount(e.target.value)}
+                  value={mortalityForm.count}
+                  onChange={e => setMortalityForm({ ...mortalityForm, count: e.target.value })}
                 />
               </div>
+
+              <div className="form-group">
+                <label>Motivo de la Baja</label>
+                <select 
+                  className="form-control"
+                  value={mortalityForm.reason}
+                  onChange={e => setMortalityForm({ ...mortalityForm, reason: e.target.value })}
+                >
+                  <option value="Muerte / Enfermedad">Muerte / Enfermedad</option>
+                  <option value="Faena / Consumo">Faena / Consumo (Hecha carne)</option>
+                </select>
+              </div>
+
+              <div className="form-group">
+                <label>Observaciones / Detalles</label>
+                <input 
+                  type="text" 
+                  className="form-control" 
+                  placeholder="Ej: una murió hoy / faenada para carne" 
+                  value={mortalityForm.notes}
+                  onChange={e => setMortalityForm({ ...mortalityForm, notes: e.target.value })}
+                />
+              </div>
+
               <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '1.5rem' }}>
                 Esto descontará la cantidad del lote activo y guardará el registro en sus notas.
               </p>
@@ -1004,6 +1169,16 @@ export default function Inventory({ token }) {
 
               {feedForm.action === 'buy' && (
                 <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '1rem', marginTop: '1rem' }}>
+                  <div className="form-group">
+                    <label>Fecha de Compra / Llegada</label>
+                    <input 
+                      type="date" 
+                      className="form-control" 
+                      required
+                      value={feedForm.purchaseDate}
+                      onChange={e => setFeedForm({ ...feedForm, purchaseDate: e.target.value })}
+                    />
+                  </div>
                   <h4 style={{ fontSize: '0.85rem', color: 'var(--accent-gold)', marginBottom: '0.75rem' }}>Detalles de Gastos (Flete)</h4>
                   <div style={{ display: 'flex', gap: '0.75rem' }}>
                     <div className="form-group" style={{ flex: '1' }}>
@@ -1033,6 +1208,103 @@ export default function Inventory({ token }) {
               <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1.5rem' }}>
                 <button type="submit" className="btn btn-primary" style={{ flex: '1' }}>Guardar</button>
                 <button type="button" className="btn btn-secondary" style={{ flex: '1' }} onClick={() => setShowFeedModal(false)}>Cancelar</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* =======================================================
+          MODAL: EDITAR LOTE DE AVES
+         ======================================================= */}
+      {showEditBatchModal && (
+        <div className="modal-overlay">
+          <div className="modal-content">
+            <h3 style={{ marginBottom: '1.5rem' }}>Editar Lote de Aves</h3>
+            <form onSubmit={handleSaveBatch}>
+              <div className="form-group">
+                <label>Nombre del Lote</label>
+                <input 
+                  type="text" 
+                  className="form-control" 
+                  required
+                  value={editBatchForm.name}
+                  onChange={e => setEditBatchForm({ ...editBatchForm, name: e.target.value })}
+                />
+              </div>
+
+              <div className="form-group">
+                <label>Tipo</label>
+                <select 
+                  className="form-control"
+                  value={editBatchForm.type}
+                  onChange={e => setEditBatchForm({ ...editBatchForm, type: e.target.value })}
+                >
+                  <option value="chick">Polluelo (Menor a 5 semanas, come Iniciador)</option>
+                  <option value="adult">Adulta (Postura, come Ponedora)</option>
+                </select>
+              </div>
+
+              <div style={{ display: 'flex', gap: '1rem' }}>
+                <div className="form-group" style={{ flex: '1' }}>
+                  <label>Cantidad Inicial</label>
+                  <input 
+                    type="number" 
+                    className="form-control" 
+                    required
+                    value={editBatchForm.initialQuantity}
+                    onChange={e => setEditBatchForm({ ...editBatchForm, initialQuantity: e.target.value })}
+                  />
+                </div>
+                <div className="form-group" style={{ flex: '1' }}>
+                  <label>Cantidad Actual</label>
+                  <input 
+                    type="number" 
+                    className="form-control" 
+                    required
+                    value={editBatchForm.currentQuantity}
+                    onChange={e => setEditBatchForm({ ...editBatchForm, currentQuantity: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: '1rem' }}>
+                <div className="form-group" style={{ flex: '1' }}>
+                  <label>Fecha de Nacimiento / Ingreso</label>
+                  <input 
+                    type="date" 
+                    className="form-control" 
+                    required
+                    value={editBatchForm.birthDate}
+                    onChange={e => setEditBatchForm({ ...editBatchForm, birthDate: e.target.value })}
+                  />
+                </div>
+                <div className="form-group" style={{ flex: '1' }}>
+                  <label>Estado</label>
+                  <select 
+                    className="form-control"
+                    value={editBatchForm.status}
+                    onChange={e => setEditBatchForm({ ...editBatchForm, status: e.target.value })}
+                  >
+                    <option value="active">Activo</option>
+                    <option value="sold">Vendido</option>
+                    <option value="retired">Retirado</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="form-group">
+                <label>Notas Adicionales</label>
+                <textarea 
+                  className="form-control" 
+                  value={editBatchForm.notes}
+                  onChange={e => setEditBatchForm({ ...editBatchForm, notes: e.target.value })}
+                />
+              </div>
+
+              <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1.5rem' }}>
+                <button type="submit" className="btn btn-primary" style={{ flex: '1' }}>Guardar Cambios</button>
+                <button type="button" className="btn btn-secondary" style={{ flex: '1' }} onClick={() => setShowEditBatchModal(false)}>Cancelar</button>
               </div>
             </form>
           </div>
