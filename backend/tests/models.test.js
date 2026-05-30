@@ -12,6 +12,13 @@ import { User } from '../models/User.js';
 import { getDatabaseConnection } from '../db/connection.js';
 import bcryptjs from 'bcryptjs';
 
+const toLocalYYYYMMDD = (date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
 test.describe('Pruebas Unitarias de Modelos de Negocio (POO)', () => {
   
   test.beforeEach(async () => {
@@ -27,7 +34,7 @@ test.describe('Pruebas Unitarias de Modelos de Negocio (POO)', () => {
     test('Debe calcular correctamente la edad en días y semanas', () => {
       const birthDate = new Date();
       birthDate.setDate(birthDate.getDate() - 14); // Hace 14 días
-      const dateStr = birthDate.toISOString().split('T')[0];
+      const dateStr = toLocalYYYYMMDD(birthDate);
 
       const batch = new QuailBatch({
         name: 'Lote Test 1',
@@ -49,7 +56,7 @@ test.describe('Pruebas Unitarias de Modelos de Negocio (POO)', () => {
         type: 'chick',
         initial_quantity: 50,
         current_quantity: 50,
-        birth_date: birthChick.toISOString().split('T')[0]
+        birth_date: toLocalYYYYMMDD(birthChick)
       });
 
       const birthAdult = new Date();
@@ -59,7 +66,7 @@ test.describe('Pruebas Unitarias de Modelos de Negocio (POO)', () => {
         type: 'adult',
         initial_quantity: 50,
         current_quantity: 50,
-        birth_date: birthAdult.toISOString().split('T')[0]
+        birth_date: toLocalYYYYMMDD(birthAdult)
       });
 
       assert.strictEqual(chickBatch.getFeedType(), 'iniciador');
@@ -164,11 +171,11 @@ test.describe('Pruebas Unitarias de Modelos de Negocio (POO)', () => {
         type: 'adult',
         initial_quantity: 100,
         current_quantity: 100,
-        birth_date: birth.toISOString().split('T')[0]
+        birth_date: toLocalYYYYMMDD(birth)
       });
       await batch.save();
 
-      const todayStr = new Date().toISOString().split('T')[0];
+      const todayStr = toLocalYYYYMMDD(new Date());
       const collection = new EggCollection({
         date: todayStr,
         quantity_collected: 85,
@@ -284,7 +291,7 @@ test.describe('Pruebas Unitarias de Modelos de Negocio (POO)', () => {
   // --- PRUEBAS CALENDAREVENT ---
   test.describe('Modelo CalendarEvent (Calendario de Granja)', () => {
     test('Debe crear eventos automáticos de volteo y eclosión al iniciar incubadora', async () => {
-      const todayStr = new Date().toISOString().split('T')[0];
+      const todayStr = toLocalYYYYMMDD(new Date());
       await CalendarEvent.registerIncubatorBatch(120, todayStr);
 
       const events = await CalendarEvent.getAll();
