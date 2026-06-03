@@ -2,7 +2,7 @@ name: CD (Deploy to Oracle Server)
 
 on:
   push:
-    branches: [ main ]
+    branches: [ master ]
 
 jobs:
   deploy:
