@@ -391,12 +391,23 @@ export default function CalendarView({ token }) {
                               background: 'rgba(255, 255, 255, 0.02)',
                               padding: '0.1rem 0.25rem',
                               borderRadius: '3px',
-                              whiteSpace: 'nowrap',
-                              overflow: 'hidden',
-                              textOverflow: 'ellipsis',
                               borderLeft: `2px solid ${getEventColor(event.type)}`,
                               width: '100%',
-                              boxSizing: 'border-box'
+                              boxSizing: 'border-box',
+                              // Si hay un solo evento, permitir que use hasta 2 líneas. Si hay más, limitar a 1 línea.
+                              ...(dayEvents.length === 1 ? {
+                                display: '-webkit-box',
+                                WebkitLineClamp: 2,
+                                WebkitBoxOrient: 'vertical',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                whiteSpace: 'normal',
+                                wordBreak: 'break-word'
+                              } : {
+                                whiteSpace: 'nowrap',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis'
+                              })
                             }}
                             title={event.title}
                           >
