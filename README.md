@@ -14,7 +14,7 @@ Este es un sistema full-stack de gestión para granja de codornices, diseñado p
 
 ## ⚙️ Configuración del Servidor
 
-El servidor Oracle Cloud ARM ya cuenta con Node.js 22 y PM2 instalados, y la base de datos se inicializará automáticamente.
+El servidor Oracle Cloud AMD ya cuenta con Node.js 22 y PM2 instalados, y la base de datos se inicializará automáticamente.
 
 Para arrancar el proyecto localmente en desarrollo:
 ```bash
