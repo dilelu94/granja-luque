@@ -338,7 +338,7 @@ export default function CalendarView({ token }) {
           </div>
 
           {/* Cuadrícula del Calendario */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '0.5rem', textAlign: 'center' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, minmax(0, 1fr))', gap: '0.5rem', textAlign: 'center' }}>
             {/* Cabecera Lunes - Domingo */}
             {['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'].map(d => (
               <div key={d} style={{ color: 'var(--text-secondary)', fontWeight: 'bold', padding: '0.5rem 0', fontSize: '0.85rem', textTransform: 'uppercase' }}>
@@ -363,7 +363,9 @@ export default function CalendarView({ token }) {
                     padding: '0.5rem',
                     textAlign: 'left',
                     cursor: cell.day ? 'pointer' : 'default',
-                    transition: 'var(--transition-smooth)'
+                    transition: 'var(--transition-smooth)',
+                    minWidth: '0px',
+                    overflow: 'hidden'
                   }}
                   className={cell.day ? 'glass-card' : ''}
                   onClick={() => {
@@ -379,7 +381,7 @@ export default function CalendarView({ token }) {
                       </div>
                       
                       {/* Lista resumida de eventos en el día */}
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem', width: '100%', overflow: 'hidden' }}>
                         {dayEvents.map(event => (
                           <div 
                             key={event.id}
@@ -392,7 +394,9 @@ export default function CalendarView({ token }) {
                               whiteSpace: 'nowrap',
                               overflow: 'hidden',
                               textOverflow: 'ellipsis',
-                              borderLeft: `2px solid ${getEventColor(event.type)}`
+                              borderLeft: `2px solid ${getEventColor(event.type)}`,
+                              width: '100%',
+                              boxSizing: 'border-box'
                             }}
                             title={event.title}
                           >
