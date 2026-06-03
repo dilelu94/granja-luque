@@ -50,6 +50,7 @@ export default function Projections({ token }) {
 
   // --- Estado de Collapsible de Configuración ---
   const [showConfig, setShowConfig] = useState(false);
+  const [hoveredIdx, setHoveredIdx] = useState(null);
 
   const headers = { 'Authorization': `Bearer ${token}` };
 
@@ -136,7 +137,9 @@ export default function Projections({ token }) {
 
     // Costo de alimento Iniciador durante 35 días de crianza para TODOS los polluelos nacidos (machos + hembras)
     // Consumo diario estimado polluelo: 15g (0.015kg)
-    rearingFeedKg = chicksHatched * 0.015 * 35;
+    // Durante las primeras 3 semanas (21 días) desperdician 20% de alimento, y las siguientes 2 semanas (14 días) comen nominal.
+    const rearingFeedKgPerChick = (0.015 * 1.20 * 21) + (0.015 * 14);
+    rearingFeedKg = chicksHatched * rearingFeedKgPerChick;
     rearingFeedCost = rearingFeedKg * baseData.feedCostIniciadorPerKg;
   }
 
@@ -173,7 +176,203 @@ export default function Projections({ token }) {
   const netMonthlyProfit = projectedMonthlyRevenue - totalMonthlyOperatingCost;
 
   // ROI (Meses para recuperar inversión)
-  const roiMonths = netMonthlyProfit > 0 ? (initialInvestment / netMonthlyProfit).toFixed(1) : null;
+  const roiMonths = netMonthlyProfit > 0 ? (initialInvestment / netMonthlyProfit).toFixed(2) : null;
+
+  // --- GENERACIÓN DE DATOS DE LA LÍNEA DE TIEMPO Y CURVA DE ROI ---
+  const generateTimelineData = () => {
+    const data = [];
+    const months = 12;
+    const femaleRatio = 0.5;
+    
+    // Configuración de los lotes de incubación
+    const rearingFeedKgPerChick = (0.015 * 1.20 * 21) + (0.015 * 14);
+    const rearingFeedCostPerChick = rearingFeedKgPerChick * baseData.feedCostIniciadorPerKg;
+    const batchList = [];
+    
+    if (growthMethod !== 'buy_adults') {
+      let eggsAssigned = 0;
+      for (let b = 1; b <= incubatorBatches; b++) {
+        const eggsInBatch = b === incubatorBatches ? (fertileEggsNeeded - eggsAssigned) : incubatorCapacity;
+        eggsAssigned += eggsInBatch;
+        
+        const chicksInBatch = Math.round(eggsInBatch * hatchDecimal);
+        const femalesInBatch = Math.round(chicksInBatch * femaleRatio);
+        const startDay = (b - 1) * 17;
+        const hatchDay = startDay + 17;
+        const adultDay = hatchDay + 35;
+        
+        batchList.push({
+          id: b,
+          eggsInBatch,
+          chicksInBatch,
+          femalesInBatch,
+          startDay,
+          hatchDay,
+          adultDay,
+          eggCost: growthMethod === 'incubate_bought' ? eggsInBatch * costFertileEgg : 0,
+          feedCost: chicksInBatch * rearingFeedCostPerChick
+        });
+      }
+    }
+
+    let cumulativeCost = 0;
+    let cumulativeRevenue = 0;
+    
+    // Inversión Inicial en Mes 0
+    cumulativeCost += cageInvestment;
+    
+    if (growthMethod === 'buy_adults') {
+      cumulativeCost += quailGap * costAdultQuail;
+    }
+
+    // Punto del Mes 0
+    data.push({
+      month: 0,
+      label: 'Mes 0',
+      revenue: 0,
+      cost: Math.round(cumulativeCost),
+      activeQuails: baseData.activeAdultQuails
+    });
+
+    for (let m = 1; m <= months; m++) {
+      const monthStartDay = (m - 1) * 30;
+      const monthEndDay = m * 30;
+      
+      let monthRevenue = 0;
+      let monthCost = 0;
+      
+      // 1. Calcular aves activas y huevos puestos en este mes
+      let activeQuailsThisMonth = baseData.activeAdultQuails;
+      
+      if (growthMethod === 'buy_adults') {
+        activeQuailsThisMonth += quailGap;
+        const eggsProduced = activeQuailsThisMonth * 0.8 * 30;
+        monthRevenue += eggsProduced * pricePerEgg;
+        
+        monthCost += activeQuailsThisMonth * dailyFeedConsumptionAdult * 30 * baseData.feedCostPonedoraPerKg;
+        monthCost += Math.ceil(activeQuailsThisMonth / 50) * kwhPerCageMonth * electricityKwhCost;
+        monthCost += eggsProduced * packagingCostPerEgg;
+      } else {
+        let eggsProduced = 0;
+        let adultFeedCost = 0;
+        let activeQuailsCountEnd = baseData.activeAdultQuails;
+        
+        eggsProduced += baseData.activeAdultQuails * 0.8 * 30;
+        adultFeedCost += baseData.activeAdultQuails * dailyFeedConsumptionAdult * 30 * baseData.feedCostPonedoraPerKg;
+        
+        batchList.forEach(batch => {
+          const startMonth = Math.floor(batch.startDay / 30) + 1;
+          if (startMonth === m) {
+            monthCost += batch.eggCost + batch.feedCost;
+          }
+          
+          const overlapDays = Math.max(0, Math.min(monthEndDay, batch.hatchDay) - Math.max(monthStartDay, batch.startDay));
+          if (overlapDays > 0) {
+            monthCost += (16 * 24 * overlapDays / 1000) * electricityKwhCost;
+          }
+          
+          if (batch.adultDay < monthEndDay) {
+            const activeDays = monthEndDay - Math.max(monthStartDay, batch.adultDay);
+            const batchEggs = batch.femalesInBatch * 0.8 * activeDays;
+            eggsProduced += batchEggs;
+            adultFeedCost += batch.femalesInBatch * dailyFeedConsumptionAdult * activeDays * baseData.feedCostPonedoraPerKg;
+            
+            if (monthEndDay >= batch.adultDay) {
+              activeQuailsCountEnd += batch.femalesInBatch;
+            }
+          }
+        });
+        
+        monthRevenue += eggsProduced * pricePerEgg;
+        monthCost += adultFeedCost;
+        monthCost += eggsProduced * packagingCostPerEgg;
+        
+        const activeCages = Math.ceil(activeQuailsCountEnd / 50);
+        monthCost += activeCages * kwhPerCageMonth * electricityKwhCost;
+        activeQuailsThisMonth = activeQuailsCountEnd;
+      }
+      
+      cumulativeRevenue += monthRevenue;
+      cumulativeCost += monthCost;
+      
+      data.push({
+        month: m,
+        label: `Mes ${m}`,
+        revenue: Math.round(cumulativeRevenue),
+        cost: Math.round(cumulativeCost),
+        activeQuails: activeQuailsThisMonth
+      });
+    }
+    
+    return data;
+  };
+
+  const timelineData = generateTimelineData();
+  const maxValue = Math.max(...timelineData.map(d => Math.max(d.cost, d.revenue)), 1000) * 1.15;
+  const gridLevels = 5;
+
+  const xScale = (idx) => 80 + idx * (680 / 12);
+  const yScale = (value) => 310 - (value / maxValue) * 270;
+
+  const formatMoneyCompact = (val) => {
+    if (val >= 1000000) return `$${(val / 1000000).toFixed(1)}M`;
+    if (val >= 1000) return `$${(val / 1000).toFixed(0)}k`;
+    return `$${val}`;
+  };
+
+  // Construir SVG Paths
+  let costLinePath = '';
+  let costAreaPath = '';
+  let revLinePath = '';
+  let revAreaPath = '';
+
+  timelineData.forEach((d, idx) => {
+    const x = xScale(idx);
+    const yCost = yScale(d.cost);
+    const yRev = yScale(d.revenue);
+
+    if (idx === 0) {
+      costLinePath = `M ${x} ${yCost}`;
+      costAreaPath = `M ${x} 310 L ${x} ${yCost}`;
+      
+      revLinePath = `M ${x} ${yRev}`;
+      revAreaPath = `M ${x} 310 L ${x} ${yRev}`;
+    } else {
+      costLinePath += ` L ${x} ${yCost}`;
+      costAreaPath += ` L ${x} ${yCost}`;
+
+      revLinePath += ` L ${x} ${yRev}`;
+      revAreaPath += ` L ${x} ${yRev}`;
+    }
+  });
+
+  costAreaPath += ` L ${xScale(12)} 310 Z`;
+  revAreaPath += ` L ${xScale(12)} 310 Z`;
+
+  // Calcular intersección (Punto de Equilibrio exacto)
+  let crossingMonth = -1;
+  let crossingX = 0;
+  let crossingY = 0;
+  for (let i = 0; i < timelineData.length - 1; i++) {
+    const curr = timelineData[i];
+    const next = timelineData[i+1];
+    if (curr.revenue < curr.cost && next.revenue >= next.cost) {
+      const x1 = xScale(i);
+      const x2 = xScale(i + 1);
+      const y1_rev = yScale(curr.revenue);
+      const y2_rev = yScale(next.revenue);
+      const y1_cost = yScale(curr.cost);
+      const y2_cost = yScale(next.cost);
+      
+      const denom = (y2_rev - y1_rev) - (y2_cost - y1_cost);
+      const t = denom !== 0 ? (y1_cost - y1_rev) / denom : 0.5;
+      
+      crossingMonth = i + t;
+      crossingX = x1 + t * (x2 - x1);
+      crossingY = y1_rev + t * (y2_rev - y1_rev);
+      break;
+    }
+  }
 
   return (
     <div>
@@ -210,7 +409,7 @@ export default function Projections({ token }) {
               onChange={e => setPricePerDozen(Math.max(1, parseInt(e.target.value) || 0))}
               style={{ padding: '0.5rem 0.75rem' }}
             />
-            <small style={{ color: 'var(--text-muted)' }}>Equivale a ${pricePerEgg.toFixed(1)} c/u.</small>
+            <small style={{ color: 'var(--text-muted)' }}>Equivale a ${pricePerEgg.toFixed(2)} c/u.</small>
           </div>
 
           <div className="form-group" style={{ margin: '0' }}>
@@ -524,7 +723,7 @@ export default function Projections({ token }) {
             </div>
             {growthMethod !== 'buy_adults' && (
               <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                Incluye {rearingFeedKg.toFixed(1)} kg de alimento Iniciador para los 35 días previos a la postura.
+                 {rearingFeedKg.toFixed(2)} kg de alimento Iniciador para los 35 días previos a la postura.
               </div>
             )}
           </div>
@@ -550,11 +749,11 @@ export default function Projections({ token }) {
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', paddingLeft: '1rem', borderLeft: '2px solid rgba(255,255,255,0.05)' }}>
                 <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>Equivalente a {monthlyEggs / 30} Maples de 30</span>
-                <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>${(pricePerEgg * 30).toFixed(1)} por Maple</span>
+                <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>${(pricePerEgg * 30).toFixed(2)} por Maple</span>
               </div>
 
               <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '0.75rem' }}>
-                <span style={{ color: 'var(--text-secondary)' }}>Gastos de Alimento Ponedoras ({monthlyFeedConsumptionKg.toFixed(1)} kg):</span>
+                <span style={{ color: 'var(--text-secondary)' }}>Gastos de Alimento Ponedoras ({monthlyFeedConsumptionKg.toFixed(2)} kg):</span>
                 <span style={{ color: '#f87171' }}>- ${Math.round(monthlyFeedCost).toLocaleString()}</span>
               </div>
 
@@ -564,7 +763,7 @@ export default function Projections({ token }) {
               </div>
 
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ color: 'var(--text-secondary)' }}>Costo Energía Eléctrica Focos ({monthlyElectricityCost.toFixed(1)} kWh):</span>
+                <span style={{ color: 'var(--text-secondary)' }}>Costo Energía Eléctrica Focos ({(totalCagesNeeded * kwhPerCageMonth).toFixed(2)} kWh):</span>
                 <span style={{ color: '#f87171' }}>- ${Math.round(monthlyElectricityCost).toLocaleString()}</span>
               </div>
 
@@ -620,6 +819,200 @@ export default function Projections({ token }) {
             </div>
           </div>
 
+        </div>
+
+        {/* --- GRÁFICO DE LÍNEA DE TIEMPO INTERACTIVO --- */}
+        <hr style={{ border: 'none', borderTop: '1px solid rgba(255,255,255,0.05)', margin: '2rem 0' }} />
+        
+        <div>
+          <h4 style={{ color: 'white', marginBottom: '1rem', fontFamily: 'var(--font-heading)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            📈 Curva de Recuperación y Crecimiento (Proyección a 12 Meses)
+          </h4>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: '1.5rem' }}>
+            Visualiza cómo crece la cantidad de codornices ponedoras a medida que finaliza la incubación de cada tanda y cómo se cruzan las líneas de inversión y ganancias acumuladas (punto de equilibrio).
+          </p>
+
+          <div style={{ position: 'relative', width: '100%', background: 'rgba(11, 15, 25, 0.4)', borderRadius: 'var(--border-radius-sm)', border: '1px solid var(--border-color)', padding: '1.5rem' }}>
+            {/* Tooltip flotante */}
+            {hoveredIdx !== null && timelineData[hoveredIdx] && (
+              <div style={{
+                position: 'absolute',
+                top: '10px',
+                left: hoveredIdx < 6 ? `${xScale(hoveredIdx) + 20}px` : `${xScale(hoveredIdx) - 230}px`,
+                background: 'rgba(19, 26, 46, 0.95)',
+                border: '1px solid var(--border-color-hover)',
+                borderRadius: '8px',
+                padding: '0.75rem 1rem',
+                zIndex: 10,
+                pointerEvents: 'none',
+                boxShadow: 'var(--glass-shadow)',
+                fontSize: '0.85rem',
+                minWidth: '220px',
+                backdropFilter: 'blur(8px)'
+              }}>
+                <div style={{ fontWeight: 'bold', color: 'white', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '0.25rem', marginBottom: '0.5rem' }}>
+                  {timelineData[hoveredIdx].label}
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.25rem' }}>
+                  <span style={{ color: 'var(--text-secondary)' }}>Aves Ponedoras:</span>
+                  <span style={{ fontWeight: '600' }}>{timelineData[hoveredIdx].activeQuails} hembras</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.25rem' }}>
+                  <span style={{ color: 'var(--text-secondary)' }}>Ingresos Acum.:</span>
+                  <span style={{ fontWeight: '600', color: 'var(--accent-green)' }}>${timelineData[hoveredIdx].revenue.toLocaleString()}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.25rem' }}>
+                  <span style={{ color: 'var(--text-secondary)' }}>Costos Acum.:</span>
+                  <span style={{ fontWeight: '600', color: 'var(--accent-gold)' }}>${timelineData[hoveredIdx].cost.toLocaleString()}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '0.25rem', marginTop: '0.25rem', fontWeight: 'bold' }}>
+                  <span style={{ color: 'white' }}>Resultado Neto:</span>
+                  <span style={{ color: (timelineData[hoveredIdx].revenue - timelineData[hoveredIdx].cost) >= 0 ? 'var(--accent-green)' : 'var(--accent-red)' }}>
+                    ${(timelineData[hoveredIdx].revenue - timelineData[hoveredIdx].cost).toLocaleString()}
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {/* SVG gráfico */}
+            <svg viewBox="0 0 800 350" style={{ width: '100%', height: 'auto', display: 'block' }}>
+              <defs>
+                {/* Gradientes para las curvas */}
+                <linearGradient id="grad-revenue" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="var(--accent-green)" stopOpacity="0.25" />
+                  <stop offset="100%" stopColor="var(--accent-green)" stopOpacity="0.0" />
+                </linearGradient>
+                <linearGradient id="grad-cost" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="var(--accent-gold)" stopOpacity="0.15" />
+                  <stop offset="100%" stopColor="var(--accent-gold)" stopOpacity="0.0" />
+                </linearGradient>
+                {/* Sombra para el punto de cruce */}
+                <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+                  <feGaussianBlur stdDeviation="3" result="blur" />
+                  <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                </filter>
+              </defs>
+
+              {/* Líneas de cuadrícula horizontal */}
+              {Array.from({ length: gridLevels }).map((_, idx) => {
+                const val = (maxValue / (gridLevels - 1)) * idx;
+                const y = yScale(val);
+                return (
+                  <g key={idx}>
+                    <line x1="80" y1={y} x2="760" y2={y} stroke="var(--border-color)" strokeDasharray="3 3" />
+                    <text x="70" y={y + 4} textAnchor="end" fill="var(--text-muted)" style={{ fontSize: '10px', fontFamily: 'monospace' }}>
+                      {formatMoneyCompact(val)}
+                    </text>
+                  </g>
+                );
+              })}
+
+              {/* Etiquetas del eje X (meses) */}
+              {timelineData.map((d, idx) => {
+                const x = xScale(idx);
+                return (
+                  <g key={idx}>
+                    <line x1={x} y1="310" x2={x} y2="315" stroke="var(--border-color)" />
+                    <text x={x} y="330" textAnchor="middle" fill="var(--text-secondary)" style={{ fontSize: '11px' }}>
+                      M{d.month}
+                    </text>
+                  </g>
+                );
+              })}
+
+              {/* Ejes principales */}
+              <line x1="80" y1="310" x2="760" y2="310" stroke="var(--border-color)" strokeWidth="1.5" />
+              <line x1="80" y1="40" x2="80" y2="310" stroke="var(--border-color)" strokeWidth="1.5" />
+
+              {/* Área y Línea de Inversiones Acumuladas */}
+              <path d={costAreaPath} fill="url(#grad-cost)" />
+              <path d={costLinePath} fill="none" stroke="var(--accent-gold)" strokeWidth="3" strokeLinecap="round" />
+
+              {/* Área y Línea de Ganancias Acumuladas */}
+              <path d={revAreaPath} fill="url(#grad-revenue)" />
+              <path d={revLinePath} fill="none" stroke="var(--accent-green)" strokeWidth="3" strokeLinecap="round" />
+
+              {/* Línea vertical de hover */}
+              {hoveredIdx !== null && (
+                <line 
+                  x1={xScale(hoveredIdx)} 
+                  y1="40" 
+                  x2={xScale(hoveredIdx)} 
+                  y2="310" 
+                  stroke="rgba(255, 255, 255, 0.2)" 
+                  strokeDasharray="4 4" 
+                  strokeWidth="1.5" 
+                />
+              )}
+
+              {/* Punto de intersección (Equilibrio / ROI) */}
+              {crossingMonth !== -1 && (
+                <g filter="url(#glow)">
+                  <circle cx={crossingX} cy={crossingY} r="8" fill="var(--accent-green)" />
+                  <circle cx={crossingX} cy={crossingY} r="4" fill="white" />
+                  {/* Etiqueta de Punto de Equilibrio */}
+                  <rect 
+                    x={crossingX - 60} 
+                    y={crossingY - 30} 
+                    width="120" 
+                    height="20" 
+                    rx="4" 
+                    fill="var(--bg-secondary)" 
+                    stroke="var(--accent-green)" 
+                    strokeWidth="1" 
+                  />
+                  <text 
+                    x={crossingX} 
+                    y={crossingY - 16} 
+                    textAnchor="middle" 
+                    fill="var(--accent-green)" 
+                    style={{ fontSize: '9px', fontWeight: 'bold' }}
+                  >
+                    RETORNO (ROI)
+                  </text>
+                </g>
+              )}
+
+              {/* Puntos destacados en hover */}
+              {hoveredIdx !== null && timelineData[hoveredIdx] && (
+                <g>
+                  <circle cx={xScale(hoveredIdx)} cy={yScale(timelineData[hoveredIdx].cost)} r="6" fill="var(--accent-gold)" stroke="white" strokeWidth="1.5" />
+                  <circle cx={xScale(hoveredIdx)} cy={yScale(timelineData[hoveredIdx].revenue)} r="6" fill="var(--accent-green)" stroke="white" strokeWidth="1.5" />
+                </g>
+              )}
+
+              {/* Rectángulos transparentes para captura de hover */}
+              {timelineData.map((d, idx) => {
+                const x = xScale(idx);
+                const step = 680 / 12;
+                return (
+                  <rect
+                    key={idx}
+                    x={x - step / 2}
+                    y="40"
+                    width={step}
+                    height="270"
+                    fill="transparent"
+                    style={{ cursor: 'pointer' }}
+                    onMouseEnter={() => setHoveredIdx(idx)}
+                    onMouseLeave={() => setHoveredIdx(null)}
+                  />
+                );
+              })}
+            </svg>
+
+            {/* Leyenda del gráfico */}
+            <div style={{ display: 'flex', justifyContent: 'center', gap: '2rem', marginTop: '1rem', fontSize: '0.85rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <div style={{ width: '12px', height: '12px', background: 'var(--accent-gold)', borderRadius: '2px' }}></div>
+                <span style={{ color: 'var(--text-secondary)' }}>Inversión Acumulada (Costos)</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <div style={{ width: '12px', height: '12px', background: 'var(--accent-green)', borderRadius: '2px' }}></div>
+                <span style={{ color: 'var(--text-secondary)' }}>Ingresos Acumulados (Ganancias)</span>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>

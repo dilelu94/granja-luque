@@ -1,5 +1,17 @@
 import React, { useState, useEffect } from 'react';
 
+const formatDateTime = (dateStr) => {
+  if (!dateStr) return '';
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return dateStr;
+  const day = String(d.getDate()).padStart(2, '0');
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const year = d.getFullYear();
+  const hours = String(d.getHours()).padStart(2, '0');
+  const minutes = String(d.getMinutes()).padStart(2, '0');
+  return `${day}/${month}/${year} ${hours}:${minutes}`;
+};
+
 export default function Orders({ token }) {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -218,7 +230,7 @@ Una vez completado el pago, el sistema registrará tu pedido automáticamente. �
                       ${order.totalPrice}
                     </td>
                     <td style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-                      {new Date(order.createdAt).toLocaleString()}
+                      {formatDateTime(order.createdAt)}
                     </td>
                     <td>
                       {getStatusBadge(order.status)}

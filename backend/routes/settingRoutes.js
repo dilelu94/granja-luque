@@ -1,5 +1,6 @@
 import express from 'express';
 import { Settings } from '../models/Settings.js';
+import { FeedStock } from '../models/FeedStock.js';
 import { authenticateToken } from './authRoutes.js';
 
 const router = express.Router();
@@ -48,6 +49,10 @@ router.put('/', authenticateToken, async (req, res) => {
   }
 
   try {
+    // Descontar consumo automático usando las tasas antiguas antes de guardarlas
+    const oldSettings = await Settings.getAll();
+    await FeedStock.deductAutomaticConsumption(oldSettings);
+
     for (const [key, value] of Object.entries(newSettings)) {
       await Settings.set(key, value);
     }

@@ -103,12 +103,9 @@ export class FeedStock {
     let dailyLayingNeed = 0;
 
     activeBatches.forEach(batch => {
-      const consumption = batch.getDailyFeedConsumption(settings);
-      if (batch.getFeedType() === 'iniciador') {
-        dailyInitiatorNeed += consumption;
-      } else {
-        dailyLayingNeed += consumption;
-      }
+      const breakdown = batch.getDailyFeedConsumptionBreakdown(settings);
+      dailyInitiatorNeed += breakdown.initiator;
+      dailyLayingNeed += breakdown.ponedora;
     });
 
     const initiatorStock = await FeedStock.getByType('iniciador');
@@ -176,12 +173,9 @@ export class FeedStock {
     let dailyLayingNeed = 0;
 
     activeBatches.forEach(batch => {
-      const consumption = batch.getDailyFeedConsumption(settings);
-      if (batch.getFeedType() === 'iniciador') {
-        dailyInitiatorNeed += consumption;
-      } else {
-        dailyLayingNeed += consumption;
-      }
+      const breakdown = batch.getDailyFeedConsumptionBreakdown(settings);
+      dailyInitiatorNeed += breakdown.initiator;
+      dailyLayingNeed += breakdown.ponedora;
     });
 
     const initiatorStock = await FeedStock.getByType('iniciador');

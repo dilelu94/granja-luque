@@ -13,7 +13,18 @@ export default function App() {
   const [token, setToken] = useState(localStorage.getItem('token') || null);
   const [username, setUsername] = useState(localStorage.getItem('username') || '');
   const [role, setRole] = useState(localStorage.getItem('role') || 'admin');
-  const [view, setView] = useState('shop'); // 'shop', 'login', 'dashboard', 'orders', 'inventory', 'calendar', 'settings'
+  const [view, setView] = useState(() => {
+    const savedView = localStorage.getItem('currentView');
+    const hasToken = !!localStorage.getItem('token');
+    if (!hasToken) {
+      return 'shop';
+    }
+    return savedView || 'dashboard';
+  });
+
+  useEffect(() => {
+    localStorage.setItem('currentView', view);
+  }, [view]);
 
   // Si hay un cambio en el token, verificar validez al arrancar
   useEffect(() => {
@@ -54,6 +65,7 @@ export default function App() {
     localStorage.removeItem('token');
     localStorage.removeItem('username');
     localStorage.removeItem('role');
+    localStorage.removeItem('currentView');
     setToken(null);
     setUsername('');
     setRole('admin');

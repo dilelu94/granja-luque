@@ -41,6 +41,16 @@ export async function initializeDatabase() {
     )
   `);
 
+  // 2.5. Tabla de Jaulas (Cages)
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS cages (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT UNIQUE NOT NULL,
+      capacity INTEGER NOT NULL DEFAULT 50,
+      notes TEXT
+    )
+  `);
+
   // 3. Tabla de Lotes de Codornices (Aves)
   await db.exec(`
     CREATE TABLE IF NOT EXISTS quail_batches (
@@ -97,6 +107,9 @@ export async function initializeDatabase() {
 
   // --- MIGRACIONES PARA LA TABLA USERS (Roles) ---
   await addColumnIfNotExists(db, 'users', 'role', "TEXT CHECK(role IN ('super_admin', 'admin')) NOT NULL DEFAULT 'admin'");
+
+  // --- MIGRACIONES PARA LA TABLA QUAIL_BATCHES (Jaulas) ---
+  await addColumnIfNotExists(db, 'quail_batches', 'cage_id', 'INTEGER REFERENCES cages(id)');
 
   // 7. Tabla de Pedidos de Venta
   await db.exec(`
@@ -155,21 +168,36 @@ export async function initializeDatabase() {
     )
   `);
 
+  // 11. Nueva Tabla de Incubaciones
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS incubations (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      eggs_count INTEGER NOT NULL,
+      start_date TEXT NOT NULL, -- YYYY-MM-DD HH:MM
+      status TEXT CHECK(status IN ('active', 'completed', 'cancelled')) NOT NULL DEFAULT 'active',
+      notes TEXT
+    )
+  `);
+
   // --- POBLACIÓN DE DATOS POR DEFECTO ---
 
   // Crear usuario administrador por defecto
   const adminUser = process.env.ADMIN_USERNAME || 'admin';
   const adminPass = process.env.ADMIN_PASSWORD || 'adminpass';
   
-  const existingAdmin = await db.get('SELECT id FROM users WHERE username = ?', [adminUser]);
-  if (!existingAdmin) {
+  const anyUser = await db.get('SELECT id FROM users LIMIT 1');
+  if (!anyUser) {
+    // Si la tabla de usuarios está completamente vacía (instalación inicial)
     const salt = await bcryptjs.genSalt(10);
     const hashedPassword = await bcryptjs.hash(adminPass, salt);
     await db.run("INSERT INTO users (username, password, role) VALUES (?, ?, 'super_admin')", [adminUser, hashedPassword]);
     console.log(`Usuario administrador por defecto creado: ${adminUser} (super_admin)`);
   } else {
-    // Asegurar que el usuario administrador inicial tenga el rol de super_admin
-    await db.run("UPDATE users SET role = 'super_admin' WHERE id = 1");
+    // Si ya existe el usuario 'admin', asegurar que tenga el rol de 'super_admin'
+    const existingAdmin = await db.get('SELECT id FROM users WHERE username = ?', [adminUser]);
+    if (existingAdmin) {
+      await db.run("UPDATE users SET role = 'super_admin' WHERE username = ?", [adminUser]);
+    }
   }
 
   // Insertar configuraciones iniciales

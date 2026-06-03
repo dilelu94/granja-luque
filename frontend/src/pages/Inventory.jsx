@@ -2,19 +2,30 @@ import React, { useState, useEffect } from 'react';
 
 const formatDate = (dateStr) => {
   if (!dateStr) return '';
+  if (typeof dateStr === 'string' && (dateStr.includes('T') || dateStr.includes(' '))) {
+    const d = new Date(dateStr);
+    if (!isNaN(d.getTime())) {
+      const day = String(d.getDate()).padStart(2, '0');
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const year = d.getFullYear();
+      return `${day}/${month}/${year}`;
+    }
+  }
   const parts = dateStr.split('-');
   if (parts.length === 3) {
-    return `${parts[2]}/${parts[1]}/${parts[0]}`;
+    const dayPart = parts[2].split(' ')[0].split('T')[0];
+    return `${dayPart}/${parts[1]}/${parts[0]}`;
   }
   return dateStr;
 };
 
 export default function Inventory({ token }) {
-  const [activeTab, setActiveTab] = useState('birds'); // 'birds' | 'feed' | 'products'
+  const [activeTab, setActiveTab] = useState('birds'); // 'birds' | 'feed' | 'products' | 'cages'
   const [batches, setBatches] = useState([]);
   const [feed, setFeed] = useState({ initiator: { stock: 0 }, ponedora: { stock: 0 } });
   const [products, setProducts] = useState([]);
   const [settings, setSettings] = useState({ egg_base_cost: '15.0' });
+  const [cages, setCages] = useState([]);
   
   // Modals / Forms States
   const [showBatchModal, setShowBatchModal] = useState(false);
@@ -24,17 +35,22 @@ export default function Inventory({ token }) {
   const [showPackModal, setShowPackModal] = useState(false);
   const [showFeedModal, setShowFeedModal] = useState(false);
   const [showProductModal, setShowProductModal] = useState(false);
+  const [showCageModal, setShowCageModal] = useState(false);
+  const [showEditCageModal, setShowEditCageModal] = useState(false);
 
   // Form inputs
-  const [batchForm, setBatchForm] = useState({ name: '', type: 'chick', initialQuantity: '', birthDate: '', notes: '' });
-  const [editBatchForm, setEditBatchForm] = useState({ id: '', name: '', type: 'chick', initialQuantity: '', currentQuantity: '', birthDate: '', status: 'active', notes: '' });
+  const [batchForm, setBatchForm] = useState({ name: '', type: 'chick', initialQuantity: '', birthDate: '', notes: '', cageId: '' });
+  const [editBatchForm, setEditBatchForm] = useState({ id: '', name: '', type: 'chick', initialQuantity: '', currentQuantity: '', birthDate: '', status: 'active', notes: '', cageId: '' });
   const [selectedBatchId, setSelectedBatchId] = useState(null);
   const [mortalityForm, setMortalityForm] = useState({ count: '', reason: 'Muerte / Enfermedad', notes: '' });
   
   const [eggForm, setEggForm] = useState({ date: new Date().toISOString().split('T')[0], quantityCollected: '', quantityBroken: '', notes: '' });
-  const [packForm, setPackForm] = useState({ productId: '', packagesCount: '', eggsPerPackage: '30' });
+  const [packForm, setPackForm] = useState({ productId: '', packagesCount: '', eggsPerPackage: '' });
   const [feedForm, setFeedForm] = useState({ type: 'ponedora', action: 'buy', quantity: '', price: '', shippingCost: '', purchaseDate: new Date().toISOString().split('T')[0] });
   const [feedPurchases, setFeedPurchases] = useState([]);
+
+  const [cageForm, setCageForm] = useState({ name: '', capacity: '50', notes: '' });
+  const [editCageForm, setEditCageForm] = useState({ id: '', name: '', capacity: '', notes: '' });
   
   // Producto Form (Crear / Editar)
   const [productForm, setProductForm] = useState({
@@ -66,6 +82,11 @@ export default function Inventory({ token }) {
       const resBatches = await fetch('/api/inventory/quail-batches', { headers });
       const dataBatches = await resBatches.json();
       setBatches(dataBatches);
+
+      // 1.5. Jaulas
+      const resCages = await fetch('/api/inventory/cages', { headers });
+      const dataCages = await resCages.json();
+      setCages(dataCages);
 
       // 2. Alimentos
       const resFeed = await fetch('/api/inventory/feed', { headers });
@@ -119,14 +140,17 @@ export default function Inventory({ token }) {
       const res = await fetch('/api/inventory/quail-batches', {
         method: 'POST',
         headers,
-        body: JSON.stringify(batchForm)
+        body: JSON.stringify({
+          ...batchForm,
+          cageId: batchForm.cageId ? Number(batchForm.cageId) : null
+        })
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
 
       showNotification('Lote de codornices registrado e hitos agendados en el calendario.');
       setShowBatchModal(false);
-      setBatchForm({ name: '', type: 'chick', initialQuantity: '', birthDate: '', notes: '' });
+      setBatchForm({ name: '', type: 'chick', initialQuantity: '', birthDate: '', notes: '', cageId: '' });
       fetchData();
     } catch (err) {
       showNotification(err.message, true);
@@ -143,7 +167,8 @@ export default function Inventory({ token }) {
       currentQuantity: batch.currentQuantity,
       birthDate: batch.birthDate,
       status: batch.status,
-      notes: batch.notes || ''
+      notes: batch.notes || '',
+      cageId: batch.cageId || ''
     });
     setShowEditBatchModal(true);
   };
@@ -161,7 +186,8 @@ export default function Inventory({ token }) {
           currentQuantity: Number(editBatchForm.currentQuantity),
           birthDate: editBatchForm.birthDate,
           status: editBatchForm.status,
-          notes: editBatchForm.notes
+          notes: editBatchForm.notes,
+          cageId: editBatchForm.cageId ? Number(editBatchForm.cageId) : null
         })
       });
       const data = await res.json();
@@ -228,14 +254,101 @@ export default function Inventory({ token }) {
       const res = await fetch('/api/inventory/eggs/pack', {
         method: 'POST',
         headers,
-        body: JSON.stringify(packForm)
+        body: JSON.stringify({
+          productId: packForm.productId,
+          packagesCount: Number(packForm.packagesCount)
+        })
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
 
       showNotification('Huevos empaquetados e incrementado el stock del producto.');
       setShowPackModal(false);
-      setPackForm({ productId: '', packagesCount: '', eggsPerPackage: '30' });
+      setPackForm({ productId: '', packagesCount: '', eggsPerPackage: '' });
+      fetchData();
+    } catch (err) {
+      showNotification(err.message, true);
+    }
+  };
+
+  const handleProductChangeForPacking = (productId) => {
+    const prod = products.find(p => p.id === Number(productId));
+    setPackForm({
+      ...packForm,
+      productId,
+      eggsPerPackage: prod ? String(prod.eggCount || 30) : '30'
+    });
+  };
+
+  // 4.5. CRUD de Jaulas
+  const handleCreateCage = async (e) => {
+    e.preventDefault();
+    try {
+      const res = await fetch('/api/inventory/cages', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          name: cageForm.name,
+          capacity: Number(cageForm.capacity),
+          notes: cageForm.notes
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+
+      showNotification('Jaula creada con éxito.');
+      setShowCageModal(false);
+      setCageForm({ name: '', capacity: '50', notes: '' });
+      fetchData();
+    } catch (err) {
+      showNotification(err.message, true);
+    }
+  };
+
+  const handleEditCageClick = (cage) => {
+    setEditCageForm({
+      id: cage.id,
+      name: cage.name,
+      capacity: cage.capacity,
+      notes: cage.notes || ''
+    });
+    setShowEditCageModal(true);
+  };
+
+  const handleSaveCage = async (e) => {
+    e.preventDefault();
+    try {
+      const res = await fetch(`/api/inventory/cages/${editCageForm.id}`, {
+        method: 'PUT',
+        headers,
+        body: JSON.stringify({
+          name: editCageForm.name,
+          capacity: Number(editCageForm.capacity),
+          notes: editCageForm.notes
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+
+      showNotification('Jaula actualizada con éxito.');
+      setShowEditCageModal(false);
+      fetchData();
+    } catch (err) {
+      showNotification(err.message, true);
+    }
+  };
+
+  const handleDeleteCage = async (id) => {
+    if (!window.confirm('¿Estás seguro de eliminar esta jaula? Los lotes vinculados no se eliminarán pero quedarán sin jaula asignada.')) return;
+    try {
+      const res = await fetch(`/api/inventory/cages/${id}`, {
+        method: 'DELETE',
+        headers
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+
+      showNotification('Jaula eliminada con éxito.');
       fetchData();
     } catch (err) {
       showNotification(err.message, true);
@@ -367,6 +480,7 @@ export default function Inventory({ token }) {
         <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
           <button className="btn btn-primary" onClick={() => setShowEggModal(true)}>🥚 Recolectar Huevos</button>
           <button className="btn btn-secondary" onClick={() => setShowPackModal(true)}>📦 Empaquetar</button>
+          <button className="btn btn-secondary" onClick={() => setShowCageModal(true)}>🪵 Nueva Jaula</button>
           <button className="btn btn-gold" onClick={() => setShowBatchModal(true)}>🐤 Nuevo Lote Aves</button>
           <button className="btn btn-secondary" onClick={() => setShowFeedModal(true)}>🌾 Cargar Alimento</button>
         </div>
@@ -384,6 +498,17 @@ export default function Inventory({ token }) {
           onClick={() => setActiveTab('birds')}
         >
           🐤 Lotes de Aves
+        </button>
+        <button 
+          className="btn" 
+          style={{
+            borderBottom: activeTab === 'cages' ? '2px solid var(--accent-green)' : 'none',
+            borderRadius: '0', background: 'none', color: activeTab === 'cages' ? 'var(--text-primary)' : 'var(--text-secondary)',
+            fontWeight: '600'
+          }}
+          onClick={() => setActiveTab('cages')}
+        >
+          🪵 Jaulas
         </button>
         <button 
           className="btn" 
@@ -436,6 +561,7 @@ export default function Inventory({ token }) {
                 <thead>
                   <tr>
                     <th>Lote</th>
+                    <th>Jaula</th>
                     <th>Tipo / Edad</th>
                     <th>Cantidad Inicial</th>
                     <th>Cantidad Actual</th>
@@ -458,6 +584,15 @@ export default function Inventory({ token }) {
                         <td style={{ fontWeight: '600' }}>
                           {batch.name}
                           {batch.notes && <div style={{ fontSize: '0.75rem', fontWeight: 'normal', color: 'var(--text-secondary)' }}>{batch.notes}</div>}
+                        </td>
+                        <td>
+                          {batch.cageName ? (
+                            <span style={{ fontWeight: '600', color: 'var(--accent-gold)' }}>
+                              🪵 {batch.cageName}
+                            </span>
+                          ) : (
+                            <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>-</span>
+                          )}
                         </td>
                         <td>
                           <span className={`badge ${batch.type === 'chick' ? 'badge-approved' : 'badge-pending'}`}>
@@ -486,7 +621,7 @@ export default function Inventory({ token }) {
                                   setShowMortalityModal(true);
                                 }}
                               >
-                                💀 Bajas
+                                Baja
                               </button>
                             )}
                             <button 
@@ -495,6 +630,105 @@ export default function Inventory({ token }) {
                               onClick={() => handleEditBatchClick(batch)}
                             >
                               ✏️ Editar
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* =======================================================
+          TAB: JAULAS
+         ======================================================= */}
+      {activeTab === 'cages' && (
+        <div className="glass-card">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem' }}>
+            <h3 style={{ margin: 0, fontFamily: 'var(--font-heading)' }}>
+              Gestión de Jaulas 🪵
+            </h3>
+            <button className="btn btn-primary" onClick={() => setShowCageModal(true)}>
+              🪵 Agregar Jaula
+            </button>
+          </div>
+          
+          {cages.length === 0 ? (
+            <p style={{ color: 'var(--text-secondary)', padding: '1rem' }}>No hay jaulas registradas.</p>
+          ) : (
+            <div className="table-container">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Jaula</th>
+                    <th>Capacidad</th>
+                    <th>Ocupación Actual</th>
+                    <th>Lotes de aves alojados</th>
+                    <th>Notas</th>
+                    <th>Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {cages.map(cage => {
+                    const occupancyPercent = cage.capacity > 0 ? Math.round((cage.current_occupancy / cage.capacity) * 100) : 0;
+                    const cageBatches = batches.filter(b => b.cageId === cage.id && b.status === 'active');
+                    
+                    return (
+                      <tr key={cage.id}>
+                        <td style={{ fontWeight: 'bold' }}>{cage.name}</td>
+                        <td>{cage.capacity} aves</td>
+                        <td>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            <span style={{
+                              color: occupancyPercent > 100 ? 'var(--accent-red)' : occupancyPercent >= 90 ? 'var(--accent-gold)' : 'var(--accent-green)',
+                              fontWeight: '600'
+                            }}>
+                              {cage.current_occupancy} / {cage.capacity} ({occupancyPercent}%)
+                            </span>
+                            <div style={{
+                              width: '60px', height: '8px', background: '#374151', borderRadius: '4px', overflow: 'hidden'
+                            }}>
+                              <div style={{
+                                width: `${Math.min(100, occupancyPercent)}%`,
+                                height: '100%',
+                                background: occupancyPercent > 100 ? 'var(--accent-red)' : occupancyPercent >= 90 ? 'var(--accent-gold)' : 'var(--accent-green)'
+                              }} />
+                            </div>
+                          </div>
+                        </td>
+                        <td>
+                          {cageBatches.length === 0 ? (
+                            <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>Vacía</span>
+                          ) : (
+                            <ul style={{ margin: 0, paddingLeft: '1.2rem', fontSize: '0.85rem' }}>
+                              {cageBatches.map(b => (
+                                <li key={b.id}>
+                                  <strong>{b.name}</strong> ({b.currentQuantity} {b.type === 'chick' ? 'polluelos' : 'adultas'}, {b.birthDate})
+                                </li>
+                              ))}
+                            </ul>
+                          )}
+                        </td>
+                        <td style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>{cage.notes || '-'}</td>
+                        <td>
+                          <div style={{ display: 'flex', gap: '0.5rem' }}>
+                            <button 
+                              className="btn btn-secondary" 
+                              style={{ padding: '0.25rem 0.5rem', fontSize: '0.8rem' }}
+                              onClick={() => handleEditCageClick(cage)}
+                            >
+                              ✏️ Editar
+                            </button>
+                            <button 
+                              className="btn btn-secondary" 
+                              style={{ padding: '0.25rem 0.5rem', fontSize: '0.8rem', borderColor: 'var(--accent-red)', color: 'var(--accent-red)' }}
+                              onClick={() => handleDeleteCage(cage.id)}
+                            >
+                              🗑️ Borrar
                             </button>
                           </div>
                         </td>
@@ -519,7 +753,7 @@ export default function Inventory({ token }) {
               <div>
                 <h3 style={{ fontSize: '1rem', color: 'var(--text-secondary)' }}>Total Stock Alimento</h3>
                 <div style={{ fontSize: '1.8rem', fontWeight: 'bold', color: 'var(--accent-green)' }}>
-                  {((feed.ponedora?.stock || 0) + (feed.initiator?.stock || 0)).toFixed(1)} kg
+                  {((feed.ponedora?.stock || 0) + (feed.initiator?.stock || 0)).toFixed(2)} kg
                 </div>
                 <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
                   Ponedoras + Iniciador
@@ -531,7 +765,7 @@ export default function Inventory({ token }) {
               <div style={{ fontSize: '3rem' }}>🌾</div>
               <div>
                 <h3 style={{ fontSize: '1rem', color: 'var(--text-secondary)' }}>Alimento Ponedoras</h3>
-                <div style={{ fontSize: '1.8rem', fontWeight: 'bold', color: 'var(--accent-gold)' }}>{(feed.ponedora?.stock || 0).toFixed(1)} kg</div>
+                <div style={{ fontSize: '1.8rem', fontWeight: 'bold', color: 'var(--accent-gold)' }}>{(feed.ponedora?.stock || 0).toFixed(2)} kg</div>
                 <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
                   Consumo: {(feed.ponedora?.dailyConsumption || 0).toFixed(2)} kg/día
                 </div>
@@ -542,7 +776,7 @@ export default function Inventory({ token }) {
               <div style={{ fontSize: '3rem' }}>🧪</div>
               <div>
                 <h3 style={{ fontSize: '1rem', color: 'var(--text-secondary)' }}>Alimento Iniciador</h3>
-                <div style={{ fontSize: '1.8rem', fontWeight: 'bold', color: 'var(--accent-blue)' }}>{(feed.initiator?.stock || 0).toFixed(1)} kg</div>
+                <div style={{ fontSize: '1.8rem', fontWeight: 'bold', color: 'var(--accent-blue)' }}>{(feed.initiator?.stock || 0).toFixed(2)} kg</div>
                 <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
                   Consumo: {(feed.initiator?.dailyConsumption || 0).toFixed(2)} kg/día
                 </div>
@@ -576,7 +810,7 @@ export default function Inventory({ token }) {
                   <tbody>
                     {feedPurchases.map(purchase => {
                       const totalCost = purchase.price + purchase.shipping_cost;
-                      const costPerKg = purchase.quantity_kg > 0 ? (totalCost / purchase.quantity_kg).toFixed(2) : 0;
+                      const costPerKg = purchase.quantity_kg > 0 ? (totalCost / purchase.quantity_kg).toFixed(2) : '0.00';
                       return (
                         <tr key={purchase.id}>
                           <td style={{ fontWeight: '600' }}>{formatDate(purchase.purchase_date)}</td>
@@ -585,10 +819,10 @@ export default function Inventory({ token }) {
                               {purchase.feed_type === 'iniciador' ? 'Iniciador' : 'Ponedora'}
                             </span>
                           </td>
-                          <td style={{ fontWeight: '600' }}>{purchase.quantity_kg} kg</td>
-                          <td>${purchase.price}</td>
-                          <td>${purchase.shipping_cost}</td>
-                          <td style={{ fontWeight: 'bold', color: 'var(--accent-gold)' }}>${totalCost}</td>
+                          <td style={{ fontWeight: '600' }}>{Number(purchase.quantity_kg).toFixed(2)} kg</td>
+                          <td>${Number(purchase.price).toFixed(2)}</td>
+                          <td>${Number(purchase.shipping_cost).toFixed(2)}</td>
+                          <td style={{ fontWeight: 'bold', color: 'var(--accent-gold)' }}>${totalCost.toFixed(2)}</td>
                           <td style={{ color: 'var(--text-secondary)' }}>${costPerKg}/kg</td>
                         </tr>
                       );
@@ -680,15 +914,15 @@ export default function Inventory({ token }) {
                       <td>
                         <span className="badge badge-pending">{prod.category}</span>
                       </td>
-                      <td style={{ fontWeight: 'bold', color: 'var(--accent-gold)' }}>${prod.price}</td>
+                      <td style={{ fontWeight: 'bold', color: 'var(--accent-gold)' }}>${Number(prod.price).toFixed(2)}</td>
                       <td style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-                        📦 Envase plástico: ${containerCost}
-                        <br />🏷️ Etiqueta: ${labelCost}
-                        {eggCount > 0 && <><br />🥚 Huevos ({eggCount}): ${rawCost} (${eggUnitCost} c/u)</>}
+                        📦 Envase plástico: ${Number(containerCost).toFixed(2)}
+                        <br />🏷️ Etiqueta: ${Number(labelCost).toFixed(2)}
+                        {eggCount > 0 && <><br />🥚 Huevos ({eggCount}): ${Number(rawCost).toFixed(2)} (${Number(eggUnitCost).toFixed(2)} c/u)</>}
                       </td>
-                      <td style={{ fontWeight: 'bold' }}>${totalCost}</td>
+                      <td style={{ fontWeight: 'bold' }}>${totalCost.toFixed(2)}</td>
                       <td style={{ color: margin >= 0 ? 'var(--accent-green)' : 'var(--accent-red)', fontWeight: 'bold' }}>
-                        ${margin} ({marginPercent}%)
+                        ${margin.toFixed(2)} ({marginPercent}%)
                       </td>
                       <td style={{ fontWeight: '600', color: prod.stock > 0 ? 'var(--text-primary)' : 'var(--accent-red)' }}>
                         {prod.stock} uds
@@ -907,6 +1141,22 @@ export default function Inventory({ token }) {
               </div>
 
               <div className="form-group">
+                <label>Jaula de Aves 🪵</label>
+                <select 
+                  className="form-control"
+                  value={batchForm.cageId}
+                  onChange={e => setBatchForm({ ...batchForm, cageId: e.target.value })}
+                >
+                  <option value="">-- Sin jaula (Libre) --</option>
+                  {cages.map(cage => (
+                    <option key={cage.id} value={cage.id}>
+                      {cage.name} (Capac: {cage.capacity}, Ocup: {cage.current_occupancy}/{cage.capacity})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="form-group">
                 <label>Cantidad de Aves</label>
                 <input 
                   type="number" 
@@ -1080,7 +1330,7 @@ export default function Inventory({ token }) {
                   className="form-control" 
                   required
                   value={packForm.productId}
-                  onChange={e => setPackForm({ ...packForm, productId: e.target.value })}
+                  onChange={e => handleProductChangeForPacking(e.target.value)}
                 >
                   <option value="">-- Elige un producto --</option>
                   {products.filter(p => p.category === 'eggs' || p.category === 'processed').map(p => (
@@ -1102,14 +1352,14 @@ export default function Inventory({ token }) {
               </div>
 
               <div className="form-group">
-                <label>Equivalente de huevos por empaque</label>
+                <label>Equivalente de huevos por empaque (definido en el producto)</label>
                 <input 
                   type="number" 
                   className="form-control" 
-                  placeholder="30" 
-                  required
+                  readOnly
+                  disabled
+                  placeholder="Se auto-completa al elegir producto"
                   value={packForm.eggsPerPackage}
-                  onChange={e => setPackForm({ ...packForm, eggsPerPackage: e.target.value })}
                 />
               </div>
 
@@ -1245,6 +1495,22 @@ export default function Inventory({ token }) {
                 </select>
               </div>
 
+              <div className="form-group">
+                <label>Jaula de Aves 🪵</label>
+                <select 
+                  className="form-control"
+                  value={editBatchForm.cageId}
+                  onChange={e => setEditBatchForm({ ...editBatchForm, cageId: e.target.value })}
+                >
+                  <option value="">-- Sin jaula (Libre) --</option>
+                  {cages.map(cage => (
+                    <option key={cage.id} value={cage.id}>
+                      {cage.name} (Capac: {cage.capacity}, Ocup: {cage.current_occupancy}/{cage.capacity})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
               <div style={{ display: 'flex', gap: '1rem' }}>
                 <div className="form-group" style={{ flex: '1' }}>
                   <label>Cantidad Inicial</label>
@@ -1305,6 +1571,105 @@ export default function Inventory({ token }) {
               <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1.5rem' }}>
                 <button type="submit" className="btn btn-primary" style={{ flex: '1' }}>Guardar Cambios</button>
                 <button type="button" className="btn btn-secondary" style={{ flex: '1' }} onClick={() => setShowEditBatchModal(false)}>Cancelar</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* =======================================================
+          MODAL: CREAR JAULA
+         ======================================================= */}
+      {showCageModal && (
+        <div className="modal-overlay">
+          <div className="modal-content">
+            <h3 style={{ marginBottom: '1.5rem' }}>Crear Nueva Jaula</h3>
+            <form onSubmit={handleCreateCage}>
+              <div className="form-group">
+                <label>Nombre / Identificador de la Jaula</label>
+                <input 
+                  type="text" 
+                  className="form-control" 
+                  placeholder="Jaula A1" 
+                  required
+                  value={cageForm.name}
+                  onChange={e => setCageForm({ ...cageForm, name: e.target.value })}
+                />
+              </div>
+
+              <div className="form-group">
+                <label>Capacidad Máxima (Aves)</label>
+                <input 
+                  type="number" 
+                  className="form-control" 
+                  placeholder="50" 
+                  required
+                  value={cageForm.capacity}
+                  onChange={e => setCageForm({ ...cageForm, capacity: e.target.value })}
+                />
+              </div>
+
+              <div className="form-group">
+                <label>Notas / Descripción</label>
+                <textarea 
+                  className="form-control" 
+                  placeholder="Material, ubicación, foco de luz..."
+                  value={cageForm.notes}
+                  onChange={e => setCageForm({ ...cageForm, notes: e.target.value })}
+                />
+              </div>
+
+              <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1.5rem' }}>
+                <button type="submit" className="btn btn-primary" style={{ flex: '1' }}>Crear</button>
+                <button type="button" className="btn btn-secondary" style={{ flex: '1' }} onClick={() => setShowCageModal(false)}>Cancelar</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* =======================================================
+          MODAL: EDITAR JAULA
+         ======================================================= */}
+      {showEditCageModal && (
+        <div className="modal-overlay">
+          <div className="modal-content">
+            <h3 style={{ marginBottom: '1.5rem' }}>Editar Jaula</h3>
+            <form onSubmit={handleSaveCage}>
+              <div className="form-group">
+                <label>Nombre / Identificador de la Jaula</label>
+                <input 
+                  type="text" 
+                  className="form-control" 
+                  required
+                  value={editCageForm.name}
+                  onChange={e => setEditCageForm({ ...editCageForm, name: e.target.value })}
+                />
+              </div>
+
+              <div className="form-group">
+                <label>Capacidad Máxima (Aves)</label>
+                <input 
+                  type="number" 
+                  className="form-control" 
+                  required
+                  value={editCageForm.capacity}
+                  onChange={e => setEditCageForm({ ...editCageForm, capacity: e.target.value })}
+                />
+              </div>
+
+              <div className="form-group">
+                <label>Notas / Descripción</label>
+                <textarea 
+                  className="form-control" 
+                  value={editCageForm.notes}
+                  onChange={e => setEditCageForm({ ...editCageForm, notes: e.target.value })}
+                />
+              </div>
+
+              <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1.5rem' }}>
+                <button type="submit" className="btn btn-primary" style={{ flex: '1' }}>Guardar Cambios</button>
+                <button type="button" className="btn btn-secondary" style={{ flex: '1' }} onClick={() => setShowEditCageModal(false)}>Cancelar</button>
               </div>
             </form>
           </div>

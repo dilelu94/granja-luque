@@ -9,6 +9,8 @@ import { Product } from '../models/Product.js';
 import { CalendarEvent } from '../models/CalendarEvent.js';
 import { Settings } from '../models/Settings.js';
 import { User } from '../models/User.js';
+import { Incubation } from '../models/Incubation.js';
+import { Cage } from '../models/Cage.js';
 import { getDatabaseConnection } from '../db/connection.js';
 import bcryptjs from 'bcryptjs';
 
@@ -48,7 +50,7 @@ test.describe('Pruebas Unitarias de Modelos de Negocio (POO)', () => {
       assert.strictEqual(batch.getAgeInWeeks(), 2);
     });
 
-    test('Debe sugerir alimento Iniciador para aves menores de 35 días y Ponedora para mayores', () => {
+    test('Debe sugerir alimento Iniciador para aves menores de 45 días y Ponedora para mayores', () => {
       const birthChick = new Date();
       birthChick.setDate(birthChick.getDate() - 20); // 20 días
       const chickBatch = new QuailBatch({
@@ -60,7 +62,7 @@ test.describe('Pruebas Unitarias de Modelos de Negocio (POO)', () => {
       });
 
       const birthAdult = new Date();
-      birthAdult.setDate(birthAdult.getDate() - 40); // 40 días
+      birthAdult.setDate(birthAdult.getDate() - 50); // 50 días (mayor a 45 días)
       const adultBatch = new QuailBatch({
         name: 'Adultas',
         type: 'adult',
@@ -71,6 +73,53 @@ test.describe('Pruebas Unitarias de Modelos de Negocio (POO)', () => {
 
       assert.strictEqual(chickBatch.getFeedType(), 'iniciador');
       assert.strictEqual(adultBatch.getFeedType(), 'ponedora');
+    });
+
+    test('Debe calcular el consumo diario de polluelos con 20% de desperdicio antes de 21 días', () => {
+      const birth = new Date();
+      birth.setDate(birth.getDate() - 10); // 10 días (tiene desperdicio)
+      const batch = new QuailBatch({
+        name: 'Polluelos Bebés',
+        type: 'chick',
+        initial_quantity: 100,
+        current_quantity: 100,
+        birth_date: toLocalYYYYMMDD(birth)
+      });
+
+      const settings = {
+        feed_consumption_adult: '0.025',
+        feed_consumption_chick: '0.015'
+      };
+
+      // 100 * 0.015 * 1.20 = 1.8 kg/día
+      const breakdown = batch.getDailyFeedConsumptionBreakdown(settings);
+      assert.strictEqual(breakdown.initiator, 1.8);
+      assert.strictEqual(breakdown.ponedora, 0.0);
+    });
+
+    test('Debe calcular el consumo gradual durante el periodo de transición (días 39 a 45)', () => {
+      const settings = {
+        feed_consumption_adult: '0.025',
+        feed_consumption_chick: '0.015'
+      };
+
+      // Caso: Día 40 (transición Día 1-2: 75% iniciador, 25% postura)
+      const birth40 = new Date();
+      birth40.setDate(birth40.getDate() - 40);
+      const batch40 = new QuailBatch({
+        name: 'Transición 40d',
+        type: 'chick',
+        initial_quantity: 100,
+        current_quantity: 100,
+        birth_date: toLocalYYYYMMDD(birth40)
+      });
+      // Tasa combinada = 0.75 * 0.015 + 0.25 * 0.025 = 0.01125 + 0.00625 = 0.0175 kg/ave
+      // Total lote = 100 * 0.0175 = 1.75 kg
+      // Iniciador = 1.75 * 0.75 = 1.3125 kg
+      // Ponedora = 1.75 * 0.25 = 0.4375
+      const breakdown40 = batch40.getDailyFeedConsumptionBreakdown(settings);
+      assert.strictEqual(breakdown40.initiator, 1.3125);
+      assert.strictEqual(breakdown40.ponedora, 0.4375);
     });
 
     test('Debe calcular el consumo diario de alimento según la configuración', () => {
@@ -435,6 +484,104 @@ test.describe('Pruebas Unitarias de Modelos de Negocio (POO)', () => {
 
       const kwhCost = await db.get("SELECT value FROM settings WHERE key = 'electricity_kwh_cost'");
       assert.strictEqual(kwhCost.value, '60.0');
+    });
+  });
+
+  // --- PRUEBAS INCUBATION ---
+  test.describe('Modelo Incubation (Gestión de Incubación y Eventos)', () => {
+    test('Debe registrar una incubación y agendar eventos en las fechas y horas correctas', async () => {
+      const db = await getDatabaseConnection();
+      
+      const incubation = new Incubation({
+        eggsCount: 150,
+        startDate: '2026-05-30 00:10',
+        notes: 'Incubación de prueba'
+      });
+      await incubation.save();
+
+      assert.ok(incubation.id);
+
+      // Verificar que se crearon 3 eventos
+      const events = await db.all('SELECT * FROM calendar_events WHERE reference_id = ? ORDER BY event_date ASC', [incubation.id]);
+      assert.strictEqual(events.length, 3);
+
+      // Evento 1: Ovoscopia (Día 7 a las 20:00)
+      const ovoscopia = events.find(e => e.title.includes('Ovoscopia'));
+      assert.ok(ovoscopia);
+      assert.strictEqual(ovoscopia.event_date, '2026-06-06 20:00');
+
+      // Evento 2: Detener Volteo (Día 15 a la hora exacta de inicio: 00:10)
+      const volteo = events.find(e => e.title.includes('Volteo'));
+      assert.ok(volteo);
+      assert.strictEqual(volteo.event_date, '2026-06-14 00:10');
+
+      // Evento 3: Eclosión (Día 17 a la hora exacta: 00:10)
+      const hatch = events.find(e => e.title.includes('Eclosión'));
+      assert.ok(hatch);
+      assert.strictEqual(hatch.event_date, '2026-06-16 00:10');
+
+      // Eliminar y verificar limpieza de eventos
+      await incubation.delete();
+      const eventsAfterDelete = await db.all('SELECT * FROM calendar_events WHERE reference_id = ?', [incubation.id]);
+      assert.strictEqual(eventsAfterDelete.length, 0);
+    });
+  });
+
+  // --- PRUEBAS MODELO CAGE Y VINCULACIÓN CON LOTES ---
+  test.describe('Modelo Cage (Gestión de Jaulas y Vinculación)', () => {
+    test('Debe crear una jaula, asociar un lote, y actualizar eventos al cambiar el nombre', async () => {
+      const db = await getDatabaseConnection();
+
+      // 1. Crear jaula
+      const cage = new Cage({
+        name: 'Jaula Test 1',
+        capacity: 40,
+        notes: 'Ubicación sur'
+      });
+      await cage.save();
+      assert.ok(cage.id);
+
+      // 2. Crear un lote de aves y asignarlo a la jaula
+      const batch = new QuailBatch({
+        name: 'Lote Test Jaula',
+        type: 'chick',
+        initialQuantity: 30,
+        currentQuantity: 30,
+        birthDate: '2026-05-01',
+        status: 'active',
+        cageId: cage.id
+      });
+      await batch.save();
+      assert.ok(batch.id);
+      assert.strictEqual(batch.cageId, cage.id);
+
+      // 3. Verificar que se crearon eventos automáticos con el nombre de la jaula
+      const events = await db.all('SELECT * FROM calendar_events WHERE reference_id = ?', [batch.id]);
+      assert.strictEqual(events.length, 3);
+      
+      const transitionEvent = events.find(e => e.title.includes('Inicio Transición'));
+      assert.ok(transitionEvent);
+      assert.ok(transitionEvent.title.includes('Jaula: Jaula Test 1'));
+      assert.ok(transitionEvent.description.includes('Jaula: Jaula Test 1'));
+
+      // 4. Renombrar la jaula y verificar que los eventos del calendario se actualizaron
+      cage.name = 'Jaula Test Modificada';
+      await cage.save();
+
+      const updatedEvents = await db.all('SELECT * FROM calendar_events WHERE reference_id = ?', [batch.id]);
+      const updatedTransitionEvent = updatedEvents.find(e => e.title.includes('Inicio Transición'));
+      assert.ok(updatedTransitionEvent);
+      assert.ok(updatedTransitionEvent.title.includes('Jaula: Jaula Test Modificada'));
+      assert.ok(updatedTransitionEvent.description.includes('Jaula: Jaula Test Modificada'));
+
+      // 5. Eliminar la jaula y verificar que el lote ahora tiene cage_id = null
+      await cage.delete();
+      const updatedBatch = await QuailBatch.getById(batch.id);
+      assert.strictEqual(updatedBatch.cageId, null);
+      
+      // Limpiar lote
+      await db.run('DELETE FROM quail_batches WHERE id = ?', [batch.id]);
+      await db.run('DELETE FROM calendar_events WHERE reference_id = ?', [batch.id]);
     });
   });
 });

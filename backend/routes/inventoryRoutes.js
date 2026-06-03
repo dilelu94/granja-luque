@@ -3,6 +3,8 @@ import { QuailBatch } from '../models/QuailBatch.js';
 import { FeedStock } from '../models/FeedStock.js';
 import { EggCollection } from '../models/EggCollection.js';
 import { Settings } from '../models/Settings.js';
+import { Cage } from '../models/Cage.js';
+import { Product } from '../models/Product.js';
 import { getDatabaseConnection } from '../db/connection.js';
 import { authenticateToken } from './authRoutes.js';
 
@@ -144,13 +146,16 @@ router.get('/quail-batches', authenticateToken, async (req, res) => {
  * ADMIN ONLY: Create a new quail batch.
  */
 router.post('/quail-batches', authenticateToken, async (req, res) => {
-  const { name, type, initialQuantity, birthDate, notes } = req.body;
+  const { name, type, initialQuantity, birthDate, notes, cageId } = req.body;
 
   if (!name || !type || !initialQuantity || !birthDate) {
     return res.status(400).json({ error: 'Campos obligatorios faltantes (nombre, tipo, cantidad inicial, fecha de nacimiento).' });
   }
 
   try {
+    const settings = await Settings.getAll();
+    await FeedStock.deductAutomaticConsumption(settings);
+
     const batch = new QuailBatch({
       name,
       type,
@@ -158,7 +163,8 @@ router.post('/quail-batches', authenticateToken, async (req, res) => {
       currentQuantity: Number(initialQuantity),
       birthDate,
       notes,
-      status: 'active'
+      status: 'active',
+      cageId: cageId ? Number(cageId) : null
     });
     
     await batch.save();
@@ -182,6 +188,9 @@ router.post('/quail-batches/:id/mortality', authenticateToken, async (req, res) 
   }
 
   try {
+    const settings = await Settings.getAll();
+    await FeedStock.deductAutomaticConsumption(settings);
+
     const batch = await QuailBatch.getById(id);
     if (!batch) {
       return res.status(404).json({ error: 'Lote no encontrado.' });
@@ -201,9 +210,12 @@ router.post('/quail-batches/:id/mortality', authenticateToken, async (req, res) 
  */
 router.put('/quail-batches/:id', authenticateToken, async (req, res) => {
   const { id } = req.params;
-  const { name, type, initialQuantity, currentQuantity, birthDate, status, notes } = req.body;
+  const { name, type, initialQuantity, currentQuantity, birthDate, status, notes, cageId } = req.body;
 
   try {
+    const settings = await Settings.getAll();
+    await FeedStock.deductAutomaticConsumption(settings);
+
     const batch = await QuailBatch.getById(id);
     if (!batch) {
       return res.status(404).json({ error: 'Lote no encontrado.' });
@@ -216,6 +228,7 @@ router.put('/quail-batches/:id', authenticateToken, async (req, res) => {
     batch.birthDate = birthDate !== undefined ? birthDate : batch.birthDate;
     batch.status = status !== undefined ? status : batch.status;
     batch.notes = notes !== undefined ? notes : batch.notes;
+    batch.cageId = cageId !== undefined ? (cageId ? Number(cageId) : null) : batch.cageId;
 
     if (batch.currentQuantity === 0) {
       batch.status = 'retired';
@@ -370,18 +383,130 @@ router.post('/eggs/collect', authenticateToken, async (req, res) => {
  * ADMIN ONLY: Pack collected eggs into products (adds stock to a product).
  */
 router.post('/eggs/pack', authenticateToken, async (req, res) => {
-  const { productId, packagesCount, eggsPerPackage } = req.body;
+  const { productId, packagesCount } = req.body;
 
-  if (!productId || !packagesCount || !eggsPerPackage) {
-    return res.status(400).json({ error: 'Faltan parámetros (producto, cantidad de empaques, huevos por empaque).' });
+  if (!productId || !packagesCount) {
+    return res.status(400).json({ error: 'Faltan parámetros (producto, cantidad de empaques).' });
   }
 
   try {
+    const product = await Product.getById(Number(productId));
+    if (!product) {
+      return res.status(404).json({ error: 'Producto no encontrado.' });
+    }
+
+    const eggsPerPackage = product.eggCount || 30;
+
     await EggCollection.packEggs(Number(productId), Number(packagesCount), Number(eggsPerPackage));
     res.json({ message: `Empacado completado. Se añadieron ${packagesCount} unidades al stock del producto.` });
   } catch (error) {
     console.error('Error al empaquetar huevos:', error);
     res.status(500).json({ error: 'Error al actualizar el stock del producto.' });
+  }
+});
+
+// ==========================================
+// 5. GESTIÓN DE JAULAS (ADMIN)
+// ==========================================
+
+/**
+ * GET /api/inventory/cages
+ * ADMIN ONLY: List all cages with occupancy.
+ */
+router.get('/cages', authenticateToken, async (req, res) => {
+  try {
+    const cages = await Cage.getCagesOccupancy();
+    res.json(cages);
+  } catch (error) {
+    console.error('Error al obtener jaulas:', error);
+    res.status(500).json({ error: 'Error al obtener jaulas.' });
+  }
+});
+
+/**
+ * POST /api/inventory/cages
+ * ADMIN ONLY: Create a new cage.
+ */
+router.post('/cages', authenticateToken, async (req, res) => {
+  const { name, capacity, notes } = req.body;
+
+  if (!name) {
+    return res.status(400).json({ error: 'El nombre de la jaula es obligatorio.' });
+  }
+
+  try {
+    const existing = await Cage.getByName(name);
+    if (existing) {
+      return res.status(400).json({ error: 'Ya existe una jaula con este nombre.' });
+    }
+
+    const cage = new Cage({
+      name,
+      capacity: capacity !== undefined ? Number(capacity) : 50,
+      notes
+    });
+
+    await cage.save();
+    res.status(201).json({ message: 'Jaula creada con éxito.', cage });
+  } catch (error) {
+    console.error('Error al crear jaula:', error);
+    res.status(500).json({ error: 'Error al crear la jaula.' });
+  }
+});
+
+/**
+ * PUT /api/inventory/cages/:id
+ * ADMIN ONLY: Edit cage details.
+ */
+router.put('/cages/:id', authenticateToken, async (req, res) => {
+  const { id } = req.params;
+  const { name, capacity, notes } = req.body;
+
+  if (!name) {
+    return res.status(400).json({ error: 'El nombre de la jaula es obligatorio.' });
+  }
+
+  try {
+    const cage = await Cage.getById(id);
+    if (!cage) {
+      return res.status(404).json({ error: 'Jaula no encontrada.' });
+    }
+
+    const existing = await Cage.getByName(name);
+    if (existing && existing.id !== Number(id)) {
+      return res.status(400).json({ error: 'Ya existe otra jaula con ese nombre.' });
+    }
+
+    cage.name = name;
+    cage.capacity = capacity !== undefined ? Number(capacity) : cage.capacity;
+    cage.notes = notes !== undefined ? notes : cage.notes;
+
+    await cage.save();
+    res.json({ message: 'Jaula actualizada con éxito.', cage });
+  } catch (error) {
+    console.error('Error al actualizar jaula:', error);
+    res.status(500).json({ error: 'Error al actualizar la jaula.' });
+  }
+});
+
+/**
+ * DELETE /api/inventory/cages/:id
+ * ADMIN ONLY: Delete a cage.
+ */
+router.delete('/cages/:id', authenticateToken, async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const cage = await Cage.getById(id);
+    if (!cage) {
+      return res.status(404).json({ error: 'Jaula no encontrada.' });
+    }
+
+    await cage.delete();
+    res.json({ message: 'Jaula eliminada con éxito.' });
+  } catch (error) {
+    console.error('Error al eliminar jaula:', error);
+    res.status(500).json({ error: 'Error al eliminar la jaula.' });
   }
 });
 

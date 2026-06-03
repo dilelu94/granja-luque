@@ -10,6 +10,8 @@ export class QuailBatch {
     this.birthDate = data.birth_date || data.birthDate; // YYYY-MM-DD
     this.status = data.status || 'active'; // 'active', 'sold', 'retired'
     this.notes = data.notes || '';
+    this.cageId = data.cage_id || data.cageId || null;
+    this.cageName = data.cage_name || data.cageName || '';
   }
 
   /**
@@ -37,11 +39,59 @@ export class QuailBatch {
 
   /**
    * Determines feed type based on age.
-   * Chicks (< 5 weeks) eat 'iniciador', adults eat 'ponedora'.
+   * Chicks (< 45 days) eat 'iniciador', adults eat 'ponedora'.
    * @returns {string} 'iniciador' | 'ponedora'
    */
   getFeedType() {
-    return this.getAgeInDays() < 35 ? 'iniciador' : 'ponedora';
+    return this.getAgeInDays() < 45 ? 'iniciador' : 'ponedora';
+  }
+
+  /**
+   * Calculates daily feed consumption breakdown for the batch in kg.
+   * @param {Object} settings Object containing feed rates: feed_consumption_chick and feed_consumption_adult
+   * @returns {{ initiator: number, ponedora: number }} Consumption breakdown in kg/day
+   */
+  getDailyFeedConsumptionBreakdown(settings) {
+    const age = this.getAgeInDays();
+    const rateChick = parseFloat(settings.feed_consumption_chick || 0.015);
+    const rateAdult = parseFloat(settings.feed_consumption_adult || 0.025);
+    const qty = this.currentQuantity;
+
+    let initiatorNeed = 0;
+    let ponedoraNeed = 0;
+
+    if (age < 39) {
+      // 100% Iniciador
+      let rate = rateChick;
+      // Desperdicio de 20% en las primeras 3 semanas (21 días)
+      if (age < 21) {
+        rate = rate * 1.20;
+      }
+      initiatorNeed = qty * rate;
+    } else if (age >= 39 && age <= 40) {
+      // Transición Día 1-2: 75% Iniciación / 25% Postura
+      const rateCombined = (0.75 * rateChick) + (0.25 * rateAdult);
+      initiatorNeed = qty * rateCombined * 0.75;
+      ponedoraNeed = qty * rateCombined * 0.25;
+    } else if (age >= 41 && age <= 42) {
+      // Transición Día 3-4: 50% Iniciación / 50% Postura
+      const rateCombined = (0.50 * rateChick) + (0.50 * rateAdult);
+      initiatorNeed = qty * rateCombined * 0.50;
+      ponedoraNeed = qty * rateCombined * 0.50;
+    } else if (age >= 43 && age <= 44) {
+      // Transición Día 5-6: 25% Iniciación / 75% Postura
+      const rateCombined = (0.25 * rateChick) + (0.75 * rateAdult);
+      initiatorNeed = qty * rateCombined * 0.25;
+      ponedoraNeed = qty * rateCombined * 0.75;
+    } else {
+      // Age >= 45: 100% Postura
+      ponedoraNeed = qty * rateAdult;
+    }
+
+    return {
+      initiator: Math.round(initiatorNeed * 10000) / 10000,
+      ponedora: Math.round(ponedoraNeed * 10000) / 10000
+    };
   }
 
   /**
@@ -50,11 +100,8 @@ export class QuailBatch {
    * @returns {number} Consumption in kg/day
    */
   getDailyFeedConsumption(settings) {
-    const feedType = this.getFeedType();
-    const rate = feedType === 'iniciador'
-      ? parseFloat(settings.feed_consumption_chick || 0.015)
-      : parseFloat(settings.feed_consumption_adult || 0.025);
-    return this.currentQuantity * rate;
+    const breakdown = this.getDailyFeedConsumptionBreakdown(settings);
+    return breakdown.initiator + breakdown.ponedora;
   }
 
   /**
@@ -65,51 +112,86 @@ export class QuailBatch {
     if (this.id) {
       await db.run(
         `UPDATE quail_batches 
-         SET name = ?, type = ?, initial_quantity = ?, current_quantity = ?, birth_date = ?, status = ?, notes = ?
+         SET name = ?, type = ?, initial_quantity = ?, current_quantity = ?, birth_date = ?, status = ?, notes = ?, cage_id = ?
          WHERE id = ?`,
-        [this.name, this.type, this.initialQuantity, this.currentQuantity, this.birthDate, this.status, this.notes, this.id]
+        [this.name, this.type, this.initialQuantity, this.currentQuantity, this.birthDate, this.status, this.notes, this.cageId, this.id]
       );
     } else {
       const result = await db.run(
-        `INSERT INTO quail_batches (name, type, initial_quantity, current_quantity, birth_date, status, notes)
-         VALUES (?, ?, ?, ?, ?, ?, ?)`,
-        [this.name, this.type, this.initialQuantity, this.currentQuantity, this.birthDate, this.status, this.notes]
+        `INSERT INTO quail_batches (name, type, initial_quantity, current_quantity, birth_date, status, notes, cage_id)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        [this.name, this.type, this.initialQuantity, this.currentQuantity, this.birthDate, this.status, this.notes, this.cageId]
       );
       this.id = result.lastID;
-      
-      // Si es un lote de polluelos recién nacidos, agregar hitos automáticos al calendario
-      if (this.type === 'chick' && this.status === 'active') {
-        await this._createAutomaticHatchingCalendarEvents(db);
-      }
     }
+
+    // Sincronizar eventos de calendario en cada guardado (creación o edición)
+    await this.syncCalendarEvents(db);
+
     return this;
   }
 
   /**
-   * Creates automatic calendar events for feed transition and posture start.
+   * Sincroniza los eventos automáticos del calendario para el lote de aves.
+   * Si el lote es polluelo ('chick') y está activo, genera los hitos de alimentación y postura.
+   * Si está inactivo o es adulto, elimina cualquier evento automático asociado.
    * @param {import('sqlite').Database} db 
-   * @private
    */
-  async _createAutomaticHatchingCalendarEvents(db) {
+  async syncCalendarEvents(db) {
+    // Eliminar eventos automáticos previos asociados a este lote
+    await db.run(`
+      DELETE FROM calendar_events 
+      WHERE reference_id = ? AND type IN ('feed_transition', 'egg_posture')
+    `, [this.id]);
+
+    // Solo se agendan eventos automáticos para lotes de polluelos activos
+    if (this.type !== 'chick' || this.status !== 'active') {
+      return;
+    }
+
+    // Obtener el nombre de la jaula si está asociada
+    let cageInfo = '';
+    if (this.cageId) {
+      const row = await db.get('SELECT name FROM cages WHERE id = ?', [this.cageId]);
+      if (row && row.name) {
+        cageInfo = ` (Jaula: ${row.name})`;
+      }
+    }
+
     const parts = this.birthDate.split('-');
     const birth = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
-    
-    // Transición de Alimento a las 5 semanas (35 días)
-    const transitionDate = new Date(birth);
-    transitionDate.setDate(transitionDate.getDate() + 35);
-    const transitionDateStr = transitionDate.toISOString().split('T')[0];
-    
+
+    // 1. Inicio de Transición de Alimento: 39 días (Día 1 de transición)
+    const transitionStartDate = new Date(birth);
+    transitionStartDate.setDate(transitionStartDate.getDate() + 39);
+    const transitionStartDateStr = transitionStartDate.toISOString().split('T')[0];
+
     await db.run(`
       INSERT INTO calendar_events (title, description, event_date, type, reference_id)
       VALUES (?, ?, ?, 'feed_transition', ?)
     `, [
-      `Cambio Alimento: ${this.name}`,
-      `Lote ${this.name} cumple 5 semanas. Cambiar alimento de Iniciador a Ponedora.`,
-      transitionDateStr,
+      `Inicio Transición Alimento: ${this.name}${cageInfo}`,
+      `Lote ${this.name}${cageInfo} cumple 39 días. Iniciar transición gradual de alimento por 7 días:\n• Día 1-2 (39-40d): 75% Iniciación / 25% Postura\n• Día 3-4 (41-42d): 50% Iniciación / 50% Postura\n• Día 5-6 (43-44d): 25% Iniciación / 75% Postura\n• Día 7 (45d): 100% Postura (Fin de transición).`,
+      transitionStartDateStr,
       this.id
     ]);
 
-    // Inicio de postura a las 6 semanas (42 días)
+    // 2. Fin de Transición de Alimento: 45 días (Día 7 de transición)
+    const transitionEndDate = new Date(birth);
+    transitionEndDate.setDate(transitionEndDate.getDate() + 45);
+    const transitionEndDateStr = transitionEndDate.toISOString().split('T')[0];
+
+    await db.run(`
+      INSERT INTO calendar_events (title, description, event_date, type, reference_id)
+      VALUES (?, ?, ?, 'feed_transition', ?)
+    `, [
+      `Fin Transición Alimento: ${this.name}${cageInfo}`,
+      `Lote ${this.name}${cageInfo} cumple 45 días. Transición completada con éxito. A partir de hoy consume 100% alimento de Postura (Ponedoras).`,
+      transitionEndDateStr,
+      this.id
+    ]);
+
+    // 3. Inicio de postura a las 6 semanas (42 días)
     const postureDate = new Date(birth);
     postureDate.setDate(postureDate.getDate() + 42);
     const postureDateStr = postureDate.toISOString().split('T')[0];
@@ -118,8 +200,8 @@ export class QuailBatch {
       INSERT INTO calendar_events (title, description, event_date, type, reference_id)
       VALUES (?, ?, ?, 'egg_posture', ?)
     `, [
-      `Inicio Postura: ${this.name}`,
-      `Lote ${this.name} cumple 6 semanas. Debería comenzar la postura de huevos.`,
+      `Inicio Postura: ${this.name}${cageInfo}`,
+      `Lote ${this.name}${cageInfo} cumple 6 semanas. Debería comenzar la postura de huevos.`,
       postureDateStr,
       this.id
     ]);
@@ -166,27 +248,35 @@ export class QuailBatch {
    */
   static async getById(id) {
     const db = await getDatabaseConnection();
-    const row = await db.get('SELECT * FROM quail_batches WHERE id = ?', [id]);
+    const row = await db.get(`
+      SELECT q.*, c.name as cage_name 
+      FROM quail_batches q 
+      LEFT JOIN cages c ON q.cage_id = c.id 
+      WHERE q.id = ?
+    `, [id]);
     return row ? new QuailBatch(row) : null;
   }
 
-  /**
-   * Retrieves all active quail batches.
-   * @returns {Promise<QuailBatch[]>}
-   */
   static async getAllActive() {
     const db = await getDatabaseConnection();
-    const rows = await db.all("SELECT * FROM quail_batches WHERE status = 'active' ORDER BY birth_date DESC");
+    const rows = await db.all(`
+      SELECT q.*, c.name as cage_name 
+      FROM quail_batches q 
+      LEFT JOIN cages c ON q.cage_id = c.id 
+      WHERE q.status = 'active' 
+      ORDER BY q.birth_date DESC
+    `);
     return rows.map(row => new QuailBatch(row));
   }
 
-  /**
-   * Retrieves all quail batches.
-   * @returns {Promise<QuailBatch[]>}
-   */
   static async getAll() {
     const db = await getDatabaseConnection();
-    const rows = await db.all("SELECT * FROM quail_batches ORDER BY birth_date DESC");
+    const rows = await db.all(`
+      SELECT q.*, c.name as cage_name 
+      FROM quail_batches q 
+      LEFT JOIN cages c ON q.cage_id = c.id 
+      ORDER BY q.birth_date DESC
+    `);
     return rows.map(row => new QuailBatch(row));
   }
 
@@ -217,5 +307,20 @@ export class QuailBatch {
       counts[row.type] = row.total || 0;
     });
     return counts;
+  }
+
+  toJSON() {
+    return {
+      id: this.id,
+      name: this.name,
+      type: this.getAgeInDays() < 45 ? 'chick' : 'adult',
+      initialQuantity: this.initialQuantity,
+      currentQuantity: this.currentQuantity,
+      birthDate: this.birthDate,
+      status: this.status,
+      notes: this.notes,
+      cageId: this.cageId,
+      cageName: this.cageName || ''
+    };
   }
 }

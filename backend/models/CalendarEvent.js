@@ -99,7 +99,7 @@ export class CalendarEvent {
     
     const turnEvent = new CalendarEvent({
       title: `Detener Volteo (${eggsCount} huevos)`,
-      description: `Incubadora iniciada el ${startDateStr}. Es el día 15: detener el volteo manual o automático y preparar bandejas de nacimiento con alta humedad.`,
+      description: `Incubadora iniciada el ${startDateStr}. Es el día 15: detener el volteo manual o automático y preparar bandejas de nacimiento.\n\n💧 Humedad: Es fundamental aumentar la humedad al 70-75% desde el día 15 hasta el nacimiento para facilitar que la membrana no se pegue al pichón y pueda salir con facilidad.\n\n🌡️ Temperatura: Se recomienda bajar ligeramente la temperatura (aprox. 0.5 °C a 1 °C menos que durante la incubación) durante estos últimos días.`,
       eventDate: turnDateStr,
       type: 'incubator_turn'
     });

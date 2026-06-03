@@ -2,9 +2,19 @@ import React, { useState, useEffect } from 'react';
 
 const formatDate = (dateStr) => {
   if (!dateStr) return '';
+  if (typeof dateStr === 'string' && (dateStr.includes('T') || dateStr.includes(' '))) {
+    const d = new Date(dateStr);
+    if (!isNaN(d.getTime())) {
+      const day = String(d.getDate()).padStart(2, '0');
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const year = d.getFullYear();
+      return `${day}/${month}/${year}`;
+    }
+  }
   const parts = dateStr.split('-');
   if (parts.length === 3) {
-    return `${parts[2]}/${parts[1]}/${parts[0]}`;
+    const dayPart = parts[2].split(' ')[0].split('T')[0];
+    return `${dayPart}/${parts[1]}/${parts[0]}`;
   }
   return dateStr;
 };
@@ -78,22 +88,22 @@ export default function Dashboard({ token }) {
   if (stats.feed.initiator.daysLeft !== null && stats.feed.initiator.daysLeft < 7) {
     alerts.push({
       type: 'critical',
-      message: `El alimento Iniciador se agotará en ${stats.feed.initiator.daysLeft} días. Stock actual: ${stats.feed.initiator.stock} kg.`
+      message: `El alimento Iniciador se agotará en ${stats.feed.initiator.daysLeft} días. Stock actual: ${Number(stats.feed.initiator.stock).toFixed(2)} kg.`
     });
   }
   if (stats.feed.ponedora.daysLeft !== null && stats.feed.ponedora.daysLeft < 7) {
     alerts.push({
       type: 'critical',
-      message: `El alimento Ponedora se agotará en ${stats.feed.ponedora.daysLeft} días. Stock actual: ${stats.feed.ponedora.stock} kg.`
+      message: `El alimento Ponedora se agotará en ${stats.feed.ponedora.daysLeft} días. Stock actual: ${Number(stats.feed.ponedora.stock).toFixed(2)} kg.`
     });
   }
-
+ 
   // Tasa de postura actual (del último registro)
   const lastEggCollection = stats.eggs.history[stats.eggs.history.length - 1];
   if (lastEggCollection && lastEggCollection.postureRate < 65 && lastEggCollection.adultQuailsCount > 0) {
     alerts.push({
       type: 'warning',
-      message: `La tasa de postura del día ${lastEggCollection.date} cayó al ${lastEggCollection.postureRate}% (esperado ~80%). Revisa las aves.`
+      message: `La tasa de postura del día ${formatDate(lastEggCollection.date)} cayó al ${lastEggCollection.postureRate}% (esperado ~80%). Revisa las aves.`
     });
   }
 
@@ -156,11 +166,11 @@ export default function Dashboard({ token }) {
             <span style={{ fontSize: '2rem' }}>🌾</span>
           </div>
           <div style={{ fontSize: '2.5rem', fontWeight: 'bold', margin: '0.5rem 0', fontFamily: 'var(--font-heading)', color: 'var(--accent-gold)' }}>
-            {stats.feed.ponedora.stock} kg
+            {Number(stats.feed.ponedora.stock).toFixed(2)} kg
           </div>
           <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
             {stats.feed.ponedora.daysLeft !== null ? (
-              <span>Dura aprox. <strong style={{ color: 'white' }}>{stats.feed.ponedora.daysLeft} días</strong> ({stats.feed.ponedora.dailyConsumption} kg/día)</span>
+              <span>Dura aprox. <strong style={{ color: 'white' }}>{stats.feed.ponedora.daysLeft} días</strong> ({Number(stats.feed.ponedora.dailyConsumption).toFixed(2)} kg/día)</span>
             ) : (
               <span>Sin consumo activo (0 adultas)</span>
             )}
@@ -174,11 +184,11 @@ export default function Dashboard({ token }) {
             <span style={{ fontSize: '2rem' }}>🧪</span>
           </div>
           <div style={{ fontSize: '2.5rem', fontWeight: 'bold', margin: '0.5rem 0', fontFamily: 'var(--font-heading)', color: 'var(--accent-blue)' }}>
-            {stats.feed.initiator.stock} kg
+            {Number(stats.feed.initiator.stock).toFixed(2)} kg
           </div>
           <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
             {stats.feed.initiator.daysLeft !== null ? (
-              <span>Dura aprox. <strong style={{ color: 'white' }}>{stats.feed.initiator.daysLeft} días</strong> ({stats.feed.initiator.dailyConsumption} kg/día)</span>
+              <span>Dura aprox. <strong style={{ color: 'white' }}>{stats.feed.initiator.daysLeft} días</strong> ({Number(stats.feed.initiator.dailyConsumption).toFixed(2)} kg/día)</span>
             ) : (
               <span>Sin consumo activo (0 polluelos)</span>
             )}
@@ -272,10 +282,10 @@ export default function Dashboard({ token }) {
                 >
                   <div>
                     <div style={{ fontWeight: 'bold', fontSize: '0.95rem' }}>#{order.id} - {order.customerName}</div>
-                    <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{new Date(order.createdAt).toLocaleDateString()}</div>
+                    <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{formatDate(order.createdAt)}</div>
                   </div>
                   <div style={{ textAlign: 'right' }}>
-                    <div style={{ color: 'var(--accent-gold)', fontWeight: 'bold' }}>${order.totalPrice}</div>
+                    <div style={{ color: 'var(--accent-gold)', fontWeight: 'bold' }}>${Number(order.totalPrice).toFixed(2)}</div>
                     <span className="badge badge-pending" style={{ fontSize: '0.7rem', marginTop: '0.25rem' }}>Pendiente</span>
                   </div>
                 </div>

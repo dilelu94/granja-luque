@@ -1,16 +1,70 @@
 import React, { useState, useEffect } from 'react';
 
+const getLocalTodayDate = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+};
+
 const formatDate = (dateStr) => {
   if (!dateStr) return '';
+  if (typeof dateStr === 'string' && (dateStr.includes('T') || dateStr.includes(' '))) {
+    const d = new Date(dateStr.replace(' ', 'T'));
+    if (!isNaN(d.getTime())) {
+      const day = String(d.getDate()).padStart(2, '0');
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const year = d.getFullYear();
+      return `${day}/${month}/${year}`;
+    }
+  }
   const parts = dateStr.split('-');
   if (parts.length === 3) {
-    return `${parts[2]}/${parts[1]}/${parts[0]}`;
+    const dayPart = parts[2].split(' ')[0].split('T')[0];
+    return `${dayPart}/${parts[1]}/${parts[0]}`;
   }
   return dateStr;
 };
 
+const formatDateTime = (dateStr) => {
+  if (!dateStr) return '';
+  const d = new Date(dateStr.replace(' ', 'T'));
+  if (isNaN(d.getTime())) return dateStr;
+  const day = String(d.getDate()).padStart(2, '0');
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const year = d.getFullYear();
+  const hours = String(d.getHours()).padStart(2, '0');
+  const minutes = String(d.getMinutes()).padStart(2, '0');
+  return `${day}/${month}/${year} ${hours}:${minutes}`;
+};
+
+const addDays = (dateTimeStr, days) => {
+  const parts = dateTimeStr.replace('T', ' ').split(' ');
+  const dateParts = parts[0].split('-');
+  const timeParts = parts[1] ? parts[1].split(':') : ['00', '00'];
+  
+  const d = new Date(
+    Number(dateParts[0]),
+    Number(dateParts[1]) - 1,
+    Number(dateParts[2]),
+    Number(timeParts[0]),
+    Number(timeParts[1])
+  );
+  d.setDate(d.getDate() + days);
+  
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  const hh = String(d.getHours()).padStart(2, '0');
+  const min = String(d.getMinutes()).padStart(2, '0');
+  
+  return {
+    dateOnly: `${yyyy}-${mm}-${dd}`,
+    dateTime: `${yyyy}-${mm}-${dd} ${hh}:${min}`
+  };
+};
+
 export default function CalendarView({ token }) {
   const [events, setEvents] = useState([]);
+  const [incubations, setIncubations] = useState([]);
   const [currentDate, setCurrentDate] = useState(new Date());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -21,7 +75,13 @@ export default function CalendarView({ token }) {
   const [selectedDayEvents, setSelectedDayEvents] = useState(null); // { date: 'YYYY-MM-DD', list: [...] }
 
   // Forms inputs
-  const [incubatorForm, setIncubatorForm] = useState({ eggsCount: '', startDate: new Date().toISOString().split('T')[0] });
+  const [incubatorForm, setIncubatorForm] = useState({
+    id: null,
+    eggsCount: '',
+    startDate: getLocalTodayDate() + 'T00:10',
+    notes: '',
+    status: 'active'
+  });
   const [eventForm, setEventForm] = useState({ title: '', description: '', eventDate: '', type: 'manual' });
 
   const headers = {
@@ -43,8 +103,20 @@ export default function CalendarView({ token }) {
     }
   };
 
+  const fetchIncubations = async () => {
+    try {
+      const res = await fetch('/api/calendar/incubations', { headers });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      setIncubations(data);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   useEffect(() => {
     fetchEvents();
+    fetchIncubations();
   }, [token]);
 
   const year = currentDate.getFullYear();
@@ -58,21 +130,59 @@ export default function CalendarView({ token }) {
     setCurrentDate(new Date(year, month + 1, 1));
   };
 
-  // Crear eventos de la incubadora
-  const handleCreateIncubator = async (e) => {
+  // Guardar/Actualizar incubación
+  const handleSaveIncubation = async (e) => {
     e.preventDefault();
+    const isEdit = incubatorForm.id !== null;
+    const endpoint = isEdit ? `/api/calendar/incubations/${incubatorForm.id}` : '/api/calendar/incubations';
+    const method = isEdit ? 'PUT' : 'POST';
+
     try {
-      const res = await fetch('/api/calendar/incubator', {
-        method: 'POST',
+      const res = await fetch(endpoint, {
+        method,
         headers,
-        body: JSON.stringify(incubatorForm)
+        body: JSON.stringify({
+          eggsCount: Number(incubatorForm.eggsCount),
+          startDate: incubatorForm.startDate.replace('T', ' '),
+          status: incubatorForm.status,
+          notes: incubatorForm.notes
+        })
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
 
       setShowIncubatorModal(false);
-      setIncubatorForm({ eggsCount: '', startDate: new Date().toISOString().split('T')[0] });
+      setIncubatorForm({ id: null, eggsCount: '', startDate: new Date().toISOString().substring(0, 10) + 'T00:10', notes: '', status: 'active' });
       fetchEvents();
+      fetchIncubations();
+    } catch (err) {
+      alert(err.message);
+    }
+  };
+
+  const handleEditIncubationClick = (inc) => {
+    setIncubatorForm({
+      id: inc.id,
+      eggsCount: inc.eggsCount,
+      startDate: inc.startDate.replace(' ', 'T'),
+      notes: inc.notes || '',
+      status: inc.status
+    });
+    setShowIncubatorModal(true);
+  };
+
+  const handleDeleteIncubation = async (id) => {
+    if (!window.confirm('¿Estás seguro de que deseas eliminar esta tanda de incubación? Se borrarán todos sus eventos asociados.')) return;
+    try {
+      const res = await fetch(`/api/calendar/incubations/${id}`, {
+        method: 'DELETE',
+        headers
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+
+      fetchEvents();
+      fetchIncubations();
     } catch (err) {
       alert(err.message);
     }
@@ -146,10 +256,10 @@ export default function CalendarView({ token }) {
     calendarCells.push({ day: null, dateStr: null });
   }
 
-  // Filtrar eventos por celda
+  // Filtrar eventos por celda (maneja YYYY-MM-DD y YYYY-MM-DD HH:MM)
   const getEventsForDate = (dateStr) => {
     if (!dateStr) return [];
-    return events.filter(e => e.eventDate === dateStr);
+    return events.filter(e => e.eventDate && e.eventDate.substring(0, 10) === dateStr);
   };
 
   const getEventEmoji = (type) => {
@@ -184,11 +294,25 @@ export default function CalendarView({ token }) {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
         <h2 style={{ fontFamily: 'var(--font-heading)', fontSize: '1.8rem' }}>Calendario de la Granja 📅</h2>
         <div style={{ display: 'flex', gap: '0.75rem' }}>
-          <button className="btn btn-gold" onClick={() => setShowIncubatorModal(true)}>🐣 Iniciar Incubadora</button>
+          <button 
+            className="btn btn-gold" 
+            onClick={() => {
+              setIncubatorForm({
+                id: null,
+                eggsCount: '',
+                startDate: getLocalTodayDate() + 'T00:10',
+                notes: '',
+                status: 'active'
+              });
+              setShowIncubatorModal(true);
+            }}
+          >
+            🐣 Iniciar Incubadora
+          </button>
           <button 
             className="btn btn-primary" 
             onClick={() => {
-              setEventForm({ title: '', description: '', eventDate: new Date().toISOString().split('T')[0], type: 'manual' });
+              setEventForm({ title: '', description: '', eventDate: getLocalTodayDate(), type: 'manual' });
               setShowEventModal(true);
             }}
           >
@@ -286,6 +410,118 @@ export default function CalendarView({ token }) {
       )}
 
       {/* =======================================================
+          SECCIÓN: GESTIÓN DE INCUBADORA
+         ======================================================= */}
+      <div className="glass-card" style={{ marginTop: '2.5rem', padding: '1.5rem' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+          <h3 style={{ fontFamily: 'var(--font-heading)', fontSize: '1.4rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            🐣 Control de Incubadoras Activas e Historial
+          </h3>
+          <button 
+            className="btn btn-gold" 
+            onClick={() => {
+              setIncubatorForm({
+                id: null,
+                eggsCount: '',
+                startDate: getLocalTodayDate() + 'T00:10',
+                notes: '',
+                status: 'active'
+              });
+              setShowIncubatorModal(true);
+            }}
+          >
+            🐣 Nueva Incubación
+          </button>
+        </div>
+
+        {incubations.length === 0 ? (
+          <p style={{ color: 'var(--text-secondary)' }}>No hay registros de incubación cargados.</p>
+        ) : (
+          <div className="table-container">
+            <table>
+              <thead>
+                <tr>
+                  <th>Cantidad</th>
+                  <th>Fecha Inicio</th>
+                  <th>Ovoscopia (Día 7)</th>
+                  <th>Detener Volteo (Día 15)</th>
+                  <th>Eclosión (Día 17)</th>
+                  <th>Estado</th>
+                  <th>Notas</th>
+                  <th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                {incubations.map(inc => {
+                  const ovoscopiaTime = `${addDays(inc.startDate, 7).dateOnly} 20:00`;
+                  const volteoTime = addDays(inc.startDate, 15).dateTime;
+                  const eclosionTime = addDays(inc.startDate, 17).dateTime;
+
+                  const statusBadgeClass = inc.status === 'active' 
+                    ? 'badge-pending' 
+                    : inc.status === 'completed'
+                      ? 'badge-paid' 
+                      : 'badge-cancelled';
+
+                  const statusText = inc.status === 'active' 
+                    ? 'Activa' 
+                    : inc.status === 'completed' 
+                      ? 'Completada' 
+                      : 'Cancelada';
+
+                  return (
+                    <tr key={inc.id}>
+                      <td style={{ fontWeight: 'bold' }}>{inc.eggsCount} huevos</td>
+                      <td>{formatDateTime(inc.startDate)}</td>
+                      <td style={{ color: 'var(--text-secondary)' }}>{formatDateTime(ovoscopiaTime)}</td>
+                      <td style={{ color: 'var(--accent-gold)' }}>{formatDateTime(volteoTime)}</td>
+                      <td style={{ color: 'var(--accent-green)', fontWeight: '500' }}>{formatDateTime(eclosionTime)}</td>
+                      <td>
+                        <span className={`badge ${statusBadgeClass}`}>
+                          {statusText}
+                        </span>
+                      </td>
+                      <td 
+                        style={{ 
+                          fontSize: '0.85rem', 
+                          color: 'var(--text-secondary)', 
+                          maxWidth: '180px', 
+                          overflow: 'hidden', 
+                          textOverflow: 'ellipsis', 
+                          whiteSpace: 'nowrap' 
+                        }} 
+                        title={inc.notes}
+                      >
+                        {inc.notes || '-'}
+                      </td>
+                      <td>
+                        <div style={{ display: 'flex', gap: '0.5rem' }}>
+                          <button 
+                            className="btn btn-secondary" 
+                            style={{ padding: '0.35rem 0.7rem', fontSize: '0.85rem' }}
+                            onClick={() => handleEditIncubationClick(inc)}
+                          >
+                            ✏️ Editar
+                          </button>
+                          <button 
+                            className="btn btn-danger" 
+                            style={{ padding: '0.35rem 0.7rem', fontSize: '0.85rem' }}
+                            onClick={() => handleDeleteIncubation(inc.id)}
+                          >
+                            🗑️ Eliminar
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {/* =======================================================
           MODAL: DETALLES DE EVENTOS DEL DÍA
          ======================================================= */}
       {selectedDayEvents && (
@@ -320,7 +556,7 @@ export default function CalendarView({ token }) {
                         🗑️
                       </button>
                     </div>
-                    {event.description && <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginTop: '0.5rem' }}>{event.description}</p>}
+                    {event.description && <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginTop: '0.5rem', whiteSpace: 'pre-line' }}>{event.description}</p>}
                   </div>
                 ))}
               </div>
@@ -350,8 +586,10 @@ export default function CalendarView({ token }) {
       {showIncubatorModal && (
         <div className="modal-overlay">
           <div className="modal-content">
-            <h3 style={{ marginBottom: '1.5rem' }}>🐣 Iniciar Lote de Incubadora</h3>
-            <form onSubmit={handleCreateIncubator}>
+            <h3 style={{ marginBottom: '1.5rem' }}>
+              {incubatorForm.id ? '✏️ Editar Lote de Incubadora' : '🐣 Iniciar Lote de Incubadora'}
+            </h3>
+            <form onSubmit={handleSaveIncubation}>
               <div className="form-group">
                 <label>Cantidad de Huevos Cargados</label>
                 <input 
@@ -365,13 +603,38 @@ export default function CalendarView({ token }) {
               </div>
 
               <div className="form-group">
-                <label>Fecha de Inicio de Incubación</label>
+                <label>Fecha y Hora de Inicio de Incubación</label>
                 <input 
-                  type="date" 
+                  type="datetime-local" 
                   className="form-control" 
                   required
                   value={incubatorForm.startDate}
                   onChange={e => setIncubatorForm({ ...incubatorForm, startDate: e.target.value })}
+                />
+              </div>
+
+              {incubatorForm.id && (
+                <div className="form-group">
+                  <label>Estado de la Incubación</label>
+                  <select 
+                    className="form-control"
+                    value={incubatorForm.status}
+                    onChange={e => setIncubatorForm({ ...incubatorForm, status: e.target.value })}
+                  >
+                    <option value="active">Activa (Genera alertas en calendario)</option>
+                    <option value="completed">Completada</option>
+                    <option value="cancelled">Cancelada</option>
+                  </select>
+                </div>
+              )}
+
+              <div className="form-group">
+                <label>Notas / Observaciones</label>
+                <textarea 
+                  className="form-control" 
+                  placeholder="Detalles sobre el lote, temperatura, humedad..."
+                  value={incubatorForm.notes}
+                  onChange={e => setIncubatorForm({ ...incubatorForm, notes: e.target.value })}
                 />
               </div>
 
@@ -384,13 +647,16 @@ export default function CalendarView({ token }) {
                 marginBottom: '1.5rem',
                 border: '1px solid rgba(245,158,11,0.2)'
               }}>
-                ℹ️ **Automático**: El sistema agendará automáticamente:
-                <br />1. **Detener volteo** en el **Día 15**.
-                <br />2. **Fecha de eclosión estimada** en el **Día 17**.
+                ℹ️ **Alertas automáticas** (para tandas activas):
+                <br />1. **Ovoscopia** en el **Día 7 a las 20:00**.
+                <br />2. **Detener volteo** en el **Día 15** a la hora de inicio.
+                <br />3. **Eclosión estimada** en el **Día 17** a la hora de inicio.
               </div>
 
               <div style={{ display: 'flex', gap: '0.75rem' }}>
-                <button type="submit" className="btn btn-gold" style={{ flex: '1' }}>Registrar e Iniciar</button>
+                <button type="submit" className="btn btn-gold" style={{ flex: '1' }}>
+                  {incubatorForm.id ? 'Guardar Cambios' : 'Registrar e Iniciar'}
+                </button>
                 <button type="button" className="btn btn-secondary" style={{ flex: '1' }} onClick={() => setShowIncubatorModal(false)}>Cancelar</button>
               </div>
             </form>
