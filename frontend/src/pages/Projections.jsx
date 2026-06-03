@@ -129,7 +129,7 @@ export default function Projections({ token }) {
     const chicksHatched = Math.ceil(fertileEggsNeeded * hatchDecimal);
 
     incubatorBatches = Math.ceil(fertileEggsNeeded / incubatorCapacity);
-    incubatorDays = incubatorBatches * 17;
+    incubatorDays = incubatorBatches * 16;
 
     if (growthMethod === 'incubate_bought') {
       birdCost = fertileEggsNeeded * costFertileEgg;
@@ -197,8 +197,8 @@ export default function Projections({ token }) {
         
         const chicksInBatch = Math.round(eggsInBatch * hatchDecimal);
         const femalesInBatch = Math.round(chicksInBatch * femaleRatio);
-        const startDay = (b - 1) * 17;
-        const hatchDay = startDay + 17;
+        const startDay = (b - 1) * 16;
+        const hatchDay = startDay + 16;
         const adultDay = hatchDay + 35;
         
         batchList.push({

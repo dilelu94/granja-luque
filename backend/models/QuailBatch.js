@@ -5,8 +5,8 @@ export class QuailBatch {
     this.id = data.id || null;
     this.name = data.name;
     this.type = data.type; // 'chick' o 'adult'
-    this.initialQuantity = data.initial_quantity || data.initialQuantity;
-    this.currentQuantity = data.current_quantity || data.currentQuantity;
+    this.initialQuantity = data.initial_quantity ?? data.initialQuantity;
+    this.currentQuantity = data.current_quantity ?? data.currentQuantity;
     this.birthDate = data.birth_date || data.birthDate; // YYYY-MM-DD
     this.status = data.status || 'active'; // 'active', 'sold', 'retired'
     this.notes = data.notes || '';

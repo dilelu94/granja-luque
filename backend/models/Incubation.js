@@ -52,7 +52,13 @@ export class Incubation {
       this.startDate = this.startDate.replace('T', ' ');
     }
 
+    let shouldCreateBatch = false;
     if (this.id) {
+      const old = await db.get('SELECT status FROM incubations WHERE id = ?', [this.id]);
+      if (this.status === 'completed' && (!old || old.status !== 'completed')) {
+        shouldCreateBatch = true;
+      }
+
       await db.run(
         `UPDATE incubations 
          SET eggs_count = ?, start_date = ?, status = ?, notes = ?
@@ -60,6 +66,9 @@ export class Incubation {
         [this.eggsCount, this.startDate, this.status, this.notes, this.id]
       );
     } else {
+      if (this.status === 'completed') {
+        shouldCreateBatch = true;
+      }
       const result = await db.run(
         `INSERT INTO incubations (eggs_count, start_date, status, notes)
          VALUES (?, ?, ?, ?)`,
@@ -70,6 +79,28 @@ export class Incubation {
 
     // Sincronizar los eventos del calendario
     await this.syncCalendarEvents(db);
+
+    if (shouldCreateBatch) {
+      const today = new Date();
+      const yyyy = today.getFullYear();
+      const mm = String(today.getMonth() + 1).padStart(2, '0');
+      const dd = String(today.getDate()).padStart(2, '0');
+      const birthDateStr = `${yyyy}-${mm}-${dd}`;
+      const displayDateStr = `${dd}/${mm}/${yyyy}`;
+
+      const { QuailBatch } = await import('./QuailBatch.js');
+      const newBatch = new QuailBatch({
+        name: `Lote Eclosión ${displayDateStr} (Pendiente)`,
+        type: 'chick',
+        initialQuantity: 0,
+        currentQuantity: 0,
+        birthDate: birthDateStr,
+        status: 'active',
+        notes: `Tanda de incubación #${this.id} completada. Por favor, edite este lote para ingresar la cantidad exacta de polluelos nacidos y asignarlos a una jaula.`,
+        cageId: null
+      });
+      await newBatch.save();
+    }
 
     return this;
   }
@@ -116,14 +147,14 @@ export class Incubation {
       ]
     );
 
-    // 3. Eclosión: Día 17 a la hora exacta de inicio de la incubación
-    const hatchDate = addDays(this.startDate, 17);
+    // 3. Eclosión: Día 16 a la hora exacta de inicio de la incubación (Rango 16-18)
+    const hatchDate = addDays(this.startDate, 16);
     await db.run(
       `INSERT INTO calendar_events (title, description, event_date, type, reference_id)
        VALUES (?, ?, ?, 'incubator_hatch', ?)`,
       [
         `Eclosión Estimada (${this.eggsCount} huevos)`,
-        `Incubación iniciada el ${formatDateTime(this.startDate)}. Día 17/18: nacimiento estimado de los polluelos.`,
+        `Incubación iniciada el ${formatDateTime(this.startDate)}. Día 16 a 18: nacimiento estimado de los polluelos.`,
         hatchDate.dateTime,
         this.id
       ]

@@ -445,7 +445,7 @@ export default function CalendarView({ token }) {
                   <th>Fecha Inicio</th>
                   <th>Ovoscopia (Día 7)</th>
                   <th>Detener Volteo (Día 15)</th>
-                  <th>Eclosión (Día 17)</th>
+                  <th>Eclosión (Día 16-18)</th>
                   <th>Estado</th>
                   <th>Notas</th>
                   <th>Acciones</th>
@@ -455,7 +455,7 @@ export default function CalendarView({ token }) {
                 {incubations.map(inc => {
                   const ovoscopiaTime = `${addDays(inc.startDate, 7).dateOnly} 20:00`;
                   const volteoTime = addDays(inc.startDate, 15).dateTime;
-                  const eclosionTime = addDays(inc.startDate, 17).dateTime;
+                  const eclosionTime = addDays(inc.startDate, 16).dateTime;
 
                   const statusBadgeClass = inc.status === 'active' 
                     ? 'badge-pending' 
@@ -650,7 +650,7 @@ export default function CalendarView({ token }) {
                 ℹ️ **Alertas automáticas** (para tandas activas):
                 <br />1. **Ovoscopia** en el **Día 7 a las 20:00**.
                 <br />2. **Detener volteo** en el **Día 15** a la hora de inicio.
-                <br />3. **Eclosión estimada** en el **Día 17** a la hora de inicio.
+                <br />3. **Eclosión estimada** en el **Día 16 a 18** a la hora de inicio.
               </div>
 
               <div style={{ display: 'flex', gap: '0.75rem' }}>

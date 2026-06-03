@@ -515,15 +515,43 @@ test.describe('Pruebas Unitarias de Modelos de Negocio (POO)', () => {
       assert.ok(volteo);
       assert.strictEqual(volteo.event_date, '2026-06-14 00:10');
 
-      // Evento 3: Eclosión (Día 17 a la hora exacta: 00:10)
+      // Evento 3: Eclosión (Día 16 a la hora exacta: 00:10)
       const hatch = events.find(e => e.title.includes('Eclosión'));
       assert.ok(hatch);
-      assert.strictEqual(hatch.event_date, '2026-06-16 00:10');
+      assert.strictEqual(hatch.event_date, '2026-06-15 00:10');
 
       // Eliminar y verificar limpieza de eventos
       await incubation.delete();
       const eventsAfterDelete = await db.all('SELECT * FROM calendar_events WHERE reference_id = ?', [incubation.id]);
       assert.strictEqual(eventsAfterDelete.length, 0);
+    });
+
+    test('Debe crear un lote de aves automático con cantidad 0 al marcar la incubación como completada', async () => {
+      const db = await getDatabaseConnection();
+      const incubation = new Incubation({
+        eggsCount: 150,
+        startDate: '2026-05-30 00:10',
+        status: 'active',
+        notes: 'Incubación de prueba para lote'
+      });
+      await incubation.save();
+
+      assert.ok(incubation.id);
+
+      // Cambiar status a completed
+      incubation.status = 'completed';
+      await incubation.save();
+
+      // Buscar lote automático creado
+      const { QuailBatch } = await import('../models/QuailBatch.js');
+      const batches = await QuailBatch.getAll();
+      const newBatch = batches.find(b => b.name.includes('(Pendiente)') && b.notes.includes(`#${incubation.id}`));
+
+      assert.ok(newBatch);
+      assert.strictEqual(newBatch.initialQuantity, 0);
+      assert.strictEqual(newBatch.currentQuantity, 0);
+      assert.strictEqual(newBatch.type, 'chick');
+      assert.strictEqual(newBatch.status, 'active');
     });
   });
 

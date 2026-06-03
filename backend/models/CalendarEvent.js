@@ -105,14 +105,14 @@ export class CalendarEvent {
     });
     await turnEvent.save();
 
-    // 2. Eclosión: Día 17
+    // 2. Eclosión: Día 16 (Rango 16-18)
     const hatchDate = new Date(start);
-    hatchDate.setDate(hatchDate.getDate() + 17);
+    hatchDate.setDate(hatchDate.getDate() + 16);
     const hatchDateStr = hatchDate.toISOString().split('T')[0];
     
     const hatchEvent = new CalendarEvent({
       title: `Eclosión Estimada (${eggsCount} huevos)`,
-      description: `Incubadora iniciada el ${startDateStr}. Día 17/18: nacimiento estimado de los polluelos de codorniz.`,
+      description: `Incubadora iniciada el ${startDateStr}. Día 16 a 18: nacimiento estimado de los polluelos de codorniz.`,
       eventDate: hatchDateStr,
       type: 'incubator_hatch'
     });
