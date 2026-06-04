@@ -135,10 +135,10 @@ export default function Projections({ token }) {
       birdCost = fertileEggsNeeded * costFertileEgg;
     } // else 'incubate_own' -> $0 costo de huevo
 
-    // Costo de alimento Iniciador durante 35 días de crianza para TODOS los polluelos nacidos (machos + hembras)
+    // Costo de alimento Iniciador durante 45 días de crianza para TODOS los polluelos nacidos (machos + hembras)
     // Consumo diario estimado polluelo: 15g (0.015kg)
-    // Durante las primeras 3 semanas (21 días) desperdician 20% de alimento, y las siguientes 2 semanas (14 días) comen nominal.
-    const rearingFeedKgPerChick = (0.015 * 1.20 * 21) + (0.015 * 14);
+    // Durante las primeras 3 semanas (21 días) desperdician 20% de alimento, y las siguientes semanas (24 días) comen nominal.
+    const rearingFeedKgPerChick = (0.015 * 1.20 * 21) + (0.015 * 24);
     rearingFeedKg = chicksHatched * rearingFeedKgPerChick;
     rearingFeedCost = rearingFeedKg * baseData.feedCostIniciadorPerKg;
   }
@@ -185,7 +185,7 @@ export default function Projections({ token }) {
     const femaleRatio = 0.5;
     
     // Configuración de los lotes de incubación
-    const rearingFeedKgPerChick = (0.015 * 1.20 * 21) + (0.015 * 14);
+    const rearingFeedKgPerChick = (0.015 * 1.20 * 21) + (0.015 * 24);
     const rearingFeedCostPerChick = rearingFeedKgPerChick * baseData.feedCostIniciadorPerKg;
     const batchList = [];
     
@@ -199,7 +199,7 @@ export default function Projections({ token }) {
         const femalesInBatch = Math.round(chicksInBatch * femaleRatio);
         const startDay = (b - 1) * 16;
         const hatchDay = startDay + 16;
-        const adultDay = hatchDay + 35;
+        const adultDay = hatchDay + 45;
         
         batchList.push({
           id: b,
@@ -723,7 +723,7 @@ export default function Projections({ token }) {
             </div>
             {growthMethod !== 'buy_adults' && (
               <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                 {rearingFeedKg.toFixed(2)} kg de alimento Iniciador para los 35 días previos a la postura.
+                 {rearingFeedKg.toFixed(2)} kg de alimento Iniciador para los 45 días previos a la postura.
               </div>
             )}
           </div>
@@ -802,7 +802,7 @@ export default function Projections({ token }) {
                   
                   {growthMethod !== 'buy_adults' && (
                     <div style={{ background: 'rgba(251, 191, 36, 0.05)', border: '1px solid var(--accent-gold)', borderRadius: '4px', padding: '0.75rem', marginTop: '1.25rem', color: '#fbbf24', fontSize: '0.8rem', lineHeight: '1.4' }}>
-                      ⚠️ Ten en cuenta que con el método de incubación, el ingreso comenzará a percibirse gradualmente después de que los lotes completen sus 35 días de crianza.
+                      ⚠️ Ten en cuenta que con el método de incubación, el ingreso comenzará a percibirse gradualmente después de que los lotes completen sus 45 días de crianza.
                     </div>
                   )}
                 </>
