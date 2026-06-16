@@ -444,6 +444,7 @@ export default function Projections({ token }) {
             <small style={{ color: 'var(--text-muted)' }}>Equivale a ${pricePerEgg.toFixed(2)} c/u.</small>
           </div>
 
+          {projectionMode === 'eggs' && (
           <div className="form-group" style={{ margin: '0' }}>
             <label htmlFor="growth_method" style={{ fontSize: '0.85rem' }}>Método de Crecimiento 🐣</label>
             <select
@@ -459,6 +460,7 @@ export default function Projections({ token }) {
             </select>
             <small style={{ color: 'var(--text-muted)' }}>Define la inversión y plazos.</small>
           </div>
+          )}
 
           <div className="form-group" style={{ margin: '0' }}>
             <label htmlFor="cages_current" style={{ fontSize: '0.85rem' }}>Jaulas Disponibles en Granja 🪵</label>
@@ -650,7 +652,7 @@ export default function Projections({ token }) {
       </div>
 
       {/* --- ADVERTENCIAS INTELIGENTES DE CAPACIDAD --- */}
-      {(growthMethod !== 'buy_adults' && incubatorBatches > 5) && (
+      {projectionMode === 'eggs' && (growthMethod !== 'buy_adults' && incubatorBatches > 5) && (
         <div 
           className="glass-card" 
           style={{
@@ -681,6 +683,7 @@ export default function Projections({ token }) {
       )}
 
       {/* --- CARDS DE DETALLE E INVERSIÓN INICIAL --- */}
+      {projectionMode === 'eggs' && (
       <div className="dashboard-grid" style={{ marginBottom: '2rem' }}>
         
         {/* Card: Análisis de Aves */}
@@ -762,6 +765,7 @@ export default function Projections({ token }) {
         </div>
 
       </div>
+      )}
 
       {/* --- PROYECCIÓN DE GASTOS Y UTILIDADES MENSUALES --- */}
       <div className="glass-card" style={{ padding: '2rem' }}>
