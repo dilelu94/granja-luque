@@ -564,7 +564,18 @@ export default function Inventory({ token }) {
           }}
           onClick={() => setActiveTab('products')}
         >
-          📦 Productos y Envases
+          🏷️ Productos (Venta)
+        </button>
+        <button 
+          className="btn" 
+          style={{
+            borderBottom: activeTab === 'containers' ? '2px solid var(--accent-green)' : 'none',
+            borderRadius: '0', background: 'none', color: activeTab === 'containers' ? 'var(--text-primary)' : 'var(--text-secondary)',
+            fontWeight: '600'
+          }}
+          onClick={() => setActiveTab('containers')}
+        >
+          📦 Envases Vacíos
         </button>
       </div>
 
@@ -874,23 +885,8 @@ export default function Inventory({ token }) {
          ======================================================= */}
       {activeTab === 'products' && (
         <div className="glass-card">
-          <div style={{ display: 'flex', gap: '1.5rem', marginBottom: '2rem', flexWrap: 'wrap' }}>
-            <div className="glass-card" style={{ flex: '1', minWidth: '240px', display: 'flex', alignItems: 'center', gap: '1.5rem', borderLeft: '5px solid var(--accent-gold)' }}>
-              <div style={{ fontSize: '3rem' }}>📦</div>
-              <div>
-                <h3 style={{ fontSize: '1rem', color: 'var(--text-secondary)' }}>Total Envases Vacíos (Maples)</h3>
-                <div style={{ fontSize: '1.8rem', fontWeight: 'bold', color: 'var(--accent-gold)' }}>
-                  {products.reduce((acc, p) => acc + (p.container_stock || 0), 0)}
-                </div>
-                <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-                  Suma de todos los envases cargados
-                </div>
-              </div>
-            </div>
-          </div>
-
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-            <h3 style={{ fontFamily: 'var(--font-heading)' }}>Gestión de Productos y Envases</h3>
+            <h3 style={{ fontFamily: 'var(--font-heading)' }}>Gestión Financiera de Productos</h3>
             <button 
               className="btn btn-primary" 
               style={{ padding: '0.5rem 1rem', fontSize: '0.9rem' }}
@@ -944,7 +940,6 @@ export default function Inventory({ token }) {
                   <th>Costo Total</th>
                   <th>Margen Neto</th>
                   <th>Stock Producto</th>
-                  <th>Stock Envases Vacíos</th>
                   <th>Acciones</th>
                 </tr>
               </thead>
@@ -977,9 +972,6 @@ export default function Inventory({ token }) {
                       <td style={{ fontWeight: '600', color: prod.stock > 0 ? 'var(--text-primary)' : 'var(--accent-red)' }}>
                         {prod.stock} uds
                       </td>
-                      <td style={{ fontWeight: '600', color: (prod.container_stock > 0) ? 'var(--text-primary)' : 'var(--text-muted)' }}>
-                        {prod.container_stock || 0} uds
-                      </td>
                       <td>
                         <div style={{ display: 'flex', gap: '0.25rem' }}>
                           <button 
@@ -1001,6 +993,71 @@ export default function Inventory({ token }) {
                     </tr>
                   );
                 })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* =======================================================
+          TAB: ENVASES VACÍOS
+         ======================================================= */}
+      {activeTab === 'containers' && (
+        <div className="glass-card">
+          <div style={{ display: 'flex', gap: '1.5rem', marginBottom: '2rem', flexWrap: 'wrap' }}>
+            <div className="glass-card" style={{ flex: '1', minWidth: '240px', display: 'flex', alignItems: 'center', gap: '1.5rem', borderLeft: '5px solid var(--accent-gold)' }}>
+              <div style={{ fontSize: '3rem' }}>📦</div>
+              <div>
+                <h3 style={{ fontSize: '1rem', color: 'var(--text-secondary)' }}>Total Envases Vacíos</h3>
+                <div style={{ fontSize: '1.8rem', fontWeight: 'bold', color: 'var(--accent-gold)' }}>
+                  {products.reduce((acc, p) => acc + (p.container_stock || 0), 0)}
+                </div>
+                <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                  Suma de maples, frascos y cajas
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+            <h3 style={{ fontFamily: 'var(--font-heading)' }}>Inventario de Envases</h3>
+          </div>
+
+          <div className="table-container">
+            <table>
+              <thead>
+                <tr>
+                  <th>Producto Asociado</th>
+                  <th>Categoría</th>
+                  <th>Envases Vacíos (Stock)</th>
+                  <th>Costo por Envase</th>
+                  <th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                {products.map(prod => (
+                  <tr key={`env-${prod.id}`}>
+                    <td style={{ fontWeight: '600' }}>{prod.name}</td>
+                    <td>
+                      <span className="badge badge-pending">{prod.category}</span>
+                    </td>
+                    <td style={{ fontWeight: 'bold', color: (prod.container_stock > 0) ? 'var(--accent-gold)' : 'var(--text-muted)', fontSize: '1.1rem' }}>
+                      {prod.container_stock || 0} uds
+                    </td>
+                    <td style={{ color: 'var(--text-secondary)' }}>
+                      ${Number(prod.container_cost || 0).toFixed(2)}
+                    </td>
+                    <td>
+                      <button 
+                        className="btn btn-secondary" 
+                        style={{ padding: '0.25rem 0.5rem', fontSize: '0.8rem' }}
+                        onClick={() => handleEditProductClick(prod)}
+                      >
+                        ➕ Modificar Stock Envases
+                      </button>
+                    </td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>
