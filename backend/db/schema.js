@@ -104,6 +104,7 @@ export async function initializeDatabase() {
   await addColumnIfNotExists(db, 'products', 'container_cost', 'REAL NOT NULL DEFAULT 0.0');
   await addColumnIfNotExists(db, 'products', 'label_cost', 'REAL NOT NULL DEFAULT 0.0');
   await addColumnIfNotExists(db, 'products', 'egg_count', 'INTEGER NOT NULL DEFAULT 0');
+  await addColumnIfNotExists(db, 'products', 'container_stock', 'INTEGER NOT NULL DEFAULT 0');
 
   // --- MIGRACIONES PARA LA TABLA USERS (Roles) ---
   await addColumnIfNotExists(db, 'users', 'role', "TEXT CHECK(role IN ('super_admin', 'admin')) NOT NULL DEFAULT 'admin'");
@@ -217,7 +218,8 @@ export async function initializeDatabase() {
     { key: 'cage_bulb_wattage', value: '100' },
     { key: 'cage_light_hours', value: '16' },
     { key: 'cost_fertile_egg', value: '250.0' },
-    { key: 'cost_adult_quail', value: '15000.0' }
+    { key: 'cost_adult_quail', value: '15000.0' },
+    { key: 'loose_eggs_stock', value: '13' }
   ];
 
   for (const s of defaultSettings) {

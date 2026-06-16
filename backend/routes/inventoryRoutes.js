@@ -49,7 +49,7 @@ router.get('/products/admin', authenticateToken, async (req, res) => {
  * ADMIN ONLY: Create a new product.
  */
 router.post('/products', authenticateToken, async (req, res) => {
-  const { name, description, price, stock, category, imageUrl, status, containerCost, labelCost, eggCount } = req.body;
+  const { name, description, price, stock, category, imageUrl, status, containerCost, labelCost, eggCount, containerStock } = req.body;
 
   if (!name || price === undefined || stock === undefined || !category) {
     return res.status(400).json({ error: 'Faltan campos requeridos (nombre, precio, stock, categoría).' });
@@ -58,9 +58,9 @@ router.post('/products', authenticateToken, async (req, res) => {
   try {
     const db = await getDatabaseConnection();
     const result = await db.run(`
-      INSERT INTO products (name, description, price, stock, category, image_url, status, container_cost, label_cost, egg_count)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `, [name, description, price, stock, category, imageUrl || null, status || 'active', Number(containerCost || 0), Number(labelCost || 0), Number(eggCount || 0)]);
+      INSERT INTO products (name, description, price, stock, category, image_url, status, container_cost, label_cost, egg_count, container_stock)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `, [name, description, price, stock, category, imageUrl || null, status || 'active', Number(containerCost || 0), Number(labelCost || 0), Number(eggCount || 0), Number(containerStock || 0)]);
     
     res.status(201).json({ id: result.lastID, message: 'Producto creado con éxito.' });
   } catch (error) {
@@ -75,7 +75,7 @@ router.post('/products', authenticateToken, async (req, res) => {
  */
 router.put('/products/:id', authenticateToken, async (req, res) => {
   const { id } = req.params;
-  const { name, description, price, stock, category, imageUrl, status, containerCost, labelCost, eggCount } = req.body;
+  const { name, description, price, stock, category, imageUrl, status, containerCost, labelCost, eggCount, containerStock } = req.body;
 
   try {
     const db = await getDatabaseConnection();
@@ -86,9 +86,9 @@ router.put('/products/:id', authenticateToken, async (req, res) => {
 
     await db.run(`
       UPDATE products 
-      SET name = ?, description = ?, price = ?, stock = ?, category = ?, image_url = ?, status = ?, container_cost = ?, label_cost = ?, egg_count = ?
+      SET name = ?, description = ?, price = ?, stock = ?, category = ?, image_url = ?, status = ?, container_cost = ?, label_cost = ?, egg_count = ?, container_stock = ?
       WHERE id = ?
-    `, [name, description, price, stock, category, imageUrl, status, Number(containerCost || 0), Number(labelCost || 0), Number(eggCount || 0), id]);
+    `, [name, description, price, stock, category, imageUrl, status, Number(containerCost || 0), Number(labelCost || 0), Number(eggCount || 0), Number(containerStock || 0), id]);
 
     res.json({ message: 'Producto actualizado con éxito.' });
   } catch (error) {
@@ -405,7 +405,28 @@ router.post('/eggs/pack', authenticateToken, async (req, res) => {
     res.json({ message: `Empacado completado. Se añadieron ${packagesCount} unidades al stock del producto.` });
   } catch (error) {
     console.error('Error al empaquetar huevos:', error);
-    res.status(500).json({ error: 'Error al actualizar el stock del producto.' });
+    res.status(500).json({ error: error.message || 'Error al actualizar el stock del producto.' });
+  }
+});
+
+/**
+ * POST /api/inventory/eggs/loose
+ * ADMIN ONLY: Adjust loose eggs stock manually.
+ */
+router.post('/eggs/loose', authenticateToken, async (req, res) => {
+  const { newStock } = req.body;
+
+  if (newStock === undefined) {
+    return res.status(400).json({ error: 'Falta la cantidad de huevos sueltos.' });
+  }
+
+  try {
+    const { Settings } = await import('../models/Settings.js');
+    await Settings.set('loose_eggs_stock', Math.max(0, Number(newStock)));
+    res.json({ message: 'Stock de huevos sueltos actualizado con éxito.' });
+  } catch (error) {
+    console.error('Error al actualizar huevos sueltos:', error);
+    res.status(500).json({ error: 'Error al actualizar el stock.' });
   }
 });
 

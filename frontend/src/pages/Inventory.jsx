@@ -64,7 +64,8 @@ export default function Inventory({ token }) {
     status: 'active',
     containerCost: '',
     labelCost: '',
-    eggCount: ''
+    eggCount: '',
+    containerStock: ''
   });
 
   const [loading, setLoading] = useState(true);
@@ -275,6 +276,32 @@ export default function Inventory({ token }) {
     }
   };
 
+  const handleAdjustLooseEggs = async () => {
+    const current = Number(settings.loose_eggs_stock || 0);
+    const newVal = prompt(`Cantidad actual: ${current}\n\nIngresa la nueva cantidad total de huevos sueltos (ajuste manual):`, current);
+    if (newVal === null || newVal.trim() === '') return;
+    const numVal = Number(newVal);
+    if (isNaN(numVal) || numVal < 0) {
+      showNotification('Cantidad inválida', true);
+      return;
+    }
+
+    try {
+      const res = await fetch('/api/inventory/eggs/loose', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ newStock: numVal })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+
+      showNotification('Stock de huevos sueltos ajustado con éxito.');
+      fetchData();
+    } catch (err) {
+      showNotification(err.message, true);
+    }
+  };
+
   const handleProductChangeForPacking = (productId) => {
     const prod = products.find(p => p.id === Number(productId));
     setPackForm({
@@ -407,7 +434,8 @@ export default function Inventory({ token }) {
           stock: Number(productForm.stock),
           containerCost: Number(productForm.containerCost || 0),
           labelCost: Number(productForm.labelCost || 0),
-          eggCount: Number(productForm.eggCount || 0)
+          eggCount: Number(productForm.eggCount || 0),
+          containerStock: Number(productForm.containerStock || 0)
         })
       });
       const data = await res.json();
@@ -434,7 +462,8 @@ export default function Inventory({ token }) {
       status: prod.status || 'active',
       containerCost: prod.container_cost !== undefined ? prod.container_cost : 0,
       labelCost: prod.label_cost !== undefined ? prod.label_cost : 0,
-      eggCount: prod.egg_count !== undefined ? prod.egg_count : 0
+      eggCount: prod.egg_count !== undefined ? prod.egg_count : 0,
+      containerStock: prod.container_stock !== undefined ? prod.container_stock : 0
     });
     setShowProductModal(true);
   };
@@ -468,7 +497,8 @@ export default function Inventory({ token }) {
       status: 'active',
       containerCost: '',
       labelCost: '',
-      eggCount: ''
+      eggCount: '',
+      containerStock: ''
     });
   };
 
@@ -898,7 +928,8 @@ export default function Inventory({ token }) {
                   <th>Desglose Costo</th>
                   <th>Costo Total</th>
                   <th>Margen Neto</th>
-                  <th>Stock</th>
+                  <th>Stock Producto</th>
+                  <th>Stock Envases Vacíos</th>
                   <th>Acciones</th>
                 </tr>
               </thead>
@@ -930,6 +961,9 @@ export default function Inventory({ token }) {
                       </td>
                       <td style={{ fontWeight: '600', color: prod.stock > 0 ? 'var(--text-primary)' : 'var(--accent-red)' }}>
                         {prod.stock} uds
+                      </td>
+                      <td style={{ fontWeight: '600', color: (prod.container_stock > 0) ? 'var(--text-primary)' : 'var(--text-muted)' }}>
+                        {prod.container_stock || 0} uds
                       </td>
                       <td>
                         <div style={{ display: 'flex', gap: '0.25rem' }}>
@@ -1004,7 +1038,7 @@ export default function Inventory({ token }) {
                   />
                 </div>
                 <div className="form-group" style={{ flex: '1' }}>
-                  <label>Stock Inicial</label>
+                  <label>Stock Producto Terminado</label>
                   <input 
                     type="number" 
                     className="form-control" 
@@ -1012,6 +1046,17 @@ export default function Inventory({ token }) {
                     required
                     value={productForm.stock}
                     onChange={e => setProductForm({ ...productForm, stock: e.target.value })}
+                  />
+                </div>
+                <div className="form-group" style={{ flex: '1' }}>
+                  <label>Stock Envases Vacíos</label>
+                  <input 
+                    type="number" 
+                    className="form-control" 
+                    placeholder="0" 
+                    required
+                    value={productForm.containerStock}
+                    onChange={e => setProductForm({ ...productForm, containerStock: e.target.value })}
                   />
                 </div>
               </div>
@@ -1323,58 +1368,113 @@ export default function Inventory({ token }) {
       {/* =======================================================
           MODAL: EMPAQUETAR
          ======================================================= */}
-      {showPackModal && (
-        <div className="modal-overlay">
-          <div className="modal-content">
-            <h3 style={{ marginBottom: '1.5rem' }}>Empaquetar Huevos para Venta</h3>
-            <form onSubmit={handlePackEggs}>
-              <div className="form-group">
-                <label>Selecciona el Producto</label>
-                <select 
-                  className="form-control" 
-                  required
-                  value={packForm.productId}
-                  onChange={e => handleProductChangeForPacking(e.target.value)}
-                >
-                  <option value="">-- Elige un producto --</option>
-                  {products.filter(p => p.category === 'eggs' || p.category === 'processed').map(p => (
-                    <option key={p.id} value={p.id}>{p.name} (Stock actual: {p.stock})</option>
-                  ))}
-                </select>
+      {showPackModal && (() => {
+        const looseEggs = Number(settings.loose_eggs_stock || 0);
+        const eggProducts = products.filter(p => 
+          (p.category === 'eggs' || p.category === 'processed') && p.egg_count > 0 && p.container_stock > 0
+        );
+        const suggestions = eggProducts.map(p => {
+          const maxPacks = Math.min(p.container_stock, Math.floor(looseEggs / p.egg_count));
+          return { ...p, maxPacks };
+        }).filter(p => p.maxPacks > 0);
+
+        return (
+          <div className="modal-overlay">
+            <div className="modal-content">
+              <h3 style={{ marginBottom: '1.5rem' }}>Empaquetar Huevos para Venta</h3>
+              
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(255,255,255,0.05)', padding: '1rem', borderRadius: 'var(--border-radius-sm)', marginBottom: '1.5rem' }}>
+                <div>
+                  <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', display: 'block' }}>Huevos Sueltos Disponibles</span>
+                  <strong style={{ fontSize: '1.5rem', color: 'var(--accent-gold)' }}>{looseEggs}</strong>
+                </div>
+                <button type="button" className="btn btn-secondary" style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem' }} onClick={handleAdjustLooseEggs}>
+                  ✏️ Ajustar Manual
+                </button>
               </div>
 
-              <div className="form-group">
-                <label>Cantidad de Cajas / Maples a crear</label>
-                <input 
-                  type="number" 
-                  className="form-control" 
-                  placeholder="5" 
-                  required
-                  value={packForm.packagesCount}
-                  onChange={e => setPackForm({ ...packForm, packagesCount: e.target.value })}
-                />
-              </div>
+              {suggestions.length > 0 && (
+                <div style={{ marginBottom: '1.5rem' }}>
+                  <label style={{ color: 'var(--accent-green)', fontWeight: 'bold' }}>💡 Sugerencias Rápidas:</label>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginTop: '0.5rem' }}>
+                    {suggestions.map(s => (
+                      <button 
+                        key={s.id} 
+                        type="button"
+                        className="btn btn-primary" 
+                        style={{ fontSize: '0.85rem', padding: '0.5rem 0.8rem' }}
+                        onClick={() => {
+                          setPackForm({ productId: s.id, packagesCount: s.maxPacks, eggsPerPackage: s.egg_count });
+                        }}
+                      >
+                        📦 {s.maxPacks}x {s.name}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
 
-              <div className="form-group">
-                <label>Equivalente de huevos por empaque (definido en el producto)</label>
-                <input 
-                  type="number" 
-                  className="form-control" 
-                  readOnly
-                  disabled
-                  placeholder="Se auto-completa al elegir producto"
-                  value={packForm.eggsPerPackage}
-                />
-              </div>
+              <form onSubmit={handlePackEggs}>
+                <div className="form-group">
+                  <label>Selecciona el Producto</label>
+                  <select 
+                    className="form-control" 
+                    required
+                    value={packForm.productId}
+                    onChange={e => handleProductChangeForPacking(e.target.value)}
+                  >
+                    <option value="">-- Elige un producto --</option>
+                    {products.filter(p => p.category === 'eggs' || p.category === 'processed').map(p => (
+                      <option key={p.id} value={p.id}>
+                        {p.name} (Stock: {p.stock} | Envases vacíos: {p.container_stock || 0})
+                      </option>
+                    ))}
+                  </select>
+                </div>
 
-              <div style={{ display: 'flex', gap: '0.75rem' }}>
-                <button type="submit" className="btn btn-primary" style={{ flex: '1' }}>Empaquetar</button>
-                <button type="button" className="btn btn-secondary" style={{ flex: '1' }} onClick={() => setShowPackModal(false)}>Cancelar</button>
-              </div>
-            </form>
+                <div className="form-group">
+                  <label>Cantidad de Cajas / Maples a crear</label>
+                  <input 
+                    type="number" 
+                    className="form-control" 
+                    placeholder="5" 
+                    required
+                    max={(() => {
+                      if (!packForm.productId) return undefined;
+                      const prod = products.find(p => p.id === Number(packForm.productId));
+                      if (!prod) return undefined;
+                      return Math.min(prod.container_stock || 0, Math.floor(looseEggs / (prod.egg_count || 1)));
+                    })()}
+                    value={packForm.packagesCount}
+                    onChange={e => setPackForm({ ...packForm, packagesCount: e.target.value })}
+                  />
+                  {packForm.productId && (() => {
+                    const prod = products.find(p => p.id === Number(packForm.productId));
+                    if (!prod) return null;
+                    const maxPossible = Math.min(prod.container_stock || 0, Math.floor(looseEggs / (prod.egg_count || 1)));
+                    return <small style={{ color: 'var(--text-secondary)', display: 'block', marginTop: '0.25rem' }}>Puedes crear hasta {maxPossible} paquetes.</small>;
+                  })()}
+                </div>
+
+                <div className="form-group" style={{ display: 'none' }}>
+                  <label>Equivalente de huevos por empaque</label>
+                  <input 
+                    type="number" 
+                    className="form-control" 
+                    readOnly
+                    value={packForm.eggsPerPackage}
+                  />
+                </div>
+
+                <div style={{ display: 'flex', gap: '0.75rem' }}>
+                  <button type="submit" className="btn btn-primary" style={{ flex: '1' }}>Empaquetar</button>
+                  <button type="button" className="btn btn-secondary" style={{ flex: '1' }} onClick={() => setShowPackModal(false)}>Cancelar</button>
+                </div>
+              </form>
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* =======================================================
           MODAL: ALIMENTO

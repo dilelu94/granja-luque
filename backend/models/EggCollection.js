@@ -14,7 +14,30 @@ export class EggCollection {
    */
   async save() {
     const db = await getDatabaseConnection();
+    const { Settings } = await import('./Settings.js');
+
+    let oldNet = 0;
+    let isUpdate = false;
+
     if (this.id) {
+      const old = await db.get('SELECT quantity_collected, quantity_broken FROM egg_production WHERE id = ?', [this.id]);
+      if (old) {
+        oldNet = old.quantity_collected - old.quantity_broken;
+        isUpdate = true;
+      }
+    } else {
+      const existing = await db.get('SELECT id, quantity_collected, quantity_broken FROM egg_production WHERE date = ?', [this.date]);
+      if (existing) {
+        this.id = existing.id;
+        oldNet = existing.quantity_collected - existing.quantity_broken;
+        isUpdate = true;
+      }
+    }
+
+    const newNet = this.quantityCollected - this.quantityBroken;
+    const delta = newNet - oldNet;
+
+    if (isUpdate) {
       await db.run(
         `UPDATE egg_production 
          SET quantity_collected = ?, quantity_broken = ?, notes = ? 
@@ -24,21 +47,18 @@ export class EggCollection {
     } else {
       const result = await db.run(
         `INSERT INTO egg_production (date, quantity_collected, quantity_broken, notes)
-         VALUES (?, ?, ?, ?)
-         ON CONFLICT(date) DO UPDATE SET 
-           quantity_collected = excluded.quantity_collected,
-           quantity_broken = excluded.quantity_broken,
-           notes = excluded.notes`,
+         VALUES (?, ?, ?, ?)`,
         [this.date, this.quantityCollected, this.quantityBroken, this.notes]
       );
-      if (result.lastID) {
-        this.id = result.lastID;
-      } else {
-        // En caso de conflicto resuelto, buscamos el ID
-        const row = await db.get('SELECT id FROM egg_production WHERE date = ?', [this.date]);
-        if (row) this.id = row.id;
-      }
+      this.id = result.lastID;
     }
+
+    if (delta !== 0) {
+      const currentLoose = await Settings.get('loose_eggs_stock') || 0;
+      const nextLoose = Math.max(0, Number(currentLoose) + delta);
+      await Settings.set('loose_eggs_stock', nextLoose);
+    }
+
     return this;
   }
 
@@ -125,11 +145,29 @@ export class EggCollection {
    */
   static async packEggs(productId, packagesCount, eggsPerPackage) {
     const db = await getDatabaseConnection();
+    const { Settings } = await import('./Settings.js');
     
-    // Incrementar el stock del producto
+    const requiredEggs = packagesCount * eggsPerPackage;
+    
+    // Validar y descontar huevos sueltos
+    const currentLoose = await Settings.get('loose_eggs_stock') || 0;
+    if (Number(currentLoose) < requiredEggs) {
+      throw new Error(`Huevos sueltos insuficientes. Se requieren ${requiredEggs} pero hay ${currentLoose}.`);
+    }
+
+    // Validar y descontar envases
+    const product = await db.get('SELECT container_stock FROM products WHERE id = ?', [productId]);
+    if (!product) throw new Error('Producto no encontrado.');
+    if (product.container_stock < packagesCount) {
+      throw new Error(`Envases insuficientes. Se requieren ${packagesCount} pero hay ${product.container_stock}.`);
+    }
+
+    // Actualizar inventarios
+    await Settings.set('loose_eggs_stock', Number(currentLoose) - requiredEggs);
+    
     await db.run(
-      'UPDATE products SET stock = stock + ? WHERE id = ?',
-      [packagesCount, productId]
+      'UPDATE products SET stock = stock + ?, container_stock = container_stock - ? WHERE id = ?',
+      [packagesCount, packagesCount, productId]
     );
 
     return true;

@@ -15,6 +15,7 @@ export class Product {
     this.containerCost = data.container_cost !== undefined ? data.container_cost : (data.containerCost || 0.0);
     this.labelCost = data.label_cost !== undefined ? data.label_cost : (data.labelCost || 0.0);
     this.eggCount = data.egg_count !== undefined ? data.egg_count : (data.eggCount || 0);
+    this.containerStock = data.container_stock !== undefined ? data.container_stock : (data.containerStock || 0);
   }
 
   /**
@@ -44,15 +45,15 @@ export class Product {
     if (this.id) {
       await db.run(
         `UPDATE products 
-         SET name = ?, description = ?, price = ?, stock = ?, category = ?, image_url = ?, status = ?, container_cost = ?, label_cost = ?, egg_count = ?
+         SET name = ?, description = ?, price = ?, stock = ?, category = ?, image_url = ?, status = ?, container_cost = ?, label_cost = ?, egg_count = ?, container_stock = ?
          WHERE id = ?`,
-        [this.name, this.description, this.price, this.stock, this.category, this.imageUrl, this.status, this.containerCost, this.labelCost, this.eggCount, this.id]
+        [this.name, this.description, this.price, this.stock, this.category, this.imageUrl, this.status, this.containerCost, this.labelCost, this.eggCount, this.containerStock, this.id]
       );
     } else {
       const result = await db.run(
-        `INSERT INTO products (name, description, price, stock, category, image_url, status, container_cost, label_cost, egg_count)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [this.name, this.description, this.price, this.stock, this.category, this.imageUrl, this.status, this.containerCost, this.labelCost, this.eggCount]
+        `INSERT INTO products (name, description, price, stock, category, image_url, status, container_cost, label_cost, egg_count, container_stock)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [this.name, this.description, this.price, this.stock, this.category, this.imageUrl, this.status, this.containerCost, this.labelCost, this.eggCount, this.containerStock]
       );
       this.id = result.lastID;
     }
