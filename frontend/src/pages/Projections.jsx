@@ -166,10 +166,8 @@ export default function Projections({ token }) {
   const kwhPerCageMonth = (cageBulbWattage * cageLightHours * 30) / 1000;
   const monthlyElectricityCost = totalCagesNeeded * kwhPerCageMonth * electricityKwhCost;
 
-  // Costo de envases y etiquetas (Prorrateado usando Maple de 30 como referencia)
-  // Intentar obtener de la base de datos el producto maple de 30
-  const mapleProduct = baseData.products.find(p => p.egg_count === 30) || { container_cost: 150, label_cost: 30 };
-  const packagingCostPerEgg = (mapleProduct.container_cost + mapleProduct.label_cost) / 30;
+  // Costo de envases: $300 por bandeja de 12 unidades
+  const packagingCostPerEgg = 300 / 12;
   const monthlyPackagingCost = monthlyEggs * packagingCostPerEgg;
 
   // Costo operativo total mensual
@@ -782,8 +780,8 @@ export default function Projections({ token }) {
                 <span style={{ fontWeight: '600', color: 'white' }}>+ ${projectedMonthlyRevenue.toLocaleString()}</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', paddingLeft: '1rem', borderLeft: '2px solid rgba(255,255,255,0.05)' }}>
-                <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>Equivalente a {monthlyEggs / 30} Maples de 30</span>
-                <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>${(pricePerEgg * 30).toFixed(2)} por Maple</span>
+                <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>Equivalente a {monthlyEggs / 12} Docenas</span>
+                <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>${(pricePerEgg * 12).toFixed(2)} por Docena</span>
               </div>
 
               <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '0.75rem' }}>
@@ -792,7 +790,7 @@ export default function Projections({ token }) {
               </div>
 
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ color: 'var(--text-secondary)' }}>Costo Envases Plásticos y Etiquetas (Maples):</span>
+                <span style={{ color: 'var(--text-secondary)' }}>Costo Envases Plásticos (Bandejas de 12):</span>
                 <span style={{ color: '#f87171' }}>- ${Math.round(monthlyPackagingCost).toLocaleString()}</span>
               </div>
 
@@ -818,6 +816,7 @@ export default function Projections({ token }) {
           </div>
 
           {/* ROI y Conclusión */}
+          {projectionMode === 'eggs' && (
           <div style={{ flex: '1', minWidth: '300px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
             <div className="glass-card" style={{ background: 'rgba(255,255,255,0.01)', textAlign: 'center', padding: '2rem 1.5rem', height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
               
@@ -852,10 +851,13 @@ export default function Projections({ token }) {
               
             </div>
           </div>
+          )}
 
         </div>
 
         {/* --- GRÁFICO DE LÍNEA DE TIEMPO INTERACTIVO --- */}
+        {projectionMode === 'eggs' && (
+        <>
         <hr style={{ border: 'none', borderTop: '1px solid rgba(255,255,255,0.05)', margin: '2rem 0' }} />
         
         <div>
@@ -1048,6 +1050,8 @@ export default function Projections({ token }) {
             </div>
           </div>
         </div>
+        </>
+        )}
       </div>
     </div>
   );
