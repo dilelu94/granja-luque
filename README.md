@@ -11,6 +11,8 @@ Este es un sistema full-stack de gestión para granja de codornices, diseñado p
 5. **Calendario de Granja**: Agendamiento inteligente y automático de volteo (Día 15) y eclosión (Día 17) para incubadoras.
 6. **Integración de Mercado Pago**: Generación de enlaces de pago por Mercado Pago para pedidos aprobados por WhatsApp.
 7. **Notificación al Bot de WhatsApp**: Envía webhooks instantáneos a tu bot de WhatsApp cuando se crea, aprueba o paga un pedido.
+8. **Cálculos Financieros Dinámicos**: Costo base del huevo en tiempo real calculado en base a las aves vivas (machos/hembras) y el consumo diario de alimento según su edad.
+9. **Empaquetado Inteligente**: Sugerencia de cuántos envases se pueden empaquetar según el stock de envases vacíos (maples, cajas) y la cantidad de huevos recolectados.
 
 ## ⚙️ Configuración del Servidor
 
@@ -18,11 +20,17 @@ El servidor Oracle Cloud AMD ya cuenta con Node.js 22 y PM2 instalados, y la bas
 
 Para arrancar el proyecto localmente en desarrollo:
 ```bash
+# Iniciar frontend y backend
 npm install
 npm run dev
 ```
 
-Las pruebas unitarias pueden ejecutarse con:
+### 🧪 Pruebas Unitarias
+El proyecto utiliza **Vitest** y **React Testing Library** para asegurar el correcto funcionamiento de la lógica de negocio (como el cálculo del alimento, costos dinámicos, días de incubación y ROI).
+
+Las pruebas unitarias pueden ejecutarse en cada directorio de forma independiente:
 ```bash
-npm test
+cd backend && npm test
+cd ../frontend && npm test
 ```
+Además, se han implementado flujos de integración continua en **GitHub Actions** para correr estos tests automáticamente al hacer un push a `master`.

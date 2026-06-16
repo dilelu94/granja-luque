@@ -1,4 +1,4 @@
-name: Node.js CI (Tests)
+name: Tests
 
 on:
   push:
@@ -10,17 +10,30 @@ jobs:
   test:
     runs-on: ubuntu-latest
 
+    strategy:
+      matrix:
+        node-version: [20.x]
+
     steps:
     - uses: actions/checkout@v4
 
-    - name: Use Node.js 22.x
+    - name: Use Node.js ${{ matrix.node-version }}
       uses: actions/setup-node@v4
       with:
-        node-version: 22.x
-        cache: 'npm'
+        node-version: ${{ matrix.node-version }}
 
-    - name: Install dependencies
-      run: npm run install:all
+    - name: Install backend dependencies
+      working-directory: ./backend
+      run: npm install
 
-    - name: Run unit tests
-      run: npm test
+    - name: Run backend tests
+      working-directory: ./backend
+      run: npm run test
+
+    - name: Install frontend dependencies
+      working-directory: ./frontend
+      run: npm install
+
+    - name: Run frontend tests
+      working-directory: ./frontend
+      run: npm run test

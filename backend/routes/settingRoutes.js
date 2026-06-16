@@ -4,6 +4,8 @@ import { FeedStock } from '../models/FeedStock.js';
 import { QuailBatch } from '../models/QuailBatch.js';
 import { authenticateToken } from './authRoutes.js';
 
+import { calculateDynamicEggCost } from '../utils/costCalculator.js';
+
 const router = express.Router();
 
 /**
@@ -35,16 +37,12 @@ router.get('/', authenticateToken, async (req, res) => {
     // Calcular costo dinámico del huevo
     const activeBatches = await QuailBatch.getAllActive();
     const adultBatches = activeBatches.filter(b => b.type === 'adult');
-    const totalFemales = adultBatches.reduce((acc, b) => acc + (b.femalesQuantity || 0), 0);
-    const totalAdults = adultBatches.reduce((acc, b) => acc + (b.currentQuantity || 0), 0);
-
-    const dailyFeedPerAdult = parseFloat(settings.feed_consumption_adult || 0.025);
+    
+    const dailyFeedPerAdult = settings.feed_consumption_adult || 0.025;
     const estimates = await FeedStock.calculateEstimates(settings);
     const ponedoraCost = estimates.ponedora.costPerKg || 0;
 
-    const dailyFeedCost = totalAdults * dailyFeedPerAdult * ponedoraCost;
-    const dailyEggs = totalFemales * 0.8;
-    const dynamicEggCost = dailyEggs > 0 ? (dailyFeedCost / dailyEggs) : 0;
+    const dynamicEggCost = calculateDynamicEggCost(adultBatches, dailyFeedPerAdult, ponedoraCost);
 
     settings.egg_base_cost = dynamicEggCost.toFixed(2);
 

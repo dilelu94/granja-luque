@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { calculate4MonthROI } from '../utils/calculations.js';
 
 export default function Projections({ token }) {
   const [baseData, setBaseData] = useState({
