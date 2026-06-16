@@ -7,6 +7,8 @@ export class QuailBatch {
     this.type = data.type; // 'chick' o 'adult'
     this.initialQuantity = data.initial_quantity ?? data.initialQuantity;
     this.currentQuantity = data.current_quantity ?? data.currentQuantity;
+    this.femalesQuantity = data.females_quantity ?? data.femalesQuantity ?? 0;
+    this.malesQuantity = data.males_quantity ?? data.malesQuantity ?? 0;
     this.birthDate = data.birth_date || data.birthDate; // YYYY-MM-DD
     this.status = data.status || 'active'; // 'active', 'sold', 'retired'
     this.notes = data.notes || '';
@@ -112,15 +114,15 @@ export class QuailBatch {
     if (this.id) {
       await db.run(
         `UPDATE quail_batches 
-         SET name = ?, type = ?, initial_quantity = ?, current_quantity = ?, birth_date = ?, status = ?, notes = ?, cage_id = ?
+         SET name = ?, type = ?, initial_quantity = ?, current_quantity = ?, females_quantity = ?, males_quantity = ?, birth_date = ?, status = ?, notes = ?, cage_id = ?
          WHERE id = ?`,
-        [this.name, this.type, this.initialQuantity, this.currentQuantity, this.birthDate, this.status, this.notes, this.cageId, this.id]
+        [this.name, this.type, this.initialQuantity, this.currentQuantity, this.femalesQuantity, this.malesQuantity, this.birthDate, this.status, this.notes, this.cageId, this.id]
       );
     } else {
       const result = await db.run(
-        `INSERT INTO quail_batches (name, type, initial_quantity, current_quantity, birth_date, status, notes, cage_id)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-        [this.name, this.type, this.initialQuantity, this.currentQuantity, this.birthDate, this.status, this.notes, this.cageId]
+        `INSERT INTO quail_batches (name, type, initial_quantity, current_quantity, females_quantity, males_quantity, birth_date, status, notes, cage_id)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [this.name, this.type, this.initialQuantity, this.currentQuantity, this.femalesQuantity, this.malesQuantity, this.birthDate, this.status, this.notes, this.cageId]
       );
       this.id = result.lastID;
     }
@@ -316,6 +318,8 @@ export class QuailBatch {
       type: this.getAgeInDays() < 45 ? 'chick' : 'adult',
       initialQuantity: this.initialQuantity,
       currentQuantity: this.currentQuantity,
+      femalesQuantity: this.femalesQuantity,
+      malesQuantity: this.malesQuantity,
       birthDate: this.birthDate,
       status: this.status,
       notes: this.notes,

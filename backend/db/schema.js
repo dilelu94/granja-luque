@@ -110,6 +110,8 @@ export async function initializeDatabase() {
 
   // --- MIGRACIONES PARA LA TABLA QUAIL_BATCHES (Jaulas) ---
   await addColumnIfNotExists(db, 'quail_batches', 'cage_id', 'INTEGER REFERENCES cages(id)');
+  await addColumnIfNotExists(db, 'quail_batches', 'females_quantity', 'INTEGER DEFAULT 0');
+  await addColumnIfNotExists(db, 'quail_batches', 'males_quantity', 'INTEGER DEFAULT 0');
 
   // 7. Tabla de Pedidos de Venta
   await db.exec(`

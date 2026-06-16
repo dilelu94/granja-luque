@@ -72,9 +72,9 @@ export default function Projections({ token }) {
         const estimatedCages = Math.ceil(data.activeAdultQuails / 50);
         setCurrentCages(estimatedCages);
         
-        // Inicializar hembras y machos actuales (asumimos todo hembras por defecto hasta que el usuario edite)
-        setCurrentFemales(data.activeAdultQuails);
-        setCurrentMales(0);
+        // Inicializar hembras y machos actuales
+        setCurrentFemales(data.activeAdultFemales || 0);
+        setCurrentMales(data.activeAdultMales || 0);
 
         // Inicializar inputs editables con los valores de base de datos
         if (data.settings) {
@@ -188,8 +188,7 @@ export default function Projections({ token }) {
   // Utilidad Neta Mensual
   const netMonthlyProfit = projectedMonthlyRevenue - totalMonthlyOperatingCost;
 
-  // ROI (Meses para recuperar inversión)
-  const roiMonths = netMonthlyProfit > 0 ? (initialInvestment / netMonthlyProfit).toFixed(2) : null;
+  // El ROI se calculará más abajo usando la línea de tiempo.
 
   // --- GENERACIÓN DE DATOS DE LA LÍNEA DE TIEMPO Y CURVA DE ROI ---
   const generateTimelineData = () => {
@@ -321,6 +320,20 @@ export default function Projections({ token }) {
   };
 
   const timelineData = generateTimelineData();
+  
+  let roiMonths = null;
+  const breakEvenMonthIdx = timelineData.findIndex(d => d.cumulativeProfit >= 0 && d.month > 0);
+  if (breakEvenMonthIdx > 0) {
+    const prevMonth = timelineData[breakEvenMonthIdx - 1];
+    const currentMonth = timelineData[breakEvenMonthIdx];
+    if (currentMonth.profit > 0 && prevMonth.cumulativeProfit < 0) {
+      const fraction = Math.abs(prevMonth.cumulativeProfit) / currentMonth.profit;
+      roiMonths = (prevMonth.month + fraction).toFixed(2);
+    } else {
+      roiMonths = currentMonth.month.toFixed(2);
+    }
+  }
+
   const maxValue = Math.max(...timelineData.map(d => Math.max(d.cost, d.revenue)), 1000) * 1.15;
   const gridLevels = 5;
 

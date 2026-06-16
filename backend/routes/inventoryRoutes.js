@@ -146,7 +146,7 @@ router.get('/quail-batches', authenticateToken, async (req, res) => {
  * ADMIN ONLY: Create a new quail batch.
  */
 router.post('/quail-batches', authenticateToken, async (req, res) => {
-  const { name, type, initialQuantity, birthDate, notes, cageId } = req.body;
+  const { name, type, initialQuantity, birthDate, notes, cageId, femalesQuantity, malesQuantity } = req.body;
 
   if (!name || !type || !initialQuantity || !birthDate) {
     return res.status(400).json({ error: 'Campos obligatorios faltantes (nombre, tipo, cantidad inicial, fecha de nacimiento).' });
@@ -161,6 +161,8 @@ router.post('/quail-batches', authenticateToken, async (req, res) => {
       type,
       initialQuantity: Number(initialQuantity),
       currentQuantity: Number(initialQuantity),
+      femalesQuantity: Number(femalesQuantity || 0),
+      malesQuantity: Number(malesQuantity || 0),
       birthDate,
       notes,
       status: 'active',
@@ -210,7 +212,7 @@ router.post('/quail-batches/:id/mortality', authenticateToken, async (req, res) 
  */
 router.put('/quail-batches/:id', authenticateToken, async (req, res) => {
   const { id } = req.params;
-  const { name, type, initialQuantity, currentQuantity, birthDate, status, notes, cageId } = req.body;
+  const { name, type, initialQuantity, currentQuantity, femalesQuantity, malesQuantity, birthDate, status, notes, cageId } = req.body;
 
   try {
     const settings = await Settings.getAll();
@@ -225,6 +227,8 @@ router.put('/quail-batches/:id', authenticateToken, async (req, res) => {
     batch.type = type !== undefined ? type : batch.type;
     batch.initialQuantity = initialQuantity !== undefined ? Number(initialQuantity) : batch.initialQuantity;
     batch.currentQuantity = currentQuantity !== undefined ? Number(currentQuantity) : batch.currentQuantity;
+    batch.femalesQuantity = femalesQuantity !== undefined ? Number(femalesQuantity) : batch.femalesQuantity;
+    batch.malesQuantity = malesQuantity !== undefined ? Number(malesQuantity) : batch.malesQuantity;
     batch.birthDate = birthDate !== undefined ? birthDate : batch.birthDate;
     batch.status = status !== undefined ? status : batch.status;
     batch.notes = notes !== undefined ? notes : batch.notes;

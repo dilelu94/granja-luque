@@ -14,11 +14,15 @@ router.get('/base-data', authenticateToken, async (req, res) => {
 
     // 1. Obtener cantidad de codornices adultas activas
     const quailsRow = await db.get(`
-      SELECT SUM(current_quantity) as total 
+      SELECT SUM(current_quantity) as total,
+             SUM(females_quantity) as total_females,
+             SUM(males_quantity) as total_males
       FROM quail_batches 
       WHERE status = 'active' AND type = 'adult'
     `);
     const activeAdultQuails = quailsRow && quailsRow.total ? quailsRow.total : 0;
+    const activeAdultFemales = quailsRow && quailsRow.total_females ? quailsRow.total_females : 0;
+    const activeAdultMales = quailsRow && quailsRow.total_males ? quailsRow.total_males : 0;
 
     // 2. Obtener costo de última compra de alimento Ponedora
     const lastPonedoraPurchase = await db.get(`
@@ -60,6 +64,8 @@ router.get('/base-data', authenticateToken, async (req, res) => {
 
     res.json({
       activeAdultQuails,
+      activeAdultFemales,
+      activeAdultMales,
       feedCostPonedoraPerKg,
       feedCostIniciadorPerKg,
       settings,

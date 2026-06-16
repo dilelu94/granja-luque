@@ -40,7 +40,7 @@ export default function Inventory({ token }) {
 
   // Form inputs
   const [batchForm, setBatchForm] = useState({ name: '', type: 'chick', initialQuantity: '', birthDate: '', notes: '', cageId: '' });
-  const [editBatchForm, setEditBatchForm] = useState({ id: '', name: '', type: 'chick', initialQuantity: '', currentQuantity: '', birthDate: '', status: 'active', notes: '', cageId: '' });
+  const [editBatchForm, setEditBatchForm] = useState({ id: '', name: '', type: 'chick', initialQuantity: '', currentQuantity: '', femalesQuantity: '', malesQuantity: '', birthDate: '', status: 'active', notes: '', cageId: '' });
   const [selectedBatchId, setSelectedBatchId] = useState(null);
   const [mortalityForm, setMortalityForm] = useState({ count: '', reason: 'Muerte / Enfermedad', notes: '' });
   
@@ -165,6 +165,8 @@ export default function Inventory({ token }) {
       type: batch.type,
       initialQuantity: batch.initialQuantity,
       currentQuantity: batch.currentQuantity,
+      femalesQuantity: batch.femalesQuantity || 0,
+      malesQuantity: batch.malesQuantity || 0,
       birthDate: batch.birthDate,
       status: batch.status,
       notes: batch.notes || '',
@@ -184,6 +186,8 @@ export default function Inventory({ token }) {
           type: editBatchForm.type,
           initialQuantity: Number(editBatchForm.initialQuantity),
           currentQuantity: Number(editBatchForm.currentQuantity),
+          femalesQuantity: Number(editBatchForm.femalesQuantity),
+          malesQuantity: Number(editBatchForm.malesQuantity),
           birthDate: editBatchForm.birthDate,
           status: editBatchForm.status,
           notes: editBatchForm.notes,
@@ -1523,13 +1527,44 @@ export default function Inventory({ token }) {
                   />
                 </div>
                 <div className="form-group" style={{ flex: '1' }}>
-                  <label>Cantidad Actual</label>
+                  <label>Cantidad Actual Total</label>
                   <input 
                     type="number" 
                     className="form-control" 
                     required
                     value={editBatchForm.currentQuantity}
                     onChange={e => setEditBatchForm({ ...editBatchForm, currentQuantity: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: '1rem' }}>
+                <div className="form-group" style={{ flex: '1' }}>
+                  <label>Hembras</label>
+                  <input 
+                    type="number" 
+                    className="form-control" 
+                    required
+                    value={editBatchForm.femalesQuantity}
+                    onChange={e => setEditBatchForm({ 
+                      ...editBatchForm, 
+                      femalesQuantity: e.target.value,
+                      currentQuantity: Number(e.target.value) + Number(editBatchForm.malesQuantity)
+                    })}
+                  />
+                </div>
+                <div className="form-group" style={{ flex: '1' }}>
+                  <label>Machos</label>
+                  <input 
+                    type="number" 
+                    className="form-control" 
+                    required
+                    value={editBatchForm.malesQuantity}
+                    onChange={e => setEditBatchForm({ 
+                      ...editBatchForm, 
+                      malesQuantity: e.target.value,
+                      currentQuantity: Number(editBatchForm.femalesQuantity) + Number(e.target.value)
+                    })}
                   />
                 </div>
               </div>
