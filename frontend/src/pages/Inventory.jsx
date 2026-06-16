@@ -1370,9 +1370,8 @@ export default function Inventory({ token }) {
          ======================================================= */}
       {showPackModal && (() => {
         const looseEggs = Number(settings.loose_eggs_stock || 0);
-        const eggProducts = products.filter(p => 
-          (p.category === 'eggs' || p.category === 'processed') && p.egg_count > 0 && p.container_stock > 0
-        );
+        const allEggProducts = products.filter(p => (p.category === 'eggs' || p.category === 'processed') && p.egg_count > 0);
+        const eggProducts = allEggProducts.filter(p => p.container_stock > 0);
         const suggestions = eggProducts.map(p => {
           const maxPacks = Math.min(p.container_stock, Math.floor(looseEggs / p.egg_count));
           return { ...p, maxPacks };
@@ -1420,26 +1419,28 @@ export default function Inventory({ token }) {
                 </div>
               ) : (
                 <div style={{ marginBottom: '1.5rem', padding: '0.75rem', background: 'rgba(255, 193, 7, 0.1)', color: 'var(--accent-gold)', borderRadius: 'var(--border-radius-sm)', fontSize: '0.85rem' }}>
-                  💡 No hay sugerencias rápidas porque faltan huevos o <strong>no tienes envases vacíos (maples) cargados</strong>.
-                  <div style={{ marginTop: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                    {eggProducts.map(p => (
-                      <div key={p.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(0,0,0,0.2)', padding: '0.5rem', borderRadius: '4px' }}>
-                        <span>{p.name} (Envases: {p.container_stock || 0})</span>
-                        <button 
-                          type="button" 
-                          className="btn btn-secondary" 
-                          style={{ padding: '0.2rem 0.5rem', fontSize: '0.8rem' }}
-                          onClick={() => {
-                            setShowPackModal(false);
-                            setActiveTab('products');
-                            handleEditProductClick(p);
-                          }}
-                        >
-                          ➕ Cargar Envases
-                        </button>
-                      </div>
-                    ))}
-                  </div>
+                  💡 {looseEggs === 0 ? "No tienes huevos sueltos disponibles para empaquetar." : "No tienes envases vacíos (maples) cargados en ninguno de tus productos."}
+                  {eggProducts.length === 0 && (
+                    <div style={{ marginTop: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                      {allEggProducts.map(p => (
+                        <div key={p.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(0,0,0,0.2)', padding: '0.5rem', borderRadius: '4px' }}>
+                          <span>{p.name} (Envases: {p.container_stock || 0})</span>
+                          <button 
+                            type="button" 
+                            className="btn btn-secondary" 
+                            style={{ padding: '0.2rem 0.5rem', fontSize: '0.8rem' }}
+                            onClick={() => {
+                              setShowPackModal(false);
+                              setActiveTab('products');
+                              handleEditProductClick(p);
+                            }}
+                          >
+                            ➕ Cargar Envases
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -1453,7 +1454,7 @@ export default function Inventory({ token }) {
                     onChange={e => handleProductChangeForPacking(e.target.value)}
                   >
                     <option value="">-- Elige un producto --</option>
-                    {products.filter(p => p.category === 'eggs' || p.category === 'processed').map(p => (
+                    {eggProducts.map(p => (
                       <option key={p.id} value={p.id}>
                         {p.name} (Stock: {p.stock} | Envases vacíos: {p.container_stock || 0})
                       </option>
@@ -1496,7 +1497,7 @@ export default function Inventory({ token }) {
                 </div>
 
                 <div style={{ display: 'flex', gap: '0.75rem' }}>
-                  <button type="submit" className="btn btn-primary" style={{ flex: '1' }}>Empaquetar</button>
+                  <button type="submit" className="btn btn-primary" style={{ flex: '1' }} disabled={looseEggs === 0 || eggProducts.length === 0}>Empaquetar</button>
                   <button type="button" className="btn btn-secondary" style={{ flex: '1' }} onClick={() => setShowPackModal(false)}>Cancelar</button>
                 </div>
               </form>
