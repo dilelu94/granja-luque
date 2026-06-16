@@ -1385,15 +1385,21 @@ export default function Inventory({ token }) {
               
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(255,255,255,0.05)', padding: '1rem', borderRadius: 'var(--border-radius-sm)', marginBottom: '1.5rem' }}>
                 <div>
-                  <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', display: 'block' }}>Huevos Sueltos Disponibles</span>
-                  <strong style={{ fontSize: '1.5rem', color: 'var(--accent-gold)' }}>{looseEggs}</strong>
+                  <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '0.25rem' }}>Huevos Sueltos Disponibles</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <strong style={{ fontSize: '1.75rem', color: 'var(--accent-gold)', lineHeight: '1' }}>{looseEggs}</strong>
+                    <span 
+                      style={{ cursor: 'pointer', opacity: 0.7, fontSize: '1rem', padding: '0.25rem' }} 
+                      onClick={handleAdjustLooseEggs}
+                      title="Ajustar Manualmente"
+                    >
+                      ✏️
+                    </span>
+                  </div>
                 </div>
-                <button type="button" className="btn btn-secondary" style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem' }} onClick={handleAdjustLooseEggs}>
-                  ✏️ Ajustar Manual
-                </button>
               </div>
 
-              {suggestions.length > 0 && (
+              {suggestions.length > 0 ? (
                 <div style={{ marginBottom: '1.5rem' }}>
                   <label style={{ color: 'var(--accent-green)', fontWeight: 'bold' }}>💡 Sugerencias Rápidas:</label>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginTop: '0.5rem' }}>
@@ -1409,6 +1415,29 @@ export default function Inventory({ token }) {
                       >
                         📦 {s.maxPacks}x {s.name}
                       </button>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div style={{ marginBottom: '1.5rem', padding: '0.75rem', background: 'rgba(255, 193, 7, 0.1)', color: 'var(--accent-gold)', borderRadius: 'var(--border-radius-sm)', fontSize: '0.85rem' }}>
+                  💡 No hay sugerencias rápidas porque faltan huevos o <strong>no tienes envases vacíos (maples) cargados</strong>.
+                  <div style={{ marginTop: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                    {eggProducts.map(p => (
+                      <div key={p.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(0,0,0,0.2)', padding: '0.5rem', borderRadius: '4px' }}>
+                        <span>{p.name} (Envases: {p.container_stock || 0})</span>
+                        <button 
+                          type="button" 
+                          className="btn btn-secondary" 
+                          style={{ padding: '0.2rem 0.5rem', fontSize: '0.8rem' }}
+                          onClick={() => {
+                            setShowPackModal(false);
+                            setActiveTab('products');
+                            handleEditProductClick(p);
+                          }}
+                        >
+                          ➕ Cargar Envases
+                        </button>
+                      </div>
                     ))}
                   </div>
                 </div>
