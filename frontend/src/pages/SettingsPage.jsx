@@ -16,6 +16,10 @@ export default function SettingsPage({ token, role }) {
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
 
+  // --- Datos para cálculo de costos ---
+  const [batches, setBatches] = useState([]);
+  const [feed, setFeed] = useState({});
+
   // --- Cambio de Contraseña ---
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -40,21 +44,30 @@ export default function SettingsPage({ token, role }) {
   };
 
   useEffect(() => {
-    // Cargar configuraciones
-    fetch('/api/settings', { headers })
-      .then(res => res.json())
-      .then(data => {
-        setSettings(prev => ({
-          ...prev,
-          ...data
-        }));
+    const fetchData = async () => {
+      try {
+        const [resSettings, resBatches, resFeed] = await Promise.all([
+          fetch('/api/settings', { headers }),
+          fetch('/api/inventory/quail-batches', { headers }),
+          fetch('/api/inventory/feed', { headers })
+        ]);
+
+        const dataSettings = await resSettings.json();
+        const dataBatches = await resBatches.json();
+        const dataFeed = await resFeed.json();
+
+        setSettings(prev => ({ ...prev, ...dataSettings }));
+        setBatches(dataBatches);
+        setFeed(dataFeed);
+      } catch (err) {
+        console.error('Error al cargar datos:', err);
+        setError('Error al obtener configuraciones e inventario.');
+      } finally {
         setLoading(false);
-      })
-      .catch(err => {
-        console.error('Error al cargar configuraciones:', err);
-        setError('Error al obtener configuraciones de la API.');
-        setLoading(false);
-      });
+      }
+    };
+
+    fetchData();
   }, [token]);
 
   // Cargar usuarios si es super_admin
@@ -262,20 +275,44 @@ export default function SettingsPage({ token, role }) {
         <div className="glass-card" style={{ marginBottom: '1.5rem' }}>
           <h3 style={{ marginBottom: '1.25rem', fontFamily: 'var(--font-heading)', color: 'var(--accent-green)' }}>Finanzas y Envíos</h3>
           <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap' }}>
-            <div className="form-group" style={{ flex: '1', minWidth: '200px' }}>
-              <label htmlFor="egg_base_cost">Costo de Producción de un Huevo suelto ($)</label>
-              <input 
-                type="number" 
-                step="0.1"
-                id="egg_base_cost"
-                className="form-control"
-                placeholder="15.0"
-                required
-                value={settings.egg_base_cost || ''}
-                onChange={e => setSettings({ ...settings, egg_base_cost: e.target.value })}
-              />
-              <small style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>Usado para estimar márgenes de ganancia en maples.</small>
+            <div className="form-group" style={{ flex: '1', minWidth: '350px' }}>
+              <label>Costo de Producción de un Huevo suelto ($)</label>
+              <div style={{ background: 'rgba(0,0,0,0.2)', padding: '1rem', borderRadius: 'var(--border-radius-sm)', border: '1px solid var(--border-color)' }}>
+                {(() => {
+                  const activeAdultBatches = batches.filter(b => b.type === 'adult' && b.status === 'active');
+                  const totalFemales = activeAdultBatches.reduce((acc, b) => acc + (Number(b.femalesQuantity) || 0), 0);
+                  const totalAdults = activeAdultBatches.reduce((acc, b) => acc + (Number(b.currentQuantity) || 0), 0);
+                  
+                  const dailyFeedConsumptionPerAdult = Number(settings.feed_consumption_adult) || 0.025;
+                  const ponedoraCostPerKg = feed.ponedora?.costPerKg || 0;
+                  
+                  const totalDailyFeedCost = totalAdults * dailyFeedConsumptionPerAdult * ponedoraCostPerKg;
+                  const expectedDailyEggs = totalFemales * 0.8;
+                  const calculatedEggCost = expectedDailyEggs > 0 ? (totalDailyFeedCost / expectedDailyEggs) : 0;
+
+                  return (
+                    <>
+                      <div style={{ fontSize: '1.4rem', fontWeight: 'bold', color: 'var(--accent-green)', marginBottom: '0.5rem' }}>
+                        ${calculatedEggCost.toFixed(2)}
+                      </div>
+                      <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                        <strong>Desglose del cálculo:</strong>
+                        <ul style={{ margin: '0.5rem 0 0 1.5rem', padding: 0 }}>
+                          <li><strong>Alimento Ponedora:</strong> ${ponedoraCostPerKg.toFixed(2)} por kg</li>
+                          <li><strong>Aves Adultas:</strong> {totalAdults} aves consumiendo {(totalAdults * dailyFeedConsumptionPerAdult).toFixed(3)} kg al día (${totalDailyFeedCost.toFixed(2)}/día)</li>
+                          <li><strong>Postura Estimada:</strong> {expectedDailyEggs.toFixed(0)} huevos por día (80% de {totalFemales} hembras)</li>
+                          <li><strong>Cálculo:</strong> ${totalDailyFeedCost.toFixed(2)} / {expectedDailyEggs.toFixed(0)} huevos = ${calculatedEggCost.toFixed(2)} c/u</li>
+                        </ul>
+                      </div>
+                    </>
+                  );
+                })()}
+              </div>
+              <small style={{ color: 'var(--text-muted)', fontSize: '0.8rem', display: 'block', marginTop: '0.5rem' }}>
+                Este valor se calcula automáticamente y se utiliza para estimar márgenes de ganancia.
+              </small>
             </div>
+
 
             <div className="form-group" style={{ flex: '1', minWidth: '200px' }}>
               <label htmlFor="shipping_default_cost">Costo de Envío a Domicilio Estándar ($)</label>

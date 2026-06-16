@@ -1,6 +1,7 @@
 import express from 'express';
 import { Settings } from '../models/Settings.js';
 import { FeedStock } from '../models/FeedStock.js';
+import { QuailBatch } from '../models/QuailBatch.js';
 import { authenticateToken } from './authRoutes.js';
 
 const router = express.Router();
@@ -30,6 +31,23 @@ router.get('/public', async (req, res) => {
 router.get('/', authenticateToken, async (req, res) => {
   try {
     const settings = await Settings.getAll();
+
+    // Calcular costo dinámico del huevo
+    const activeBatches = await QuailBatch.getAllActive();
+    const adultBatches = activeBatches.filter(b => b.type === 'adult');
+    const totalFemales = adultBatches.reduce((acc, b) => acc + (b.femalesQuantity || 0), 0);
+    const totalAdults = adultBatches.reduce((acc, b) => acc + (b.currentQuantity || 0), 0);
+
+    const dailyFeedPerAdult = parseFloat(settings.feed_consumption_adult || 0.025);
+    const estimates = await FeedStock.calculateEstimates(settings);
+    const ponedoraCost = estimates.ponedora.costPerKg || 0;
+
+    const dailyFeedCost = totalAdults * dailyFeedPerAdult * ponedoraCost;
+    const dailyEggs = totalFemales * 0.8;
+    const dynamicEggCost = dailyEggs > 0 ? (dailyFeedCost / dailyEggs) : 0;
+
+    settings.egg_base_cost = dynamicEggCost.toFixed(2);
+
     res.json(settings);
   } catch (error) {
     console.error('Error al obtener configuraciones:', error);
