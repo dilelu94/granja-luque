@@ -515,8 +515,8 @@ export default function Inventory({ token }) {
           <button className="btn btn-primary" onClick={() => setShowEggModal(true)}>🥚 Recolectar Huevos</button>
           <button className="btn btn-secondary" onClick={() => setShowPackModal(true)}>📦 Empaquetar</button>
           <button className="btn btn-secondary" onClick={() => setShowCageModal(true)}>🪵 Nueva Jaula</button>
-          <button className="btn btn-gold" onClick={() => setShowBatchModal(true)}>🐤 Nuevo Lote Aves</button>
           <button className="btn btn-secondary" onClick={() => setShowFeedModal(true)}>🌾 Cargar Alimento</button>
+          <button className="btn btn-gold" onClick={() => setShowBatchModal(true)}>🐤 Nuevo Lote Aves</button>
         </div>
       </div>
 
@@ -564,7 +564,7 @@ export default function Inventory({ token }) {
           }}
           onClick={() => setActiveTab('products')}
         >
-          🏷️ Productos en Venta
+          📦 Productos y Envases
         </button>
       </div>
 
@@ -874,8 +874,23 @@ export default function Inventory({ token }) {
          ======================================================= */}
       {activeTab === 'products' && (
         <div className="glass-card">
+          <div style={{ display: 'flex', gap: '1.5rem', marginBottom: '2rem', flexWrap: 'wrap' }}>
+            <div className="glass-card" style={{ flex: '1', minWidth: '240px', display: 'flex', alignItems: 'center', gap: '1.5rem', borderLeft: '5px solid var(--accent-gold)' }}>
+              <div style={{ fontSize: '3rem' }}>📦</div>
+              <div>
+                <h3 style={{ fontSize: '1rem', color: 'var(--text-secondary)' }}>Total Envases Vacíos (Maples)</h3>
+                <div style={{ fontSize: '1.8rem', fontWeight: 'bold', color: 'var(--accent-gold)' }}>
+                  {products.reduce((acc, p) => acc + (p.container_stock || 0), 0)}
+                </div>
+                <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                  Suma de todos los envases cargados
+                </div>
+              </div>
+            </div>
+          </div>
+
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-            <h3 style={{ fontFamily: 'var(--font-heading)' }}>Gestión Financiera de Productos</h3>
+            <h3 style={{ fontFamily: 'var(--font-heading)' }}>Gestión de Productos y Envases</h3>
             <button 
               className="btn btn-primary" 
               style={{ padding: '0.5rem 1rem', fontSize: '0.9rem' }}
