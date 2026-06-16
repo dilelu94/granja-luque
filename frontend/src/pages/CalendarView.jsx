@@ -294,21 +294,7 @@ export default function CalendarView({ token }) {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
         <h2 style={{ fontFamily: 'var(--font-heading)', fontSize: '1.8rem' }}>Calendario de la Granja 📅</h2>
         <div style={{ display: 'flex', gap: '0.75rem' }}>
-          <button 
-            className="btn btn-gold" 
-            onClick={() => {
-              setIncubatorForm({
-                id: null,
-                eggsCount: '',
-                startDate: getLocalTodayDate() + 'T00:10',
-                notes: '',
-                status: 'active'
-              });
-              setShowIncubatorModal(true);
-            }}
-          >
-            🐣 Iniciar Incubadora
-          </button>
+
           <button 
             className="btn btn-primary" 
             onClick={() => {
