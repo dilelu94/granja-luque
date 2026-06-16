@@ -326,6 +326,10 @@ test.describe('Pruebas Unitarias de Modelos de Negocio (POO)', () => {
       // Obtener producto existente (sembrado por schema) o crear uno
       const products = await db.all('SELECT * FROM products');
       const prod = products[0];
+      
+      // Asegurarnos que haya suficiente stock para que no se capeé a 0
+      await db.run('UPDATE products SET stock = 10 WHERE id = ?', [prod.id]);
+      prod.stock = 10;
       const initialStock = prod.stock;
 
       // Crear pedido sin envío
