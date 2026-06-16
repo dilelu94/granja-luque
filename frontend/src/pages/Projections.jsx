@@ -31,6 +31,7 @@ export default function Projections({ token }) {
   const [costAdultQuail, setCostAdultQuail] = useState(1200);
   const [costFertileEgg, setCostFertileEgg] = useState(15000);
   const [currentCages, setCurrentCages] = useState(0);
+  const [includeCurrentBirds, setIncludeCurrentBirds] = useState(true);
 
   // --- Desglose Costo Unitario de Jaula ---
   const [cageCosts, setCageCosts] = useState({
@@ -104,7 +105,8 @@ export default function Projections({ token }) {
   const projectedDailyEggs = projectionMode === 'birds' ? Math.floor(targetBirds * 0.8) : targetEggs;
 
   // 3. Brecha de aves (aves a agregar)
-  const quailGap = Math.max(0, quailsNeeded - baseData.activeAdultQuails);
+  const effectiveCurrentBirds = includeCurrentBirds ? baseData.activeAdultQuails : 0;
+  const quailGap = Math.max(0, quailsNeeded - effectiveCurrentBirds);
 
   // 4. Módulos de jaula necesarios
   const totalCagesNeeded = Math.ceil(quailsNeeded / 50);
@@ -476,6 +478,21 @@ export default function Projections({ token }) {
             <small style={{ color: 'var(--text-muted)' }}>Caben 50 aves por jaula.</small>
           </div>
 
+          {projectionMode === 'eggs' && (
+          <div className="form-group" style={{ margin: '0', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+            <label style={{ fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+              <input 
+                type="checkbox" 
+                checked={includeCurrentBirds}
+                onChange={e => setIncludeCurrentBirds(e.target.checked)}
+                style={{ width: '1.2rem', height: '1.2rem', cursor: 'pointer' }}
+              />
+              Descontar aves que ya poseo
+            </label>
+            <small style={{ color: 'var(--text-muted)' }}>Restar las {baseData.activeAdultQuails} aves de la meta.</small>
+          </div>
+          )}
+
         </div>
       </div>
 
@@ -697,7 +714,9 @@ export default function Projections({ token }) {
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
               <span style={{ color: 'var(--text-secondary)' }}>Aves Adultas Actuales:</span>
-              <span>{baseData.activeAdultQuails}</span>
+              <span style={{ color: includeCurrentBirds ? 'white' : 'var(--text-muted)', textDecoration: includeCurrentBirds ? 'none' : 'line-through' }}>
+                {baseData.activeAdultQuails} {!includeCurrentBirds && <span style={{ fontSize: '0.8em' }}>(Ignoradas)</span>}
+              </span>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '0.5rem', fontWeight: 'bold' }}>
               <span style={{ color: 'white' }}>Brecha a Cubrir:</span>
