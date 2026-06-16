@@ -35,6 +35,8 @@ export default function Projections({ token }) {
   
   const [currentFemales, setCurrentFemales] = useState(0);
   const [currentMales, setCurrentMales] = useState(0);
+  const [targetFemales, setTargetFemales] = useState(125);
+  const [targetMales, setTargetMales] = useState(0);
 
   // --- Desglose Costo Unitario de Jaula ---
   const [cageCosts, setCageCosts] = useState({
@@ -76,6 +78,8 @@ export default function Projections({ token }) {
         // Inicializar hembras y machos actuales
         setCurrentFemales(data.activeAdultFemales || 0);
         setCurrentMales(data.activeAdultMales || 0);
+        setTargetFemales(Math.max(125, data.activeAdultFemales || 0));
+        setTargetMales(data.activeAdultMales || 0);
 
         // Inicializar inputs editables con los valores de base de datos
         if (data.settings) {
@@ -108,15 +112,18 @@ export default function Projections({ token }) {
   const totalCageCost = Object.values(cageCosts).reduce((a, b) => Number(a) + Number(b), 0);
 
   // 2. Aves adultas necesarias y huevos proyectados
-  const quailsNeeded = projectionMode === 'eggs' ? Math.ceil(targetEggs / 0.8) : currentFemales;
-  const projectedDailyEggs = projectionMode === 'birds' ? Math.floor(currentFemales * 0.8) : targetEggs;
+  const quailsNeeded = projectionMode === 'eggs' ? Math.ceil(targetEggs / 0.8) : targetFemales;
+  const projectedDailyEggs = projectionMode === 'birds' ? Math.floor(targetFemales * 0.8) : targetEggs;
 
   // 3. Brecha de aves (aves a agregar)
   const effectiveCurrentFemales = includeCurrentBirds ? currentFemales : 0;
   const quailGap = Math.max(0, quailsNeeded - effectiveCurrentFemales);
 
-  const effectiveCurrentMales = includeCurrentBirds || projectionMode === 'birds' ? currentMales : 0;
-  const totalAdultBirdsToFeed = quailsNeeded + effectiveCurrentMales;
+  const effectiveCurrentMales = includeCurrentBirds ? currentMales : 0;
+  const targetMalesNeeded = projectionMode === 'birds' ? targetMales : 0;
+  const malesGap = projectionMode === 'birds' ? Math.max(0, targetMalesNeeded - effectiveCurrentMales) : 0;
+
+  const totalAdultBirdsToFeed = quailsNeeded + (projectionMode === 'birds' ? targetMalesNeeded : effectiveCurrentMales);
 
   // 4. Módulos de jaula necesarios
   const totalCagesNeeded = Math.ceil(totalAdultBirdsToFeed / 50);
@@ -196,6 +203,9 @@ export default function Projections({ token }) {
     const data = [];
     const months = 12;
     const femaleRatio = 0.5;
+    const activeFemales = Math.max(quailsNeeded, effectiveCurrentFemales);
+    const activeMales = Math.max(targetMalesNeeded, effectiveCurrentMales);
+    const activeTotalBirds = activeFemales + activeMales;
     
     // Configuración de los lotes de incubación
     const rearingFeedKgPerChick = (0.015 * 1.20 * 21) + (0.015 * 24);
@@ -235,7 +245,7 @@ export default function Projections({ token }) {
     cumulativeCost += cageInvestment;
     
     if (growthMethod === 'buy_adults') {
-      cumulativeCost += quailGap * costAdultQuail;
+      cumulativeCost += (quailGap + malesGap) * costAdultQuail;
     }
 
     // Punto del Mes 0
@@ -258,8 +268,8 @@ export default function Projections({ token }) {
       let activeQuailsThisMonth = baseData.activeAdultQuails;
       
       if (growthMethod === 'buy_adults') {
-        activeQuailsThisMonth += quailGap;
-        const eggsProduced = activeQuailsThisMonth * 0.8 * 30;
+        activeQuailsThisMonth = activeTotalBirds;
+        const eggsProduced = activeFemales * 0.8 * 30;
         monthRevenue += eggsProduced * pricePerEgg;
         
         monthCost += activeQuailsThisMonth * dailyFeedConsumptionAdult * 30 * baseData.feedCostPonedoraPerKg;
@@ -268,10 +278,13 @@ export default function Projections({ token }) {
       } else {
         let eggsProduced = 0;
         let adultFeedCost = 0;
-        let activeQuailsCountEnd = baseData.activeAdultQuails;
+        let activeQuailsCountEnd = includeCurrentBirds ? baseData.activeAdultQuails : 0;
         
-        eggsProduced += baseData.activeAdultQuails * 0.8 * 30;
-        adultFeedCost += baseData.activeAdultQuails * dailyFeedConsumptionAdult * 30 * baseData.feedCostPonedoraPerKg;
+        const initialFemales = includeCurrentBirds ? (baseData.activeAdultFemales || 0) : 0;
+        const initialMales = includeCurrentBirds ? (baseData.activeAdultMales || 0) : 0;
+        
+        eggsProduced += initialFemales * 0.8 * 30;
+        adultFeedCost += (initialFemales + initialMales) * dailyFeedConsumptionAdult * 30 * baseData.feedCostPonedoraPerKg;
         
         batchList.forEach(batch => {
           const startMonth = Math.floor(batch.startDay / 30) + 1;
@@ -322,18 +335,7 @@ export default function Projections({ token }) {
 
   const timelineData = generateTimelineData();
   
-  let roiMonths = null;
-  const breakEvenMonthIdx = timelineData.findIndex(d => d.cumulativeProfit >= 0 && d.month > 0);
-  if (breakEvenMonthIdx > 0) {
-    const prevMonth = timelineData[breakEvenMonthIdx - 1];
-    const currentMonth = timelineData[breakEvenMonthIdx];
-    if (currentMonth.profit > 0 && prevMonth.cumulativeProfit < 0) {
-      const fraction = Math.abs(prevMonth.cumulativeProfit) / currentMonth.profit;
-      roiMonths = (prevMonth.month + fraction).toFixed(2);
-    } else {
-      roiMonths = currentMonth.month.toFixed(2);
-    }
-  }
+
 
   const maxValue = Math.max(...timelineData.map(d => Math.max(d.cost, d.revenue)), 1000) * 1.15;
   const gridLevels = 5;
@@ -401,6 +403,13 @@ export default function Projections({ token }) {
     }
   }
 
+  let roiMonths = null;
+  if (crossingMonth !== -1) {
+    roiMonths = crossingMonth.toFixed(1);
+  } else if (netMonthlyProfit > 0) {
+    roiMonths = (initialInvestment / netMonthlyProfit).toFixed(1);
+  }
+
   return (
     <div>
       <h2 style={{ marginBottom: '2rem', fontFamily: 'var(--font-heading)', fontSize: '1.8rem' }}>
@@ -444,25 +453,25 @@ export default function Projections({ token }) {
             ) : (
               <div style={{ display: 'flex', gap: '0.5rem' }}>
                 <div style={{ flex: 1 }}>
-                  <label htmlFor="current_females" style={{ fontSize: '0.85rem' }}>Hembras 🦅</label>
+                  <label htmlFor="target_females" style={{ fontSize: '0.85rem' }}>Hembras 🦅</label>
                   <input 
                     type="number" 
-                    id="current_females"
+                    id="target_females"
                     className="form-control"
-                    value={currentFemales}
-                    onChange={e => setCurrentFemales(Math.max(0, parseInt(e.target.value) || 0))}
+                    value={targetFemales}
+                    onChange={e => setTargetFemales(Math.max(0, parseInt(e.target.value) || 0))}
                     style={{ padding: '0.5rem 0.75rem' }}
                   />
                   <small style={{ color: 'var(--text-muted)' }}>Huevos: ~{projectedDailyEggs}/día.</small>
                 </div>
                 <div style={{ flex: 1 }}>
-                  <label htmlFor="current_males" style={{ fontSize: '0.85rem' }}>Machos 🦅</label>
+                  <label htmlFor="target_males" style={{ fontSize: '0.85rem' }}>Machos 🦅</label>
                   <input 
                     type="number" 
-                    id="current_males"
+                    id="target_males"
                     className="form-control"
-                    value={currentMales}
-                    onChange={e => setCurrentMales(Math.max(0, parseInt(e.target.value) || 0))}
+                    value={targetMales}
+                    onChange={e => setTargetMales(Math.max(0, parseInt(e.target.value) || 0))}
                     style={{ padding: '0.5rem 0.75rem' }}
                   />
                   <small style={{ color: 'var(--text-muted)' }}>Aumenta costo alimento.</small>
@@ -484,7 +493,6 @@ export default function Projections({ token }) {
             <small style={{ color: 'var(--text-muted)' }}>Equivale a ${pricePerEgg.toFixed(2)} c/u.</small>
           </div>
 
-          {projectionMode === 'eggs' && (
           <div className="form-group" style={{ margin: '0' }}>
             <label htmlFor="growth_method" style={{ fontSize: '0.85rem' }}>Método de Crecimiento 🐣</label>
             <select
@@ -500,7 +508,6 @@ export default function Projections({ token }) {
             </select>
             <small style={{ color: 'var(--text-muted)' }}>Define la inversión y plazos.</small>
           </div>
-          )}
 
           <div className="form-group" style={{ margin: '0' }}>
             <label htmlFor="cages_current" style={{ fontSize: '0.85rem' }}>Jaulas Disponibles en Granja 🪵</label>
@@ -515,7 +522,6 @@ export default function Projections({ token }) {
             <small style={{ color: 'var(--text-muted)' }}>Caben 50 aves por jaula.</small>
           </div>
 
-          {projectionMode === 'eggs' && (
           <div className="form-group" style={{ margin: '0', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
             <label style={{ fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
               <input 
@@ -541,7 +547,6 @@ export default function Projections({ token }) {
               <small style={{ color: 'var(--text-muted)' }}>Se ignorarán las aves actuales.</small>
             )}
           </div>
-          )}
 
         </div>
       </div>
@@ -720,7 +725,7 @@ export default function Projections({ token }) {
       </div>
 
       {/* --- ADVERTENCIAS INTELIGENTES DE CAPACIDAD --- */}
-      {projectionMode === 'eggs' && (growthMethod !== 'buy_adults' && incubatorBatches > 5) && (
+      {(growthMethod !== 'buy_adults' && incubatorBatches > 5) && (
         <div 
           className="glass-card" 
           style={{
@@ -751,7 +756,6 @@ export default function Projections({ token }) {
       )}
 
       {/* --- CARDS DE DETALLE E INVERSIÓN INICIAL --- */}
-      {projectionMode === 'eggs' && (
       <div className="dashboard-grid" style={{ marginBottom: '2rem' }}>
         
         {/* Card: Análisis de Aves */}
@@ -837,7 +841,6 @@ export default function Projections({ token }) {
         </div>
 
       </div>
-      )}
 
       {/* --- PROYECCIÓN DE GASTOS Y UTILIDADES MENSUALES --- */}
       <div className="glass-card" style={{ padding: '2rem' }}>
@@ -892,7 +895,6 @@ export default function Projections({ token }) {
           </div>
 
           {/* ROI y Conclusión */}
-          {projectionMode === 'eggs' && (
           <div style={{ flex: '1', minWidth: '300px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
             <div className="glass-card" style={{ background: 'rgba(255,255,255,0.01)', textAlign: 'center', padding: '2rem 1.5rem', height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
               
@@ -927,12 +929,10 @@ export default function Projections({ token }) {
               
             </div>
           </div>
-          )}
 
         </div>
 
         {/* --- GRÁFICO DE LÍNEA DE TIEMPO INTERACTIVO --- */}
-        {projectionMode === 'eggs' && (
         <>
         <hr style={{ border: 'none', borderTop: '1px solid rgba(255,255,255,0.05)', margin: '2rem 0' }} />
         
@@ -1127,7 +1127,6 @@ export default function Projections({ token }) {
           </div>
         </div>
         </>
-        )}
       </div>
     </div>
   );

@@ -35,8 +35,11 @@ export default function Inventory({ token }) {
   const [showPackModal, setShowPackModal] = useState(false);
   const [showFeedModal, setShowFeedModal] = useState(false);
   const [showProductModal, setShowProductModal] = useState(false);
+  const [showContainerModal, setShowContainerModal] = useState(false);
   const [showCageModal, setShowCageModal] = useState(false);
   const [showEditCageModal, setShowEditCageModal] = useState(false);
+  
+  const [containerForm, setContainerForm] = useState({ id: null, name: '', containerStock: 0, containerCost: 0, originalProd: null });
 
   // Form inputs
   const [batchForm, setBatchForm] = useState({ name: '', type: 'chick', initialQuantity: '', birthDate: '', notes: '', cageId: '' });
@@ -468,6 +471,49 @@ export default function Inventory({ token }) {
     setShowProductModal(true);
   };
 
+  const handleEditContainerClick = (prod) => {
+    setContainerForm({
+      id: prod.id,
+      name: prod.name,
+      containerStock: prod.container_stock !== undefined ? prod.container_stock : 0,
+      containerCost: prod.container_cost !== undefined ? prod.container_cost : 0,
+      originalProd: prod
+    });
+    setShowContainerModal(true);
+  };
+
+  const handleSaveContainer = async (e) => {
+    e.preventDefault();
+    try {
+      const res = await fetch(`/api/inventory/products/${containerForm.id}`, {
+        method: 'PUT',
+        headers,
+        body: JSON.stringify({
+          id: containerForm.id,
+          name: containerForm.originalProd.name,
+          description: containerForm.originalProd.description || '',
+          price: Number(containerForm.originalProd.price),
+          stock: Number(containerForm.originalProd.stock),
+          category: containerForm.originalProd.category,
+          imageUrl: containerForm.originalProd.image_url || '',
+          status: containerForm.originalProd.status || 'active',
+          labelCost: Number(containerForm.originalProd.label_cost || 0),
+          eggCount: Number(containerForm.originalProd.egg_count || 0),
+          containerCost: Number(containerForm.containerCost || 0),
+          containerStock: Number(containerForm.containerStock || 0)
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+
+      showNotification('Stock de envases actualizado con éxito.');
+      setShowContainerModal(false);
+      fetchData();
+    } catch (err) {
+      showNotification(err.message, true);
+    }
+  };
+
   const handleDeleteProduct = async (id) => {
     if (!window.confirm('¿Estás seguro de que deseas eliminar este producto?')) return;
     try {
@@ -626,9 +672,20 @@ export default function Inventory({ token }) {
 
                     return (
                       <tr key={batch.id} style={{ opacity: batch.status !== 'active' ? 0.6 : 1 }}>
-                        <td style={{ fontWeight: '600' }}>
+                        <td style={{ fontWeight: '600', minWidth: '280px' }}>
                           {batch.name}
-                          {batch.notes && <div style={{ fontSize: '0.75rem', fontWeight: 'normal', color: 'var(--text-secondary)' }}>{batch.notes}</div>}
+                          {batch.notes && (
+                            <div style={{ 
+                              fontSize: '0.75rem', 
+                              fontWeight: 'normal', 
+                              color: 'var(--text-secondary)', 
+                              marginTop: '0.35rem', 
+                              whiteSpace: 'pre-wrap',
+                              lineHeight: '1.3'
+                            }}>
+                              {batch.notes}
+                            </div>
+                          )}
                         </td>
                         <td>
                           {batch.cageName ? (
@@ -1051,7 +1108,7 @@ export default function Inventory({ token }) {
                       <button 
                         className="btn btn-secondary" 
                         style={{ padding: '0.25rem 0.5rem', fontSize: '0.8rem' }}
-                        onClick={() => handleEditProductClick(prod)}
+                        onClick={() => handleEditContainerClick(prod)}
                       >
                         ➕ Modificar Stock Envases
                       </button>
@@ -1060,6 +1117,52 @@ export default function Inventory({ token }) {
                 ))}
               </tbody>
             </table>
+          </div>
+        </div>
+      )}
+
+      {/* =======================================================
+          MODAL: MODIFICAR STOCK DE ENVASES
+         ======================================================= */}
+      {showContainerModal && (
+        <div className="modal-overlay">
+          <div className="modal-content" style={{ maxWidth: '450px' }}>
+            <h3 style={{ marginBottom: '1.5rem', fontFamily: 'var(--font-heading)' }}>
+              Modificar Envase: {containerForm.name}
+            </h3>
+            <form onSubmit={handleSaveContainer}>
+              <div className="form-group">
+                <label>Stock de Envases Vacíos</label>
+                <input 
+                  type="number" 
+                  className="form-control" 
+                  required
+                  min="0"
+                  value={containerForm.containerStock}
+                  onChange={e => setContainerForm({ ...containerForm, containerStock: Math.max(0, parseInt(e.target.value) || 0) })}
+                />
+                <small style={{ color: 'var(--text-muted)' }}>Cantidad de maples/frascos/cajas vacías disponibles.</small>
+              </div>
+
+              <div className="form-group">
+                <label>Costo por Envase ($)</label>
+                <input 
+                  type="number" 
+                  step="0.01"
+                  className="form-control" 
+                  required
+                  min="0"
+                  value={containerForm.containerCost}
+                  onChange={e => setContainerForm({ ...containerForm, containerCost: Math.max(0, parseFloat(e.target.value) || 0) })}
+                />
+                <small style={{ color: 'var(--text-muted)' }}>Costo unitario del envase (se usa para calcular el costo total de fabricación).</small>
+              </div>
+
+              <div style={{ display: 'flex', gap: '1rem', marginTop: '2rem' }}>
+                <button type="submit" className="btn btn-primary" style={{ flex: '1' }}>Guardar Envase</button>
+                <button type="button" className="btn btn-secondary" style={{ flex: '1' }} onClick={() => setShowContainerModal(false)}>Cancelar</button>
+              </div>
+            </form>
           </div>
         </div>
       )}
@@ -1503,8 +1606,7 @@ export default function Inventory({ token }) {
                             style={{ padding: '0.2rem 0.5rem', fontSize: '0.8rem' }}
                             onClick={() => {
                               setShowPackModal(false);
-                              setActiveTab('products');
-                              handleEditProductClick(p);
+                              handleEditContainerClick(p);
                             }}
                           >
                             ➕ Cargar Envases
