@@ -29,7 +29,7 @@ export default function Projections({ token }) {
   const [growthMethod, setGrowthMethod] = useState('buy_adults'); // 'buy_adults', 'incubate_own', 'incubate_bought'
   const [pricePerDozen, setPricePerDozen] = useState(4500);
   const [costAdultQuail, setCostAdultQuail] = useState(1200);
-  const [costFertileEgg, setCostFertileEgg] = useState(50);
+  const [costFertileEgg, setCostFertileEgg] = useState(15000);
   const [currentCages, setCurrentCages] = useState(0);
 
   // --- Desglose Costo Unitario de Jaula ---
@@ -135,7 +135,8 @@ export default function Projections({ token }) {
     incubatorDays = incubatorBatches * 16;
 
     if (growthMethod === 'incubate_bought') {
-      birdCost = fertileEggsNeeded * costFertileEgg;
+      // costFertileEgg representa el precio de una caja de 50 huevos
+      birdCost = fertileEggsNeeded * (costFertileEgg / 50);
     } // else 'incubate_own' -> $0 costo de huevo
 
     // Costo de alimento Iniciador durante 45 días de crianza para TODOS los polluelos nacidos (machos + hembras)
@@ -210,7 +211,7 @@ export default function Projections({ token }) {
           startDay,
           hatchDay,
           adultDay,
-          eggCost: growthMethod === 'incubate_bought' ? eggsInBatch * costFertileEgg : 0,
+          eggCost: growthMethod === 'incubate_bought' ? eggsInBatch * (costFertileEgg / 50) : 0,
           feedCost: chicksInBatch * rearingFeedCostPerChick
         });
       }
@@ -632,7 +633,7 @@ export default function Projections({ token }) {
                     </div>
                   ) : (
                     <div className="form-group" style={{ margin: '0', gridColumn: 'span 2' }}>
-                      <label style={{ fontSize: '0.8rem' }}>Costo Huevo Fértil Comprado ($)</label>
+                      <label style={{ fontSize: '0.8rem' }}>Costo Huevos Fértiles Comprados (x50) ($)</label>
                       <input 
                         type="number"
                         className="form-control"
