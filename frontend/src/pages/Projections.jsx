@@ -24,14 +24,16 @@ export default function Projections({ token }) {
 
   // --- Estados de Entrada del Usuario ---
   const [projectionMode, setProjectionMode] = useState('eggs'); // 'eggs' o 'birds'
-  const [targetEggs, setTargetEggs] = useState(500);
-  const [targetBirds, setTargetBirds] = useState(625);
+  const [targetEggs, setTargetEggs] = useState(100);
   const [growthMethod, setGrowthMethod] = useState('buy_adults'); // 'buy_adults', 'incubate_own', 'incubate_bought'
   const [pricePerDozen, setPricePerDozen] = useState(4500);
   const [costAdultQuail, setCostAdultQuail] = useState(1200);
   const [costFertileEgg, setCostFertileEgg] = useState(15000);
   const [currentCages, setCurrentCages] = useState(0);
   const [includeCurrentBirds, setIncludeCurrentBirds] = useState(true);
+  
+  const [currentFemales, setCurrentFemales] = useState(0);
+  const [currentMales, setCurrentMales] = useState(0);
 
   // --- Desglose Costo Unitario de Jaula ---
   const [cageCosts, setCageCosts] = useState({
@@ -69,6 +71,10 @@ export default function Projections({ token }) {
         // Inicializar jaulas actuales estimadas
         const estimatedCages = Math.ceil(data.activeAdultQuails / 50);
         setCurrentCages(estimatedCages);
+        
+        // Inicializar hembras y machos actuales (asumimos todo hembras por defecto hasta que el usuario edite)
+        setCurrentFemales(data.activeAdultQuails);
+        setCurrentMales(0);
 
         // Inicializar inputs editables con los valores de base de datos
         if (data.settings) {
@@ -101,15 +107,18 @@ export default function Projections({ token }) {
   const totalCageCost = Object.values(cageCosts).reduce((a, b) => Number(a) + Number(b), 0);
 
   // 2. Aves adultas necesarias y huevos proyectados
-  const quailsNeeded = projectionMode === 'eggs' ? Math.ceil(targetEggs / 0.8) : targetBirds;
-  const projectedDailyEggs = projectionMode === 'birds' ? Math.floor(targetBirds * 0.8) : targetEggs;
+  const quailsNeeded = projectionMode === 'eggs' ? Math.ceil(targetEggs / 0.8) : currentFemales;
+  const projectedDailyEggs = projectionMode === 'birds' ? Math.floor(currentFemales * 0.8) : targetEggs;
 
   // 3. Brecha de aves (aves a agregar)
-  const effectiveCurrentBirds = includeCurrentBirds ? baseData.activeAdultQuails : 0;
-  const quailGap = Math.max(0, quailsNeeded - effectiveCurrentBirds);
+  const effectiveCurrentFemales = includeCurrentBirds ? currentFemales : 0;
+  const quailGap = Math.max(0, quailsNeeded - effectiveCurrentFemales);
+
+  const effectiveCurrentMales = includeCurrentBirds || projectionMode === 'birds' ? currentMales : 0;
+  const totalAdultBirdsToFeed = quailsNeeded + effectiveCurrentMales;
 
   // 4. Módulos de jaula necesarios
-  const totalCagesNeeded = Math.ceil(quailsNeeded / 50);
+  const totalCagesNeeded = Math.ceil(totalAdultBirdsToFeed / 50);
   const newCagesNeeded = Math.max(0, totalCagesNeeded - currentCages);
   
   // Tiempo de fabricación en semanas
@@ -161,7 +170,7 @@ export default function Projections({ token }) {
   // Alimento ponedoras mensual
   // Consumo por defecto: 25g (0.025kg)
   const dailyFeedConsumptionAdult = Number(baseData.settings.feed_consumption_adult || 0.025);
-  const monthlyFeedConsumptionKg = quailsNeeded * dailyFeedConsumptionAdult * 30;
+  const monthlyFeedConsumptionKg = totalAdultBirdsToFeed * dailyFeedConsumptionAdult * 30;
   const monthlyFeedCost = monthlyFeedConsumptionKg * baseData.feedCostPonedoraPerKg;
 
   // Costo luz mensual: 48 kWh al mes por jaula módulo
@@ -419,18 +428,32 @@ export default function Projections({ token }) {
                 <small style={{ color: 'var(--text-muted)' }}>Requiere ~{quailsNeeded} codornices adultas.</small>
               </>
             ) : (
-              <>
-                <label htmlFor="target_birds" style={{ fontSize: '0.85rem' }}>Cantidad Aves Adultas 🦅</label>
-                <input 
-                  type="number" 
-                  id="target_birds"
-                  className="form-control"
-                  value={targetBirds}
-                  onChange={e => setTargetBirds(Math.max(1, parseInt(e.target.value) || 0))}
-                  style={{ padding: '0.5rem 0.75rem' }}
-                />
-                <small style={{ color: 'var(--text-muted)' }}>Produce ~{projectedDailyEggs} huevos diarios.</small>
-              </>
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <div style={{ flex: 1 }}>
+                  <label htmlFor="current_females" style={{ fontSize: '0.85rem' }}>Hembras 🦅</label>
+                  <input 
+                    type="number" 
+                    id="current_females"
+                    className="form-control"
+                    value={currentFemales}
+                    onChange={e => setCurrentFemales(Math.max(0, parseInt(e.target.value) || 0))}
+                    style={{ padding: '0.5rem 0.75rem' }}
+                  />
+                  <small style={{ color: 'var(--text-muted)' }}>Huevos: ~{projectedDailyEggs}/día.</small>
+                </div>
+                <div style={{ flex: 1 }}>
+                  <label htmlFor="current_males" style={{ fontSize: '0.85rem' }}>Machos 🦅</label>
+                  <input 
+                    type="number" 
+                    id="current_males"
+                    className="form-control"
+                    value={currentMales}
+                    onChange={e => setCurrentMales(Math.max(0, parseInt(e.target.value) || 0))}
+                    style={{ padding: '0.5rem 0.75rem' }}
+                  />
+                  <small style={{ color: 'var(--text-muted)' }}>Aumenta costo alimento.</small>
+                </div>
+              </div>
             )}
           </div>
 
@@ -489,7 +512,20 @@ export default function Projections({ token }) {
               />
               Descontar aves que ya poseo
             </label>
-            <small style={{ color: 'var(--text-muted)' }}>Restar las {baseData.activeAdultQuails} aves de la meta.</small>
+            {includeCurrentBirds ? (
+              <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
+                <div>
+                  <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Hembras</label>
+                  <input type="number" className="form-control" style={{ padding: '0.25rem' }} value={currentFemales} onChange={e => setCurrentFemales(Math.max(0, parseInt(e.target.value) || 0))} />
+                </div>
+                <div>
+                  <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Machos</label>
+                  <input type="number" className="form-control" style={{ padding: '0.25rem' }} value={currentMales} onChange={e => setCurrentMales(Math.max(0, parseInt(e.target.value) || 0))} />
+                </div>
+              </div>
+            ) : (
+              <small style={{ color: 'var(--text-muted)' }}>Se ignorarán las aves actuales.</small>
+            )}
           </div>
           )}
 
@@ -714,8 +750,10 @@ export default function Projections({ token }) {
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
               <span style={{ color: 'var(--text-secondary)' }}>Aves Adultas Actuales:</span>
-              <span style={{ color: includeCurrentBirds ? 'white' : 'var(--text-muted)', textDecoration: includeCurrentBirds ? 'none' : 'line-through' }}>
-                {baseData.activeAdultQuails} {!includeCurrentBirds && <span style={{ fontSize: '0.8em' }}>(Ignoradas)</span>}
+              <span style={{ color: includeCurrentBirds ? 'white' : 'var(--text-muted)', textDecoration: includeCurrentBirds ? 'none' : 'line-through', textAlign: 'right' }}>
+                {currentFemales + currentMales} 
+                <div style={{ fontSize: '0.75em', color: 'var(--text-muted)', textDecoration: 'none' }}>({currentFemales} H, {currentMales} M)</div>
+                {!includeCurrentBirds && <div style={{ fontSize: '0.8em' }}>(Ignoradas)</div>}
               </span>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '0.5rem', fontWeight: 'bold' }}>
