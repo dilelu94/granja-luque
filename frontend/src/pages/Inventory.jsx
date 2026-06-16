@@ -280,7 +280,7 @@ export default function Inventory({ token }) {
     setPackForm({
       ...packForm,
       productId,
-      eggsPerPackage: prod ? String(prod.eggCount || 30) : '30'
+      eggsPerPackage: prod ? String(prod.egg_count || 30) : '30'
     });
   };
 
