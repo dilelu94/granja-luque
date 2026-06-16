@@ -23,7 +23,9 @@ export default function Projections({ token }) {
   const [error, setError] = useState('');
 
   // --- Estados de Entrada del Usuario ---
+  const [projectionMode, setProjectionMode] = useState('eggs'); // 'eggs' o 'birds'
   const [targetEggs, setTargetEggs] = useState(500);
+  const [targetBirds, setTargetBirds] = useState(625);
   const [growthMethod, setGrowthMethod] = useState('buy_adults'); // 'buy_adults', 'incubate_own', 'incubate_bought'
   const [pricePerDozen, setPricePerDozen] = useState(4500);
   const [costAdultQuail, setCostAdultQuail] = useState(1200);
@@ -97,8 +99,9 @@ export default function Projections({ token }) {
   // 1. Costo unitario total de fabricar una jaula
   const totalCageCost = Object.values(cageCosts).reduce((a, b) => Number(a) + Number(b), 0);
 
-  // 2. Aves adultas necesarias
-  const quailsNeeded = Math.ceil(targetEggs / 0.8);
+  // 2. Aves adultas necesarias y huevos proyectados
+  const quailsNeeded = projectionMode === 'eggs' ? Math.ceil(targetEggs / 0.8) : targetBirds;
+  const projectedDailyEggs = projectionMode === 'birds' ? Math.floor(targetBirds * 0.8) : targetEggs;
 
   // 3. Brecha de aves (aves a agregar)
   const quailGap = Math.max(0, quailsNeeded - baseData.activeAdultQuails);
@@ -148,7 +151,7 @@ export default function Projections({ token }) {
   const initialInvestment = cageInvestment + birdCost + rearingFeedCost;
 
   // 6. Proyección Operativa Mensual (Gastos y Utilidad)
-  const monthlyEggs = targetEggs * 30;
+  const monthlyEggs = projectedDailyEggs * 30;
   const pricePerEgg = pricePerDozen / 12;
   const projectedMonthlyRevenue = monthlyEggs * pricePerEgg;
 
@@ -387,16 +390,47 @@ export default function Projections({ token }) {
         <div className="dashboard-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1.25rem' }}>
           
           <div className="form-group" style={{ margin: '0' }}>
-            <label htmlFor="target_eggs" style={{ fontSize: '0.85rem' }}>Meta de Huevos Diarios 🥚</label>
-            <input 
-              type="number" 
-              id="target_eggs"
+            <label htmlFor="projection_mode" style={{ fontSize: '0.85rem' }}>Modo de Proyección 🎯</label>
+            <select
+              id="projection_mode"
               className="form-control"
-              value={targetEggs}
-              onChange={e => setTargetEggs(Math.max(1, parseInt(e.target.value) || 0))}
+              value={projectionMode}
+              onChange={e => setProjectionMode(e.target.value)}
               style={{ padding: '0.5rem 0.75rem' }}
-            />
-            <small style={{ color: 'var(--text-muted)' }}>Requiere ~{quailsNeeded} codornices adultas.</small>
+            >
+              <option value="eggs">Por Meta de Huevos</option>
+              <option value="birds">Por Cantidad de Aves</option>
+            </select>
+          </div>
+
+          <div className="form-group" style={{ margin: '0' }}>
+            {projectionMode === 'eggs' ? (
+              <>
+                <label htmlFor="target_eggs" style={{ fontSize: '0.85rem' }}>Meta de Huevos Diarios 🥚</label>
+                <input 
+                  type="number" 
+                  id="target_eggs"
+                  className="form-control"
+                  value={targetEggs}
+                  onChange={e => setTargetEggs(Math.max(1, parseInt(e.target.value) || 0))}
+                  style={{ padding: '0.5rem 0.75rem' }}
+                />
+                <small style={{ color: 'var(--text-muted)' }}>Requiere ~{quailsNeeded} codornices adultas.</small>
+              </>
+            ) : (
+              <>
+                <label htmlFor="target_birds" style={{ fontSize: '0.85rem' }}>Cantidad Aves Adultas 🦅</label>
+                <input 
+                  type="number" 
+                  id="target_birds"
+                  className="form-control"
+                  value={targetBirds}
+                  onChange={e => setTargetBirds(Math.max(1, parseInt(e.target.value) || 0))}
+                  style={{ padding: '0.5rem 0.75rem' }}
+                />
+                <small style={{ color: 'var(--text-muted)' }}>Produce ~{projectedDailyEggs} huevos diarios.</small>
+              </>
+            )}
           </div>
 
           <div className="form-group" style={{ margin: '0' }}>
