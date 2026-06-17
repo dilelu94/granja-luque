@@ -19,6 +19,71 @@ const formatDate = (dateStr) => {
   return dateStr;
 };
 
+const CollapsibleNotes = ({ notes }) => {
+  const [expanded, setExpanded] = useState(false);
+  if (!notes) return null;
+  
+  const lines = notes.split('\n').filter(line => line.trim() !== '');
+  const isLong = notes.length > 80 || lines.length > 1;
+  
+  if (!isLong) {
+    return (
+      <div style={{ 
+        fontSize: '0.75rem', 
+        fontWeight: 'normal', 
+        color: 'var(--text-secondary)', 
+        marginTop: '0.35rem', 
+        whiteSpace: 'pre-wrap',
+        lineHeight: '1.3',
+        minWidth: '220px',
+        maxWidth: '350px'
+      }}>
+        {notes}
+      </div>
+    );
+  }
+  
+  let preview = lines[0];
+  if (preview.length > 80) {
+    preview = preview.slice(0, 80) + '...';
+  } else if (lines.length > 1) {
+    preview = preview + '...';
+  }
+  
+  return (
+    <div style={{ 
+      fontSize: '0.75rem', 
+      fontWeight: 'normal', 
+      color: 'var(--text-secondary)', 
+      marginTop: '0.35rem', 
+      lineHeight: '1.3',
+      minWidth: '220px',
+      maxWidth: '350px'
+    }}>
+      <div style={{ whiteSpace: 'pre-wrap' }}>
+        {expanded ? notes : preview}
+      </div>
+      <span 
+        onClick={(e) => {
+          e.stopPropagation();
+          setExpanded(!expanded);
+        }}
+        style={{ 
+          color: 'var(--accent-green)', 
+          cursor: 'pointer', 
+          fontSize: '0.7rem', 
+          fontWeight: '600',
+          marginTop: '0.2rem',
+          display: 'inline-block',
+          textDecoration: 'underline'
+        }}
+      >
+        {expanded ? 'Ver menos ⬆' : 'Ver más ⬇'}
+      </span>
+    </div>
+  );
+};
+
 export default function Inventory({ token }) {
   const [activeTab, setActiveTab] = useState('birds'); // 'birds' | 'feed' | 'products' | 'cages'
   const [batches, setBatches] = useState([]);
@@ -672,22 +737,9 @@ export default function Inventory({ token }) {
 
                     return (
                       <tr key={batch.id} style={{ opacity: batch.status !== 'active' ? 0.6 : 1 }}>
-                        <td style={{ fontWeight: '600' }}>
+                        <td style={{ fontWeight: '600', minWidth: '180px' }}>
                           {batch.name}
-                          {batch.notes && (
-                            <div style={{ 
-                              fontSize: '0.75rem', 
-                              fontWeight: 'normal', 
-                              color: 'var(--text-secondary)', 
-                              marginTop: '0.35rem', 
-                              whiteSpace: 'pre-wrap',
-                              lineHeight: '1.3',
-                              minWidth: '350px',
-                              maxWidth: '450px'
-                            }}>
-                              {batch.notes}
-                            </div>
-                          )}
+                          <CollapsibleNotes notes={batch.notes} />
                         </td>
                         <td>
                           {batch.cageName ? (
