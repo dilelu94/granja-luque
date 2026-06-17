@@ -32,9 +32,6 @@ export default function Projections({ token }) {
   const [costFertileEgg, setCostFertileEgg] = useState(15000);
   const [currentCages, setCurrentCages] = useState(0);
   const [includeCurrentBirds, setIncludeCurrentBirds] = useState(true);
-  
-  const [currentFemales, setCurrentFemales] = useState(0);
-  const [currentMales, setCurrentMales] = useState(0);
   const [targetFemales, setTargetFemales] = useState(125);
   const [targetMales, setTargetMales] = useState(0);
 
@@ -75,9 +72,7 @@ export default function Projections({ token }) {
         const estimatedCages = Math.ceil(data.activeAdultQuails / 50);
         setCurrentCages(estimatedCages);
         
-        // Inicializar hembras y machos actuales
-        setCurrentFemales(data.activeAdultFemales || 0);
-        setCurrentMales(data.activeAdultMales || 0);
+        // Inicializar metas/objetivos con valores de base de datos o mínimos razonables
         setTargetFemales(Math.max(125, data.activeAdultFemales || 0));
         setTargetMales(data.activeAdultMales || 0);
 
@@ -116,10 +111,10 @@ export default function Projections({ token }) {
   const projectedDailyEggs = projectionMode === 'birds' ? Math.floor(targetFemales * 0.8) : targetEggs;
 
   // 3. Brecha de aves (aves a agregar)
-  const effectiveCurrentFemales = includeCurrentBirds ? currentFemales : 0;
+  const effectiveCurrentFemales = includeCurrentBirds ? (baseData.activeAdultFemales || 0) : 0;
   const quailGap = Math.max(0, quailsNeeded - effectiveCurrentFemales);
 
-  const effectiveCurrentMales = includeCurrentBirds ? currentMales : 0;
+  const effectiveCurrentMales = includeCurrentBirds ? (baseData.activeAdultMales || 0) : 0;
   const targetMalesNeeded = projectionMode === 'birds' ? targetMales : 0;
   const malesGap = projectionMode === 'birds' ? Math.max(0, targetMalesNeeded - effectiveCurrentMales) : 0;
 
@@ -533,18 +528,11 @@ export default function Projections({ token }) {
               Descontar aves que ya poseo
             </label>
             {includeCurrentBirds ? (
-              <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
-                <div>
-                  <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Hembras</label>
-                  <input type="number" className="form-control" style={{ padding: '0.25rem' }} value={currentFemales} onChange={e => setCurrentFemales(Math.max(0, parseInt(e.target.value) || 0))} />
-                </div>
-                <div>
-                  <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Machos</label>
-                  <input type="number" className="form-control" style={{ padding: '0.25rem' }} value={currentMales} onChange={e => setCurrentMales(Math.max(0, parseInt(e.target.value) || 0))} />
-                </div>
-              </div>
+              <small style={{ color: 'var(--accent-green)', marginTop: '0.25rem', display: 'block', lineHeight: '1.4' }}>
+                Descontando: {baseData.activeAdultFemales || 0} hembras y {baseData.activeAdultMales || 0} machos de tu granja.
+              </small>
             ) : (
-              <small style={{ color: 'var(--text-muted)' }}>Se ignorarán las aves actuales.</small>
+              <small style={{ color: 'var(--text-muted)', marginTop: '0.25rem', display: 'block' }}>Se ignorarán las aves actuales.</small>
             )}
           </div>
 
@@ -769,8 +757,8 @@ export default function Projections({ token }) {
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
               <span style={{ color: 'var(--text-secondary)' }}>Aves Adultas Actuales:</span>
               <span style={{ color: includeCurrentBirds ? 'white' : 'var(--text-muted)', textDecoration: includeCurrentBirds ? 'none' : 'line-through', textAlign: 'right' }}>
-                {currentFemales + currentMales} 
-                <div style={{ fontSize: '0.75em', color: 'var(--text-muted)', textDecoration: 'none' }}>({currentFemales} H, {currentMales} M)</div>
+                {(baseData.activeAdultFemales || 0) + (baseData.activeAdultMales || 0)} 
+                <div style={{ fontSize: '0.75em', color: 'var(--text-muted)', textDecoration: 'none' }}>({baseData.activeAdultFemales || 0} H, {baseData.activeAdultMales || 0} M)</div>
                 {!includeCurrentBirds && <div style={{ fontSize: '0.8em' }}>(Ignoradas)</div>}
               </span>
             </div>
