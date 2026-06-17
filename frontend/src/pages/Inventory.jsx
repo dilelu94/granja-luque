@@ -170,7 +170,7 @@ export default function Inventory({ token }) {
       // 3. Productos
       const resProducts = await fetch('/api/inventory/products/admin', { headers });
       const dataProducts = await resProducts.json();
-      setProducts(dataProducts);
+      setProducts(dataProducts.filter(p => p.status !== 'inactive'));
 
       // 4. Config (para costo base del huevo)
       const resSettings = await fetch('/api/settings', { headers });
@@ -1125,6 +1125,9 @@ export default function Inventory({ token }) {
                 </div>
                 <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
                   Suma de maples, frascos y cajas
+                </div>
+                <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>
+                  Huevos que se pueden empacar: <strong>{products.reduce((acc, p) => acc + (p.container_stock || 0) * (p.egg_count || 0), 0)}</strong>
                 </div>
               </div>
             </div>
