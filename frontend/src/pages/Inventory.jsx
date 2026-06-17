@@ -672,7 +672,7 @@ export default function Inventory({ token }) {
 
                     return (
                       <tr key={batch.id} style={{ opacity: batch.status !== 'active' ? 0.6 : 1 }}>
-                        <td style={{ fontWeight: '600', minWidth: '280px' }}>
+                        <td style={{ fontWeight: '600' }}>
                           {batch.name}
                           {batch.notes && (
                             <div style={{ 
@@ -681,7 +681,9 @@ export default function Inventory({ token }) {
                               color: 'var(--text-secondary)', 
                               marginTop: '0.35rem', 
                               whiteSpace: 'pre-wrap',
-                              lineHeight: '1.3'
+                              lineHeight: '1.3',
+                              minWidth: '350px',
+                              maxWidth: '450px'
                             }}>
                               {batch.notes}
                             </div>
