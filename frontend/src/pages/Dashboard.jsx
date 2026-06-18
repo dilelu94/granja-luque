@@ -228,7 +228,7 @@ export default function Dashboard({ token }) {
                 <thead>
                   <tr>
                     <th>Fecha</th>
-                    <th>Aves Adultas</th>
+                    <th>Hembras Adultas</th>
                     <th>Recolectados</th>
                     <th>Rotos</th>
                     <th>Tasa de Postura</th>

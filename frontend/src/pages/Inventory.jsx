@@ -1215,8 +1215,21 @@ export default function Inventory({ token }) {
                 <small style={{ color: 'var(--text-muted)' }}>Costo unitario del envase (se usa para calcular el costo total de fabricación).</small>
               </div>
 
-              <div style={{ display: 'flex', gap: '1rem', marginTop: '2rem' }}>
+              <div style={{ display: 'flex', gap: '0.75rem', marginTop: '2rem' }}>
                 <button type="submit" className="btn btn-primary" style={{ flex: '1' }}>Guardar Envase</button>
+                {containerForm.id && (
+                  <button 
+                    type="button" 
+                    className="btn btn-danger" 
+                    style={{ flex: '0.5' }} 
+                    onClick={() => {
+                      setShowContainerModal(false);
+                      handleDeleteProduct(containerForm.id);
+                    }}
+                  >
+                    Borrar
+                  </button>
+                )}
                 <button type="button" className="btn btn-secondary" style={{ flex: '1' }} onClick={() => setShowContainerModal(false)}>Cancelar</button>
               </div>
             </form>
@@ -1382,6 +1395,19 @@ export default function Inventory({ token }) {
 
               <div style={{ display: 'flex', gap: '0.75rem' }}>
                 <button type="submit" className="btn btn-primary" style={{ flex: '1' }}>Guardar Producto</button>
+                {productForm.id && (
+                  <button 
+                    type="button" 
+                    className="btn btn-danger" 
+                    style={{ flex: '0.5' }} 
+                    onClick={() => {
+                      setShowProductModal(false);
+                      handleDeleteProduct(productForm.id);
+                    }}
+                  >
+                    Borrar
+                  </button>
+                )}
                 <button type="button" className="btn btn-secondary" style={{ flex: '1' }} onClick={() => setShowProductModal(false)}>Cancelar</button>
               </div>
             </form>
@@ -1651,7 +1677,7 @@ export default function Inventory({ token }) {
                 </div>
               ) : (
                 <div style={{ marginBottom: '1.5rem', padding: '0.75rem', background: 'rgba(255, 193, 7, 0.1)', color: 'var(--accent-gold)', borderRadius: 'var(--border-radius-sm)', fontSize: '0.85rem' }}>
-                  💡 {looseEggs === 0 ? "No tienes huevos sueltos disponibles para empaquetar." : "No tienes envases vacíos (maples) cargados en ninguno de tus productos."}
+                  💡 {looseEggs === 0 ? "No tienes huevos sueltos disponibles para empaquetar." : (eggProducts.length === 0 ? "No tienes envases vacíos (maples) cargados en ninguno de tus productos." : "No tienes suficientes huevos sueltos para llenar los envases vacíos que posees.")}
                   {eggProducts.length === 0 && (
                     <div style={{ marginTop: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                       {allEggProducts.map(p => (

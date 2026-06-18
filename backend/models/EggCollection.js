@@ -100,16 +100,17 @@ export class EggCollection {
       // - El lote no debe haber sido retirado antes de dateStr (para simplificar, filtramos por activos hoy,
       //   o los que se crearon antes y siguen activos)
       const adultQuailsRow = await db.get(`
-        SELECT SUM(current_quantity) as total_adults 
+        SELECT SUM(current_quantity) as total_adults,
+               SUM(females_quantity) as total_females
         FROM quail_batches 
         WHERE status = 'active'
           AND date(birth_date, '+35 days') <= date(?)
           AND date(birth_date) <= date(?)
       `, [dateStr, dateStr]);
 
-      const adultCount = adultQuailsRow ? (adultQuailsRow.total_adults || 0) : 0;
+      const adultCount = adultQuailsRow ? (adultQuailsRow.total_females || 0) : 0;
       
-      // Tasa de postura: (huevos recolectados / codornices adultas) * 100
+      // Tasa de postura: (huevos recolectados / codornices hembras adultas) * 100
       let postureRate = 0;
       if (adultCount > 0) {
         postureRate = Math.round((col.quantity_collected / adultCount) * 1000) / 10;
