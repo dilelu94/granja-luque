@@ -27,10 +27,16 @@ export default function Dashboard({ token }) {
       ponedora: { stock: 0, dailyConsumption: 0, daysLeft: null }
     },
     eggs: { history: [], totals: { collected: 0, broken: 0 } },
-    orders: []
+    orders: [],
+    todayEvents: []
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  
+  // Modal states
+  const [showWelcomeModal, setShowWelcomeModal] = useState(false);
+  const [dontShowAgain, setDontShowAgain] = useState(false);
+  const [modalContent, setModalContent] = useState({ events: [], initiatorLow: false, ponedoraLow: false });
 
   useEffect(() => {
     const fetchData = async () => {
@@ -53,6 +59,11 @@ export default function Dashboard({ token }) {
         const resOrders = await fetch('/api/orders', { headers });
         const dataOrders = await resOrders.json();
 
+        // 5. Cargar Eventos de hoy
+        const todayStr = new Date().toISOString().split('T')[0];
+        const resEvents = await fetch(`/api/calendar/events?start=${todayStr}&end=${todayStr}`, { headers });
+        const dataEvents = await resEvents.json();
+
         // Procesar totales de codornices
         let chicks = 0;
         let adults = 0;
@@ -67,8 +78,34 @@ export default function Dashboard({ token }) {
           quails: { chick: chicks, adult: adults, total: chicks + adults },
           feed: dataFeed,
           eggs: dataEggs,
-          orders: dataOrders
+          orders: dataOrders,
+          todayEvents: Array.isArray(dataEvents) ? dataEvents : []
         });
+
+        // Lógica del modal de bienvenida
+        const prefs = JSON.parse(localStorage.getItem('dashboardAlertPrefs') || '{}');
+        
+        // Reset feed dismissals if stock increased
+        if (dataFeed.initiator.stock > (prefs.dismissedInitiatorStock || 0)) {
+          delete prefs.dismissedInitiatorStock;
+        }
+        if (dataFeed.ponedora.stock > (prefs.dismissedPonedoraStock || 0)) {
+          delete prefs.dismissedPonedoraStock;
+        }
+        localStorage.setItem('dashboardAlertPrefs', JSON.stringify(prefs));
+
+        const todayEventsList = Array.isArray(dataEvents) ? dataEvents.filter(e => e.eventDate && e.eventDate.startsWith(todayStr)) : [];
+        const initiatorLow = dataFeed.initiator.daysLeft !== null && dataFeed.initiator.daysLeft <= 14;
+        const ponedoraLow = dataFeed.ponedora.daysLeft !== null && dataFeed.ponedora.daysLeft <= 14;
+
+        const showCalendar = todayEventsList.length > 0 && prefs.dismissedDate !== todayStr;
+        const showInitiator = initiatorLow && prefs.dismissedInitiatorStock === undefined;
+        const showPonedora = ponedoraLow && prefs.dismissedPonedoraStock === undefined;
+
+        if (showCalendar || showInitiator || showPonedora) {
+          setModalContent({ events: todayEventsList, initiatorLow: showInitiator, ponedoraLow: showPonedora });
+          setShowWelcomeModal(true);
+        }
       } catch (err) {
         console.error('Error al cargar datos del dashboard:', err);
         setError('Error al conectar con la API para recopilar métricas.');
@@ -110,8 +147,79 @@ export default function Dashboard({ token }) {
   // Pedidos pendientes de aprobación
   const pendingOrders = stats.orders.filter(o => o.status === 'pending_approval');
 
+  const handleCloseWelcomeModal = () => {
+    if (dontShowAgain) {
+      const prefs = JSON.parse(localStorage.getItem('dashboardAlertPrefs') || '{}');
+      if (modalContent.events.length > 0) {
+        prefs.dismissedDate = new Date().toISOString().split('T')[0];
+      }
+      if (modalContent.initiatorLow) {
+        prefs.dismissedInitiatorStock = stats.feed.initiator.stock;
+      }
+      if (modalContent.ponedoraLow) {
+        prefs.dismissedPonedoraStock = stats.feed.ponedora.stock;
+      }
+      localStorage.setItem('dashboardAlertPrefs', JSON.stringify(prefs));
+    }
+    setShowWelcomeModal(false);
+  };
+
   return (
     <div>
+      {/* Welcome Modal */}
+      {showWelcomeModal && (
+        <div className="modal-overlay">
+          <div className="modal-content" style={{ maxWidth: '500px' }}>
+            <h3 style={{ marginBottom: '1.5rem', fontFamily: 'var(--font-heading)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              🔔 Alertas Importantes
+            </h3>
+
+            {modalContent.events.length > 0 && (
+              <div style={{ marginBottom: '1.5rem' }}>
+                <h4 style={{ color: 'var(--text-secondary)', marginBottom: '0.75rem', fontSize: '0.9rem', textTransform: 'uppercase' }}>📅 Calendario de Hoy</h4>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                  {modalContent.events.map(ev => (
+                    <div key={ev.id} style={{ background: 'rgba(255,255,255,0.05)', padding: '0.75rem', borderRadius: '4px', borderLeft: '3px solid var(--accent-blue)' }}>
+                      <strong>{ev.title}</strong>
+                      {ev.description && <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginTop: '0.25rem', whiteSpace: 'pre-line' }}>{ev.description}</p>}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {(modalContent.initiatorLow || modalContent.ponedoraLow) && (
+              <div style={{ marginBottom: '1.5rem' }}>
+                <h4 style={{ color: 'var(--text-secondary)', marginBottom: '0.75rem', fontSize: '0.9rem', textTransform: 'uppercase' }}>🌾 Alertas de Alimento (≤ 14 días)</h4>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                  {modalContent.initiatorLow && (
+                    <div style={{ background: 'var(--accent-red-glow)', color: '#f87171', padding: '0.75rem', borderRadius: '4px', border: '1px solid var(--accent-red)' }}>
+                      ⚠️ <strong>Alimento Iniciador:</strong> Quedan {stats.feed.initiator.daysLeft} días (Stock: {Number(stats.feed.initiator.stock).toFixed(2)} kg)
+                    </div>
+                  )}
+                  {modalContent.ponedoraLow && (
+                    <div style={{ background: 'var(--accent-gold-glow)', color: '#fbbf24', padding: '0.75rem', borderRadius: '4px', border: '1px solid var(--accent-gold)' }}>
+                      ⚠️ <strong>Alimento Ponedora:</strong> Quedan {stats.feed.ponedora.daysLeft} días (Stock: {Number(stats.feed.ponedora.stock).toFixed(2)} kg)
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            <div style={{ marginTop: '2rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
+                <input type="checkbox" checked={dontShowAgain} onChange={(e) => setDontShowAgain(e.target.checked)} />
+                No volver a mostrar estas alertas
+              </label>
+              
+              <button className="btn btn-primary" style={{ width: '100%', padding: '0.75rem', fontSize: '1rem' }} onClick={handleCloseWelcomeModal}>
+                Continuar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <h2 style={{ marginBottom: '2rem', fontFamily: 'var(--font-heading)', fontSize: '1.8rem' }}>
         Resumen Operativo de la Granja 🚜
       </h2>
@@ -236,7 +344,7 @@ export default function Dashboard({ token }) {
                   </tr>
                 </thead>
                 <tbody>
-                  {stats.eggs.history.slice(-7).map((row, idx) => (
+                  {stats.eggs.history.slice(-7).reverse().map((row, idx) => (
                     <tr key={idx}>
                       <td>{formatDate(row.date)}</td>
                       <td>{row.adultQuailsCount}</td>

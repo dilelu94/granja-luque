@@ -143,7 +143,7 @@ export class QuailBatch {
     // Eliminar eventos automáticos previos asociados a este lote
     await db.run(`
       DELETE FROM calendar_events 
-      WHERE reference_id = ? AND type IN ('feed_transition', 'egg_posture')
+      WHERE reference_id = ? AND type IN ('feed_transition', 'egg_posture', 'temperature')
     `, [this.id]);
 
     // Solo se agendan eventos automáticos para lotes de polluelos activos
@@ -162,6 +162,31 @@ export class QuailBatch {
 
     const parts = this.birthDate.split('-');
     const birth = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+
+    // 0. Eventos de Temperatura por Semana
+    const tempSchedule = [
+      { week: 1, daysOffset: 0, temp: '35°C - 37°C' },
+      { week: 2, daysOffset: 7, temp: '32°C' },
+      { week: 3, daysOffset: 14, temp: '29°C' },
+      { week: 4, daysOffset: 21, temp: '26°C' },
+      { week: '5+', daysOffset: 28, temp: '21°C (o temperatura ambiente si es estable)' }
+    ];
+
+    for (const schedule of tempSchedule) {
+      const eventDate = new Date(birth);
+      eventDate.setDate(eventDate.getDate() + schedule.daysOffset);
+      const eventDateStr = eventDate.toISOString().split('T')[0];
+
+      await db.run(`
+        INSERT INTO calendar_events (title, description, event_date, type, reference_id)
+        VALUES (?, ?, ?, 'temperature', ?)
+      `, [
+        `Temperatura Sem ${schedule.week}: ${this.name}${cageInfo}`,
+        `Recomendación de temperatura para ${this.name}${cageInfo} en su Semana ${schedule.week} de vida: ${schedule.temp}.`,
+        eventDateStr,
+        this.id
+      ]);
+    }
 
     // 1. Inicio de Transición de Alimento: 39 días (Día 1 de transición)
     const transitionStartDate = new Date(birth);

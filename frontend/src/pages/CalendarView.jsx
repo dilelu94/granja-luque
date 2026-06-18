@@ -269,6 +269,7 @@ export default function CalendarView({ token }) {
       case 'feed_transition': return '🌾';
       case 'egg_posture': return '🌟';
       case 'vaccine': return '💉';
+      case 'temperature': return '🌡️';
       default: return '📅';
     }
   };
@@ -280,6 +281,7 @@ export default function CalendarView({ token }) {
       case 'feed_transition': return 'var(--accent-blue)';
       case 'egg_posture': return '#c084fc';
       case 'vaccine': return 'var(--accent-red)';
+      case 'temperature': return '#fb923c';
       default: return 'var(--text-secondary)';
     }
   };
