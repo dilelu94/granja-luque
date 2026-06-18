@@ -231,6 +231,9 @@ export async function initializeDatabase() {
   await db.run("UPDATE settings SET value = '250.0' WHERE key = 'cost_fertile_egg' AND value = '50.0'");
   await db.run("UPDATE settings SET value = '15000.0' WHERE key = 'cost_adult_quail' AND value = '1200.0'");
 
+  // Parche manual para corregir fecha de postura (de 17/05/2026 a 16/06/2026)
+  await db.run("UPDATE egg_production SET date = '2026-06-16' WHERE date = '2026-05-17'");
+
   // Insertar registros de alimentos por defecto si no existen
   const now = new Date().toISOString();
   await db.run("INSERT OR IGNORE INTO feed_stock (type, quantity, last_updated) VALUES ('iniciador', 0.0, ?)", [now]);
