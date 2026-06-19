@@ -163,7 +163,7 @@ export default function App() {
           className="btn btn-secondary" 
           style={{ padding: '0.4rem 0.8rem', fontSize: '1.2rem' }}
           onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-        >
+         title={isMobileMenuOpen ? 'Cerrar menú de navegación' : 'Abrir menú de navegación'}>
           {isMobileMenuOpen ? '✕' : '☰'}
         </button>
       </header>
@@ -182,7 +182,7 @@ export default function App() {
             className={`btn ${view === 'dashboard' ? 'btn-primary' : 'btn-secondary'}`} 
             style={{ justifyContent: 'flex-start', width: '100%' }}
             onClick={() => setView('dashboard')}
-          >
+           title="Ir al Panel de control con métricas clave y alertas">
             📊 Dashboard
           </button>
           
@@ -190,7 +190,7 @@ export default function App() {
             className={`btn ${view === 'orders' ? 'btn-primary' : 'btn-secondary'}`} 
             style={{ justifyContent: 'flex-start', width: '100%' }}
             onClick={() => setView('orders')}
-          >
+           title="Ver y gestionar pedidos, ventas y estados de facturación">
             🛒 Pedidos Venta
           </button>
 
@@ -198,7 +198,7 @@ export default function App() {
             className={`btn ${view === 'inventory' ? 'btn-primary' : 'btn-secondary'}`} 
             style={{ justifyContent: 'flex-start', width: '100%' }}
             onClick={() => setView('inventory')}
-          >
+           title="Administrar lotes de codornices, consumos de alimento y stock de huevos">
             📋 Inventario Granja
           </button>
 
@@ -206,7 +206,7 @@ export default function App() {
             className={`btn ${view === 'calendar' ? 'btn-primary' : 'btn-secondary'}`} 
             style={{ justifyContent: 'flex-start', width: '100%' }}
             onClick={() => setView('calendar')}
-          >
+           title="Consultar calendario de eventos, vacunas e hitos de incubación">
             📅 Calendario
           </button>
 
@@ -214,7 +214,7 @@ export default function App() {
             className={`btn ${view === 'projections' ? 'btn-primary' : 'btn-secondary'}`} 
             style={{ justifyContent: 'flex-start', width: '100%' }}
             onClick={() => setView('projections')}
-          >
+           title="Simular crecimiento de la granja, costos de jaulas y proyecciones a 12 meses">
             📈 Proyecciones
           </button>
 
@@ -222,7 +222,7 @@ export default function App() {
             className={`btn ${view === 'settings' ? 'btn-primary' : 'btn-secondary'}`} 
             style={{ justifyContent: 'flex-start', width: '100%' }}
             onClick={() => setView('settings')}
-          >
+           title="Ajustar parámetros generales del sistema, costo del huevo y usuarios">
             ⚙️ Configuración
           </button>
 
@@ -233,14 +233,14 @@ export default function App() {
             className="btn btn-secondary" 
             style={{ width: '100%', borderColor: 'transparent', background: 'rgba(255,255,255,0.02)' }}
             onClick={() => setView('shop')}
-          >
+           title="Regresar a la tienda pública de huevos">
             🥚 Ir a la Tienda
           </button>
           <button 
             className="btn btn-danger" 
             style={{ width: '100%' }}
             onClick={handleLogout}
-          >
+           title="Salir del sistema administrativo y bloquear la sesión">
             🚪 Cerrar Sesión
           </button>
         </div>

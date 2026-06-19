@@ -100,7 +100,7 @@ export default function CageDetail({ token, onBack, cageId }) {
           onClick={onBack}
           className="btn btn-secondary"
           style={{ padding: '0.5rem 1rem', fontSize: '0.9rem' }}
-        >
+         title="Volver a la pantalla anterior">
           Volver
         </button>
       </div>
@@ -172,7 +172,7 @@ export default function CageDetail({ token, onBack, cageId }) {
                       style={{ padding: '0.75rem' }}
                     />
                   </div>
-                  <button type="submit" className="btn btn-danger" style={{ padding: '0.75rem 1rem' }}>
+                  <button type="submit" className="btn btn-danger" style={{ padding: '0.75rem 1rem' }} title="Registrar los datos completados">
                     Registrar Baja
                   </button>
                 </form>

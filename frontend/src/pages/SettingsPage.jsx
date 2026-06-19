@@ -403,7 +403,7 @@ export default function SettingsPage({ token, role }) {
           </div>
         </div>
 
-        <button type="submit" className="btn btn-primary" style={{ width: '100%', fontSize: '1.1rem', marginBottom: '2rem' }}>
+        <button type="submit" className="btn btn-primary" style={{ width: '100%', fontSize: '1.1rem', marginBottom: '2rem' }} title="Confirmar y guardar los datos ingresados">
           💾 Guardar Configuraciones de Granja
         </button>
       </form>
@@ -464,7 +464,7 @@ export default function SettingsPage({ token, role }) {
             </div>
           </div>
 
-          <button type="submit" className="btn btn-gold" style={{ width: '100%', marginTop: '0.5rem' }} disabled={pwLoading}>
+          <button type="submit" className="btn btn-gold" style={{ width: '100%', marginTop: '0.5rem' }} disabled={pwLoading} title="Hacer clic para ejecutar acción">
             {pwLoading ? 'Modificando...' : '🔑 Actualizar Contraseña'}
           </button>
         </form>
@@ -477,7 +477,7 @@ export default function SettingsPage({ token, role }) {
             <h3 style={{ fontFamily: 'var(--font-heading)', color: 'var(--accent-green)', margin: '0' }}>
               Gestión de Usuarios Administradores 👥
             </h3>
-            <button className="btn btn-primary" onClick={handleOpenCreateModal}>
+            <button className="btn btn-primary" onClick={handleOpenCreateModal} title="Hacer clic para agregar administrador">
               👤 Agregar Administrador
             </button>
           </div>
@@ -525,14 +525,14 @@ export default function SettingsPage({ token, role }) {
                             className="btn btn-secondary" 
                             style={{ padding: '0.35rem 0.75rem', fontSize: '0.8rem' }}
                             onClick={() => handleOpenEditModal(u)}
-                          >
+                           title="Abrir formulario para editar este registro">
                             Editar
                           </button>
                           <button 
                             className="btn btn-danger" 
                             style={{ padding: '0.35rem 0.75rem', fontSize: '0.8rem' }}
                             onClick={() => handleDeleteUser(u.id)}
-                          >
+                           title="Eliminar permanentemente este registro del sistema">
                             Eliminar
                           </button>
                         </div>
@@ -608,7 +608,7 @@ export default function SettingsPage({ token, role }) {
                   className="btn btn-secondary" 
                   style={{ flex: '1' }} 
                   onClick={() => setShowUserModal(false)}
-                >
+                 title="Cancelar la acción actual sin guardar los cambios">
                   Cancelar
                 </button>
                 <button 
@@ -616,7 +616,7 @@ export default function SettingsPage({ token, role }) {
                   className="btn btn-primary" 
                   style={{ flex: '1' }}
                   disabled={userFormLoading}
-                >
+                 title="Hacer clic para ejecutar acción">
                   {userFormLoading ? 'Guardando...' : 'Guardar'}
                 </button>
               </div>

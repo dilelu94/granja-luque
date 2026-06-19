@@ -626,18 +626,18 @@ export default function Inventory({ token }) {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
         <h2 style={{ fontFamily: 'var(--font-heading)', fontSize: '1.8rem' }}>Inventario de Granja 📋</h2>
         <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-          <button className="btn btn-primary" onClick={() => setShowEggModal(true)}>🥚 Recolectar Huevos</button>
-          <button className="btn btn-secondary" onClick={() => setShowPackModal(true)}>📦 Empaquetar</button>
-          <button className="btn btn-secondary" onClick={() => setShowCageModal(true)}>🪵 Nueva Jaula</button>
-          <button className="btn btn-secondary" onClick={() => setShowFeedModal(true)}>🌾 Cargar Alimento</button>
-          <button className="btn btn-gold" onClick={() => setShowBatchModal(true)}>🐤 Nuevo Lote Aves</button>
+          <button className="btn btn-primary" onClick={() => setShowEggModal(true)} title="Hacer clic para recolectar huevos">🥚 Recolectar Huevos</button>
+          <button className="btn btn-secondary" onClick={() => setShowPackModal(true)} title="Descontar huevos sueltos y envases para armar el producto de venta">📦 Empaquetar</button>
+          <button className="btn btn-secondary" onClick={() => setShowCageModal(true)} title="Hacer clic para 🪵 nueva jaula">🪵 Nueva Jaula</button>
+          <button className="btn btn-secondary" onClick={() => setShowFeedModal(true)} title="Hacer clic para cargar alimento">🌾 Cargar Alimento</button>
+          <button className="btn btn-gold" onClick={() => setShowBatchModal(true)} title="Hacer clic para nuevo lote aves">🐤 Nuevo Lote Aves</button>
           <button 
             className="btn btn-primary" 
             onClick={() => {
               window.history.pushState({}, '', '/escanear');
               window.location.reload();
             }}
-          >
+           title="Abrir el escáner de códigos QR">
             📷 Escanear QR
           </button>
         </div>
@@ -653,7 +653,7 @@ export default function Inventory({ token }) {
             fontWeight: '600'
           }}
           onClick={() => setActiveTab('birds')}
-        >
+         title="Hacer clic para lotes de aves">
           🐤 Lotes de Aves
         </button>
         <button 
@@ -664,7 +664,7 @@ export default function Inventory({ token }) {
             fontWeight: '600'
           }}
           onClick={() => setActiveTab('cages')}
-        >
+         title="Hacer clic para 🪵 jaulas">
           🪵 Jaulas
         </button>
         <button 
@@ -675,7 +675,7 @@ export default function Inventory({ token }) {
             fontWeight: '600'
           }}
           onClick={() => setActiveTab('feed')}
-        >
+         title="Hacer clic para alimento y fletes">
           🌾 Alimento y Fletes
         </button>
         <button 
@@ -686,7 +686,7 @@ export default function Inventory({ token }) {
             fontWeight: '600'
           }}
           onClick={() => setActiveTab('products')}
-        >
+         title="Hacer clic para ️ productos (venta)">
           🏷️ Productos (Venta)
         </button>
         <button 
@@ -697,7 +697,7 @@ export default function Inventory({ token }) {
             fontWeight: '600'
           }}
           onClick={() => setActiveTab('containers')}
-        >
+         title="Hacer clic para envases vacíos">
           📦 Envases Vacíos
         </button>
       </div>
@@ -788,7 +788,7 @@ export default function Inventory({ token }) {
                                   setSelectedBatchId(batch.id);
                                   setShowMortalityModal(true);
                                 }}
-                              >
+                               title="Hacer clic para baja">
                                 Baja
                               </button>
                             )}
@@ -796,7 +796,7 @@ export default function Inventory({ token }) {
                               className="btn btn-secondary" 
                               style={{ padding: '0.25rem 0.5rem', fontSize: '0.8rem' }}
                               onClick={() => handleEditBatchClick(batch)}
-                            >
+                             title="Abrir formulario para editar este registro">
                               ✏️ Editar
                             </button>
                           </div>
@@ -820,7 +820,7 @@ export default function Inventory({ token }) {
             <h3 style={{ margin: 0, fontFamily: 'var(--font-heading)' }}>
               Gestión de Jaulas 🪵
             </h3>
-            <button className="btn btn-primary" onClick={() => setShowCageModal(true)}>
+            <button className="btn btn-primary" onClick={() => setShowCageModal(true)} title="Abrir formulario para crear una nueva jaula">
               🪵 Agregar Jaula
             </button>
           </div>
@@ -891,21 +891,21 @@ export default function Inventory({ token }) {
                                 setSelectedQRCage(cage);
                                 setShowQRModal(true);
                               }}
-                            >
+                             title="Hacer clic para ️ ver qr">
                               🖨️ Ver QR
                             </button>
                             <button 
                               className="btn btn-secondary" 
                               style={{ padding: '0.25rem 0.5rem', fontSize: '0.8rem' }}
                               onClick={() => handleEditCageClick(cage)}
-                            >
+                             title="Abrir formulario para editar este registro">
                               ✏️ Editar
                             </button>
                             <button 
                               className="btn btn-secondary" 
                               style={{ padding: '0.25rem 0.5rem', fontSize: '0.8rem', borderColor: 'var(--accent-red)', color: 'var(--accent-red)' }}
                               onClick={() => handleDeleteCage(cage.id)}
-                            >
+                             title="Eliminar permanentemente este registro">
                               🗑️ Borrar
                             </button>
                           </div>
@@ -1027,7 +1027,7 @@ export default function Inventory({ token }) {
                 resetProductForm();
                 setShowProductModal(true);
               }}
-            >
+             title="Registrar y crear el nuevo elemento">
               🏷️ Crear Producto
             </button>
           </div>
@@ -1111,14 +1111,14 @@ export default function Inventory({ token }) {
                             className="btn btn-secondary" 
                             style={{ padding: '0.25rem 0.5rem', fontSize: '0.8rem' }}
                             onClick={() => handleEditProductClick(prod)}
-                          >
+                           title="Abrir formulario para editar este registro">
                             ✏️ Editar
                           </button>
                           <button 
                             className="btn btn-danger" 
                             style={{ padding: '0.25rem 0.5rem', fontSize: '0.8rem' }}
                             onClick={() => handleDeleteProduct(prod.id)}
-                          >
+                           title="Eliminar permanentemente este registro">
                             🗑️ Borrar
                           </button>
                         </div>
@@ -1188,7 +1188,7 @@ export default function Inventory({ token }) {
                         className="btn btn-secondary" 
                         style={{ padding: '0.25rem 0.5rem', fontSize: '0.8rem' }}
                         onClick={() => handleEditContainerClick(prod)}
-                      >
+                       title="Hacer clic para modificar stock envases">
                         ➕ Modificar Stock Envases
                       </button>
                     </td>
@@ -1238,7 +1238,7 @@ export default function Inventory({ token }) {
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'row-reverse', gap: '0.75rem', marginTop: '2rem' }}>
-                <button type="submit" className="btn btn-primary" style={{ flex: '1' }}>Guardar Envase</button>
+                <button type="submit" className="btn btn-primary" style={{ flex: '1' }} title="Guardar el envase y actualizar su stock o precio de costo">Guardar Envase</button>
                 {containerForm.id && (
                   <button 
                     type="button" 
@@ -1248,11 +1248,11 @@ export default function Inventory({ token }) {
                       setShowContainerModal(false);
                       handleDeleteProduct(containerForm.id);
                     }}
-                  >
+                   title="Eliminar permanentemente este registro">
                     Borrar
                   </button>
                 )}
-                <button type="button" className="btn btn-secondary" style={{ flex: '1' }} onClick={() => setShowContainerModal(false)}>Cancelar</button>
+                <button type="button" className="btn btn-secondary" style={{ flex: '1' }} onClick={() => setShowContainerModal(false)} title="Cancelar la acción actual sin guardar los cambios">Cancelar</button>
               </div>
             </form>
           </div>
@@ -1416,7 +1416,7 @@ export default function Inventory({ token }) {
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'row-reverse', gap: '0.75rem' }}>
-                <button type="submit" className="btn btn-primary" style={{ flex: '1' }}>Guardar Producto</button>
+                <button type="submit" className="btn btn-primary" style={{ flex: '1' }} title="Guardar el producto y actualizar sus especificaciones">Guardar Producto</button>
                 {productForm.id && (
                   <button 
                     type="button" 
@@ -1426,11 +1426,11 @@ export default function Inventory({ token }) {
                       setShowProductModal(false);
                       handleDeleteProduct(productForm.id);
                     }}
-                  >
+                   title="Eliminar permanentemente este registro">
                     Borrar
                   </button>
                 )}
-                <button type="button" className="btn btn-secondary" style={{ flex: '1' }} onClick={() => setShowProductModal(false)}>Cancelar</button>
+                <button type="button" className="btn btn-secondary" style={{ flex: '1' }} onClick={() => setShowProductModal(false)} title="Cancelar la acción actual sin guardar los cambios">Cancelar</button>
               </div>
             </form>
           </div>
@@ -1519,8 +1519,8 @@ export default function Inventory({ token }) {
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'row-reverse', gap: '0.75rem', marginTop: '1.5rem' }}>
-                <button type="submit" className="btn btn-primary" style={{ flex: '1' }}>Registrar</button>
-                <button type="button" className="btn btn-secondary" style={{ flex: '1' }} onClick={() => setShowBatchModal(false)}>Cancelar</button>
+                <button type="submit" className="btn btn-primary" style={{ flex: '1' }} title="Registrar los datos completados">Registrar</button>
+                <button type="button" className="btn btn-secondary" style={{ flex: '1' }} onClick={() => setShowBatchModal(false)} title="Cancelar la acción actual sin guardar los cambios">Cancelar</button>
               </div>
             </form>
           </div>
@@ -1575,8 +1575,8 @@ export default function Inventory({ token }) {
               </p>
 
               <div style={{ display: 'flex', flexDirection: 'row-reverse', gap: '0.75rem' }}>
-                <button type="submit" className="btn btn-danger" style={{ flex: '1' }}>Guardar Bajas</button>
-                <button type="button" className="btn btn-secondary" style={{ flex: '1' }} onClick={() => setShowMortalityModal(false)}>Cancelar</button>
+                <button type="submit" className="btn btn-danger" style={{ flex: '1' }} title="Registrar bajas (muertes o retiros) en el lote seleccionado">Guardar Bajas</button>
+                <button type="button" className="btn btn-secondary" style={{ flex: '1' }} onClick={() => setShowMortalityModal(false)} title="Cancelar la acción actual sin guardar los cambios">Cancelar</button>
               </div>
             </form>
           </div>
@@ -1637,8 +1637,8 @@ export default function Inventory({ token }) {
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'row-reverse', gap: '0.75rem', marginTop: '1.5rem' }}>
-                <button type="submit" className="btn btn-primary" style={{ flex: '1' }}>Guardar</button>
-                <button type="button" className="btn btn-secondary" style={{ flex: '1' }} onClick={() => setShowEggModal(false)}>Cancelar</button>
+                <button type="submit" className="btn btn-primary" style={{ flex: '1' }} title="Confirmar y guardar los datos ingresados">Guardar</button>
+                <button type="button" className="btn btn-secondary" style={{ flex: '1' }} onClick={() => setShowEggModal(false)} title="Cancelar la acción actual sin guardar los cambios">Cancelar</button>
               </div>
             </form>
           </div>
@@ -1691,7 +1691,7 @@ export default function Inventory({ token }) {
                         onClick={() => {
                           setPackForm({ productId: s.id, packagesCount: s.maxPacks, eggsPerPackage: s.egg_count });
                         }}
-                      >
+                       title="Hacer clic para x">
                         📦 {s.maxPacks}x {s.name}
                       </button>
                     ))}
@@ -1713,7 +1713,7 @@ export default function Inventory({ token }) {
                               setShowPackModal(false);
                               handleEditContainerClick(p);
                             }}
-                          >
+                           title="Hacer clic para cargar envases">
                             ➕ Cargar Envases
                           </button>
                         </div>
@@ -1776,8 +1776,8 @@ export default function Inventory({ token }) {
                 </div>
 
                 <div style={{ display: 'flex', flexDirection: 'row-reverse', gap: '0.75rem' }}>
-                  <button type="submit" className="btn btn-primary" style={{ flex: '1' }} disabled={looseEggs === 0 || eggProducts.length === 0}>Empaquetar</button>
-                  <button type="button" className="btn btn-secondary" style={{ flex: '1' }} onClick={() => setShowPackModal(false)}>Cancelar</button>
+                  <button type="submit" className="btn btn-primary" style={{ flex: '1' }} disabled={looseEggs === 0 || eggProducts.length === 0} title="Descontar huevos sueltos y envases para armar el producto de venta">Empaquetar</button>
+                  <button type="button" className="btn btn-secondary" style={{ flex: '1' }} onClick={() => setShowPackModal(false)} title="Cancelar la acción actual sin guardar los cambios">Cancelar</button>
                 </div>
               </form>
             </div>
@@ -1869,8 +1869,8 @@ export default function Inventory({ token }) {
               )}
 
               <div style={{ display: 'flex', flexDirection: 'row-reverse', gap: '0.75rem', marginTop: '1.5rem' }}>
-                <button type="submit" className="btn btn-primary" style={{ flex: '1' }}>Guardar</button>
-                <button type="button" className="btn btn-secondary" style={{ flex: '1' }} onClick={() => setShowFeedModal(false)}>Cancelar</button>
+                <button type="submit" className="btn btn-primary" style={{ flex: '1' }} title="Confirmar y guardar los datos ingresados">Guardar</button>
+                <button type="button" className="btn btn-secondary" style={{ flex: '1' }} onClick={() => setShowFeedModal(false)} title="Cancelar la acción actual sin guardar los cambios">Cancelar</button>
               </div>
             </form>
           </div>
@@ -2013,8 +2013,8 @@ export default function Inventory({ token }) {
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'row-reverse', gap: '0.75rem', marginTop: '1.5rem' }}>
-                <button type="submit" className="btn btn-primary" style={{ flex: '1' }}>Guardar Cambios</button>
-                <button type="button" className="btn btn-secondary" style={{ flex: '1' }} onClick={() => setShowEditBatchModal(false)}>Cancelar</button>
+                <button type="submit" className="btn btn-primary" style={{ flex: '1' }} title="Confirmar y aplicar los cambios realizados">Guardar Cambios</button>
+                <button type="button" className="btn btn-secondary" style={{ flex: '1' }} onClick={() => setShowEditBatchModal(false)} title="Cancelar la acción actual sin guardar los cambios">Cancelar</button>
               </div>
             </form>
           </div>
@@ -2064,8 +2064,8 @@ export default function Inventory({ token }) {
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'row-reverse', gap: '0.75rem', marginTop: '1.5rem' }}>
-                <button type="submit" className="btn btn-primary" style={{ flex: '1' }}>Crear</button>
-                <button type="button" className="btn btn-secondary" style={{ flex: '1' }} onClick={() => setShowCageModal(false)}>Cancelar</button>
+                <button type="submit" className="btn btn-primary" style={{ flex: '1' }} title="Registrar y crear el nuevo elemento">Crear</button>
+                <button type="button" className="btn btn-secondary" style={{ flex: '1' }} onClick={() => setShowCageModal(false)} title="Cancelar la acción actual sin guardar los cambios">Cancelar</button>
               </div>
             </form>
           </div>
@@ -2112,8 +2112,8 @@ export default function Inventory({ token }) {
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'row-reverse', gap: '0.75rem', marginTop: '1.5rem' }}>
-                <button type="submit" className="btn btn-primary" style={{ flex: '1' }}>Guardar Cambios</button>
-                <button type="button" className="btn btn-secondary" style={{ flex: '1' }} onClick={() => setShowEditCageModal(false)}>Cancelar</button>
+                <button type="submit" className="btn btn-primary" style={{ flex: '1' }} title="Confirmar y aplicar los cambios realizados">Guardar Cambios</button>
+                <button type="button" className="btn btn-secondary" style={{ flex: '1' }} onClick={() => setShowEditCageModal(false)} title="Cancelar la acción actual sin guardar los cambios">Cancelar</button>
               </div>
             </form>
           </div>
@@ -2175,7 +2175,7 @@ export default function Inventory({ token }) {
                   setShowQRModal(false);
                   setSelectedQRCage(null);
                 }}
-              >
+               title="Cerrar esta ventana">
                 Cerrar
               </button>
             </div>

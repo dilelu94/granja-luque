@@ -301,7 +301,7 @@ export default function CalendarView({ token }) {
             className="btn btn-secondary" 
             onClick={() => setShowSyncModal(true)}
             style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
-          >
+           title="Obtener enlace para sincronizar eventos con Google Calendar">
             🔗 Sincronizar Google Calendar
           </button>
           <button 
@@ -310,7 +310,7 @@ export default function CalendarView({ token }) {
               setEventForm({ title: '', description: '', eventDate: getLocalTodayDate(), type: 'manual' });
               setShowEventModal(true);
             }}
-          >
+           title="Hacer clic para añadir evento">
             ➕ Añadir Evento
           </button>
         </div>
@@ -326,9 +326,9 @@ export default function CalendarView({ token }) {
               {monthNames[month]} {year}
             </h3>
             <div style={{ display: 'flex', gap: '0.5rem' }}>
-              <button className="btn btn-secondary" style={{ padding: '0.4rem 0.8rem' }} onClick={handlePrevMonth}>◀ Anterior</button>
-              <button className="btn btn-secondary" style={{ padding: '0.4rem 0.8rem' }} onClick={() => setCurrentDate(new Date())}>Hoy</button>
-              <button className="btn btn-secondary" style={{ padding: '0.4rem 0.8rem' }} onClick={handleNextMonth}>Siguiente ▶</button>
+              <button className="btn btn-secondary" style={{ padding: '0.4rem 0.8rem' }} onClick={handlePrevMonth} title="Hacer clic para anterior">◀ Anterior</button>
+              <button className="btn btn-secondary" style={{ padding: '0.4rem 0.8rem' }} onClick={() => setCurrentDate(new Date())} title="Hacer clic para hoy">Hoy</button>
+              <button className="btn btn-secondary" style={{ padding: '0.4rem 0.8rem' }} onClick={handleNextMonth} title="Hacer clic para siguiente">Siguiente ▶</button>
             </div>
           </div>
 
@@ -439,7 +439,7 @@ export default function CalendarView({ token }) {
               });
               setShowIncubatorModal(true);
             }}
-          >
+           title="Hacer clic para nueva incubación">
             🐣 Nueva Incubación
           </button>
         </div>
@@ -510,14 +510,14 @@ export default function CalendarView({ token }) {
                             className="btn btn-secondary" 
                             style={{ padding: '0.35rem 0.7rem', fontSize: '0.85rem' }}
                             onClick={() => handleEditIncubationClick(inc)}
-                          >
+                           title="Abrir formulario para editar este registro">
                             ✏️ Editar
                           </button>
                           <button 
                             className="btn btn-danger" 
                             style={{ padding: '0.35rem 0.7rem', fontSize: '0.85rem' }}
                             onClick={() => handleDeleteIncubation(inc.id)}
-                          >
+                           title="Eliminar permanentemente este registro del sistema">
                             🗑️ Eliminar
                           </button>
                         </div>
@@ -562,7 +562,7 @@ export default function CalendarView({ token }) {
                       <button 
                         style={{ background: 'none', border: 'none', color: 'var(--accent-red)', cursor: 'pointer', fontSize: '0.9rem' }} 
                         onClick={() => handleDeleteEvent(event.id)}
-                      >
+                       title="Hacer clic para ️">
                         🗑️
                       </button>
                     </div>
@@ -581,10 +581,10 @@ export default function CalendarView({ token }) {
                   setSelectedDayEvents(null);
                   setShowEventModal(true);
                 }}
-              >
+               title="Hacer clic para añadir evento">
                 ➕ Añadir Evento
               </button>
-              <button className="btn btn-secondary" style={{ flex: '1' }} onClick={() => setSelectedDayEvents(null)}>Cerrar</button>
+              <button className="btn btn-secondary" style={{ flex: '1' }} onClick={() => setSelectedDayEvents(null)} title="Cerrar esta ventana">Cerrar</button>
             </div>
           </div>
         </div>
@@ -664,10 +664,10 @@ export default function CalendarView({ token }) {
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'row-reverse', gap: '0.75rem' }}>
-                <button type="submit" className="btn btn-gold" style={{ flex: '1' }}>
+                <button type="submit" className="btn btn-gold" style={{ flex: '1' }} title="Hacer clic para ejecutar acción">
                   {incubatorForm.id ? 'Guardar Cambios' : 'Registrar e Iniciar'}
                 </button>
-                <button type="button" className="btn btn-secondary" style={{ flex: '1' }} onClick={() => setShowIncubatorModal(false)}>Cancelar</button>
+                <button type="button" className="btn btn-secondary" style={{ flex: '1' }} onClick={() => setShowIncubatorModal(false)} title="Cancelar la acción actual sin guardar los cambios">Cancelar</button>
               </div>
             </form>
           </div>
@@ -729,8 +729,8 @@ export default function CalendarView({ token }) {
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'row-reverse', gap: '0.75rem', marginTop: '1.5rem' }}>
-                <button type="submit" className="btn btn-primary" style={{ flex: '1' }}>Crear Evento</button>
-                <button type="button" className="btn btn-secondary" style={{ flex: '1' }} onClick={() => setShowEventModal(false)}>Cancelar</button>
+                <button type="submit" className="btn btn-primary" style={{ flex: '1' }} title="Registrar y crear el nuevo elemento">Crear Evento</button>
+                <button type="button" className="btn btn-secondary" style={{ flex: '1' }} onClick={() => setShowEventModal(false)} title="Cancelar la acción actual sin guardar los cambios">Cancelar</button>
               </div>
             </form>
           </div>
@@ -773,10 +773,10 @@ export default function CalendarView({ token }) {
                   navigator.clipboard.writeText(`${window.location.origin}/api/calendar/feed.ics?key=luque2026`);
                   alert('¡Enlace copiado al portapapeles!');
                 }}
-              >
+               title="Copiar el enlace de sincronización al portapapeles">
                 📋 Copiar Enlace
               </button>
-              <button type="button" className="btn btn-secondary" style={{ flex: '1' }} onClick={() => setShowSyncModal(false)}>Cerrar</button>
+              <button type="button" className="btn btn-secondary" style={{ flex: '1' }} onClick={() => setShowSyncModal(false)} title="Cerrar esta ventana">Cerrar</button>
             </div>
           </div>
         </div>

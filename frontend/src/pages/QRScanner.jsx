@@ -51,7 +51,7 @@ export default function QRScanner({ token, onBack }) {
     <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: '#0f172a', zIndex: 9999, display: 'flex', flexDirection: 'column' }}>
       <div style={{ padding: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(0,0,0,0.5)' }}>
         <h2 style={{ color: 'white', margin: 0, fontSize: '1.2rem' }}>Seleccionar Jaula</h2>
-        <button className="btn btn-secondary" onClick={onBack}>Volver</button>
+        <button className="btn btn-secondary" onClick={onBack} title="Volver a la pantalla anterior">Volver</button>
       </div>
 
       {error && (
@@ -65,14 +65,14 @@ export default function QRScanner({ token, onBack }) {
           className={`btn ${activeTab === 'scan' ? 'btn-primary' : 'btn-secondary'}`} 
           style={{ flex: 1 }}
           onClick={() => setActiveTab('scan')}
-        >
+         title="Abrir el escáner de códigos QR">
           📷 Escanear QR
         </button>
         <button 
           className={`btn ${activeTab === 'manual' ? 'btn-primary' : 'btn-secondary'}`} 
           style={{ flex: 1 }}
           onClick={() => setActiveTab('manual')}
-        >
+         title="Hacer clic para ️ seleccionar manual">
           ⌨️ Seleccionar Manual
         </button>
       </div>
@@ -126,7 +126,7 @@ export default function QRScanner({ token, onBack }) {
               className="btn btn-primary" 
               style={{ width: '100%', padding: '1rem', fontSize: '1.1rem' }}
               onClick={handleManualGo}
-            >
+             title="Hacer clic para ir a la jaula">
               🚀 Ir a la Jaula
             </button>
           </div>

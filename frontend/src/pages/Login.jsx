@@ -111,7 +111,7 @@ export default function Login({ onLoginSuccess, onCancel }) {
                   fontSize: '1.2rem',
                   padding: '0.2rem'
                 }}
-              >
+               title={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}>
                 {showPassword ? '🙈' : '👁️'}
               </button>
             </div>
@@ -122,7 +122,7 @@ export default function Login({ onLoginSuccess, onCancel }) {
             className="btn btn-primary" 
             style={{ width: '100%', fontSize: '1rem', marginBottom: '1rem' }}
             disabled={loading}
-          >
+           title="Hacer clic para ejecutar acción">
             {loading ? 'Verificando...' : 'Iniciar Sesión'}
           </button>
 
@@ -131,7 +131,7 @@ export default function Login({ onLoginSuccess, onCancel }) {
             className="btn btn-secondary" 
             style={{ width: '100%' }}
             onClick={onCancel}
-          >
+           title="Volver a la pantalla anterior">
             Volver a la Tienda
           </button>
         </form>

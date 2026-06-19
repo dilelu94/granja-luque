@@ -93,7 +93,7 @@ export default function RecolectarHuevos({ token, onBack }) {
           onClick={onBack}
           className="btn btn-secondary"
           style={{ padding: '0.5rem 1rem', fontSize: '0.9rem' }}
-        >
+         title="Volver a la pantalla anterior">
           Volver
         </button>
       </div>
@@ -118,7 +118,8 @@ export default function RecolectarHuevos({ token, onBack }) {
             alignItems: 'center',
             gap: '0.5rem'
           }}
-        >
+         title="Hacer clic para () : 
+               datemode === 'ayer' ? yesterday.tolocaledatestring('es-ar', ) : 'seleccionar'})">
           📅 {dateMode === 'hoy' ? 'Hoy' : dateMode === 'ayer' ? 'Ayer' : 'Fecha Manual'} 🔄
           <span style={{ fontSize: '0.8rem', fontWeight: 'normal', opacity: 0.8, marginLeft: '0.5rem' }}>
             ({dateMode === 'hoy' ? today.toLocaleDateString('es-AR', { day: 'numeric', month: 'short' }) : 
@@ -207,7 +208,7 @@ export default function RecolectarHuevos({ token, onBack }) {
             width: '100%',
             opacity: loading ? 0.7 : 1
           }}
-        >
+         title="Hacer clic para ejecutar acción">
           {loading ? 'Guardando...' : '💾 Guardar Recolección'}
         </button>
       </form>

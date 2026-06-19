@@ -243,7 +243,7 @@ Una vez completado el pago, el sistema registrará tu pedido automáticamente. �
                             className="btn btn-primary" 
                             style={{ padding: '0.35rem 0.75rem', fontSize: '0.8rem' }}
                             onClick={() => handleApproveOrder(order.id)}
-                          >
+                           title="Hacer clic para ️ aprobar">
                             ✔️ Aprobar
                           </button>
                         )}
@@ -265,7 +265,7 @@ Una vez completado el pago, el sistema registrará tu pedido automáticamente. �
                             className="btn btn-primary" 
                             style={{ padding: '0.35rem 0.75rem', fontSize: '0.8rem', background: 'rgba(16,185,129,0.2)', color: 'var(--accent-green)', borderColor: 'rgba(16,185,129,0.4)' }}
                             onClick={() => handleManualPaid(order.id)}
-                          >
+                           title="Hacer clic para pagó efectivo">
                             💵 Pagó Efectivo
                           </button>
                         )}
@@ -275,7 +275,7 @@ Una vez completado el pago, el sistema registrará tu pedido automáticamente. �
                             className="btn btn-danger" 
                             style={{ padding: '0.35rem 0.75rem', fontSize: '0.8rem' }}
                             onClick={() => handleCancelOrder(order.id)}
-                          >
+                           title="Cancelar la acción actual sin guardar los cambios">
                             ❌ Cancelar
                           </button>
                         )}

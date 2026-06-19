@@ -215,7 +215,7 @@ export default function Dashboard({ token }) {
                 No volver a mostrar estas alertas
               </label>
               
-              <button className="btn btn-primary" style={{ width: '100%', padding: '0.75rem', fontSize: '1rem' }} onClick={handleCloseWelcomeModal}>
+              <button className="btn btn-primary" style={{ width: '100%', padding: '0.75rem', fontSize: '1rem' }} onClick={handleCloseWelcomeModal} title="Cerrar ventana de alerta y continuar al panel">
                 Continuar
               </button>
             </div>
@@ -235,7 +235,7 @@ export default function Dashboard({ token }) {
             window.history.pushState({}, '', '/escanear');
             window.location.reload();
           }}
-        >
+         title="Abrir el escáner de códigos QR para buscar o registrar datos de una jaula">
           📷 Escanear Jaula
         </button>
       </div>

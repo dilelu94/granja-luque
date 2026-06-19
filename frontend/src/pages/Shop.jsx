@@ -207,7 +207,7 @@ Quedo a la espera de su aprobación para proceder con el pago. ¡Muchas gracias!
             Codornices selectas y productos de granja de alta calidad
           </p>
         </div>
-        <button className="btn btn-secondary" onClick={onAdminLoginClick}>
+        <button className="btn btn-secondary" onClick={onAdminLoginClick} title="Hacer clic para panel administrador">
           Panel Administrador 🔒
         </button>
       </header>
@@ -257,7 +257,7 @@ Quedo a la espera de su aprobación para proceder con el pago. ¡Muchas gracias!
             className="btn btn-secondary" 
             style={{ marginTop: '1rem', width: '100%' }}
             onClick={() => setSuccessOrder(null)}
-          >
+           title="Hacer clic para hacer otra compra">
             Hacer otra compra
           </button>
         </div>
@@ -314,7 +314,7 @@ Quedo a la espera de su aprobación para proceder con el pago. ¡Muchas gracias!
                       style={{ marginTop: '1rem', width: '100%' }}
                       disabled={prod.stock <= 0}
                       onClick={() => addToCart(prod)}
-                    >
+                     title="Hacer clic para añadir al carrito">
                       🛒 Añadir al carrito
                     </button>
                   </div>
@@ -347,9 +347,9 @@ Quedo a la espera de su aprobación para proceder con el pago. ¡Muchas gracias!
                           <div style={{ fontSize: '0.8rem', color: 'var(--accent-gold)' }}>${item.price} c/u</div>
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                          <button className="btn" style={{ padding: '0.15rem 0.4rem', background: 'rgba(255,255,255,0.05)', color: 'white' }} onClick={() => updateCartQuantity(item.id, -1)}>-</button>
+                          <button className="btn" style={{ padding: '0.15rem 0.4rem', background: 'rgba(255,255,255,0.05)', color: 'white' }} onClick={() => updateCartQuantity(item.id, -1)} title="Hacer clic para -">-</button>
                           <span style={{ fontSize: '0.95rem', fontWeight: 'bold', width: '20px', textAlign: 'center' }}>{item.quantity}</span>
-                          <button className="btn" style={{ padding: '0.15rem 0.4rem', background: 'rgba(255,255,255,0.05)', color: 'white' }} onClick={() => updateCartQuantity(item.id, 1)}>+</button>
+                          <button className="btn" style={{ padding: '0.15rem 0.4rem', background: 'rgba(255,255,255,0.05)', color: 'white' }} onClick={() => updateCartQuantity(item.id, 1)} title="Hacer clic para +">+</button>
                         </div>
                       </div>
                     ))}
@@ -364,7 +364,7 @@ Quedo a la espera de su aprobación para proceder con el pago. ¡Muchas gracias!
                         className={`btn ${deliveryMethod === 'pickup' ? 'btn-primary' : 'btn-secondary'}`}
                         style={{ flex: '1', padding: '0.4rem', fontSize: '0.85rem' }}
                         onClick={() => setDeliveryMethod('pickup')}
-                      >
+                       title="Hacer clic para retiro en granja">
                         🏪 Retiro en Granja
                       </button>
                       <button 
@@ -372,7 +372,7 @@ Quedo a la espera de su aprobación para proceder con el pago. ¡Muchas gracias!
                         className={`btn ${deliveryMethod === 'shipping' ? 'btn-primary' : 'btn-secondary'}`}
                         style={{ flex: '1', padding: '0.4rem', fontSize: '0.85rem' }}
                         onClick={() => setDeliveryMethod('shipping')}
-                      >
+                       title="Hacer clic para envío a casa">
                         🚚 Envío a Casa
                       </button>
                     </div>
@@ -468,7 +468,7 @@ Quedo a la espera de su aprobación para proceder con el pago. ¡Muchas gracias!
                       className="btn btn-primary" 
                       style={{ width: '100%', fontSize: '1rem', marginTop: '0.5rem' }}
                       disabled={loading}
-                    >
+                     title="Hacer clic para ejecutar acción">
                       {loading ? 'Procesando...' : 'Confirmar Pedido'}
                     </button>
                   </form>
