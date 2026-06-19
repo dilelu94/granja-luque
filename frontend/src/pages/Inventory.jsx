@@ -86,6 +86,21 @@ const CollapsibleNotes = ({ notes }) => {
 };
 
 export default function Inventory({ token }) {
+  const getLocalDateString = (date) => {
+    const yyyy = date.getFullYear();
+    const mm = String(date.getMonth() + 1).padStart(2, '0');
+    const dd = String(date.getDate()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}`;
+  };
+
+  const today = new Date();
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1);
+
+  const todayStr = getLocalDateString(today);
+  const yesterdayStr = getLocalDateString(yesterday);
+
+  const [eggDateMode, setEggDateMode] = useState('hoy'); // 'hoy' | 'ayer' | 'manual'
   const [activeTab, setActiveTab] = useState('birds'); // 'birds' | 'feed' | 'products' | 'cages'
   const [batches, setBatches] = useState([]);
   const [feed, setFeed] = useState({ initiator: { stock: 0 }, ponedora: { stock: 0 } });
@@ -115,7 +130,7 @@ export default function Inventory({ token }) {
   const [selectedBatchId, setSelectedBatchId] = useState(null);
   const [mortalityForm, setMortalityForm] = useState({ count: '', reason: 'Muerte / Enfermedad', notes: '' });
   
-  const [eggForm, setEggForm] = useState({ date: new Date().toISOString().split('T')[0], quantityCollected: '', quantityBroken: '', notes: '' });
+  const [eggForm, setEggForm] = useState({ date: todayStr, quantityCollected: '', quantityBroken: '', notes: '' });
   const [packForm, setPackForm] = useState({ productId: '', packagesCount: '', eggsPerPackage: '' });
   const [feedForm, setFeedForm] = useState({ type: 'ponedora', action: 'buy', quantity: '', price: '', shippingCost: '', purchaseDate: new Date().toISOString().split('T')[0] });
   const [feedPurchases, setFeedPurchases] = useState([]);
@@ -302,6 +317,18 @@ export default function Inventory({ token }) {
     }
   };
 
+  const handleDateModeCycle = () => {
+    if (eggDateMode === 'hoy') {
+      setEggDateMode('ayer');
+      setEggForm(prev => ({ ...prev, date: yesterdayStr }));
+    } else if (eggDateMode === 'ayer') {
+      setEggDateMode('manual');
+    } else {
+      setEggDateMode('hoy');
+      setEggForm(prev => ({ ...prev, date: todayStr }));
+    }
+  };
+
   // 3. Registrar huevos recogidos
   const handleRecordEggs = async (e) => {
     e.preventDefault();
@@ -316,7 +343,8 @@ export default function Inventory({ token }) {
 
       showNotification('Recolección diaria de huevos guardada.');
       setShowEggModal(false);
-      setEggForm({ date: new Date().toISOString().split('T')[0], quantityCollected: '', quantityBroken: '', notes: '' });
+      setEggForm({ date: todayStr, quantityCollected: '', quantityBroken: '', notes: '' });
+      setEggDateMode('hoy');
       fetchData();
     } catch (err) {
       showNotification(err.message, true);
@@ -1591,15 +1619,47 @@ export default function Inventory({ token }) {
           <div className="modal-content">
             <h3 style={{ marginBottom: '1.5rem' }}>Recolección Diaria de Huevos</h3>
             <form onSubmit={handleRecordEggs}>
-              <div className="form-group">
+              <div className="form-group" style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                 <label>Fecha de Recolección</label>
-                <input 
-                  type="date" 
-                  className="form-control" 
-                  required
-                  value={eggForm.date}
-                  onChange={e => setEggForm({ ...eggForm, date: e.target.value })}
-                />
+                <button
+                  type="button"
+                  onClick={handleDateModeCycle}
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem 1rem',
+                    borderRadius: 'var(--border-radius-sm)',
+                    border: '1px solid var(--border-color)',
+                    background: 'rgba(255,255,255,0.02)',
+                    color: 'var(--text-primary)',
+                    fontWeight: '500',
+                    fontSize: '0.95rem',
+                    cursor: 'pointer',
+                    transition: 'var(--transition-smooth)',
+                    display: 'flex',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    gap: '0.5rem'
+                  }}
+                  title="Cambiar fecha de recolección (Hoy / Ayer / Manual)"
+                >
+                  📅 {eggDateMode === 'hoy' ? 'Hoy' : eggDateMode === 'ayer' ? 'Ayer' : 'Fecha Manual'} 🔄
+                  <span style={{ fontSize: '0.85rem', fontWeight: 'normal', opacity: 0.8, marginLeft: '0.5rem' }}>
+                    ({eggDateMode === 'hoy' ? today.toLocaleDateString('es-AR', { day: 'numeric', month: 'short' }) : 
+                       eggDateMode === 'ayer' ? yesterday.toLocaleDateString('es-AR', { day: 'numeric', month: 'short' }) : 'Seleccionar'})
+                  </span>
+                </button>
+
+                {eggDateMode === 'manual' && (
+                  <input 
+                    type="date"
+                    className="form-control"
+                    required
+                    value={eggForm.date}
+                    onChange={e => setEggForm({ ...eggForm, date: e.target.value })}
+                    style={{ marginTop: '0.25rem' }}
+                    max={todayStr}
+                  />
+                )}
               </div>
 
               <div className="form-group">
@@ -1638,7 +1698,7 @@ export default function Inventory({ token }) {
 
               <div style={{ display: 'flex', flexDirection: 'row-reverse', gap: '0.75rem', marginTop: '1.5rem' }}>
                 <button type="submit" className="btn btn-primary" style={{ flex: '1' }} title="Confirmar y guardar los datos ingresados">Guardar</button>
-                <button type="button" className="btn btn-secondary" style={{ flex: '1' }} onClick={() => setShowEggModal(false)} title="Cancelar la acción actual sin guardar los cambios">Cancelar</button>
+                <button type="button" className="btn btn-secondary" style={{ flex: '1' }} onClick={() => { setShowEggModal(false); setEggDateMode('hoy'); setEggForm(prev => ({ ...prev, date: todayStr })); }} title="Cancelar la acción actual sin guardar los cambios">Cancelar</button>
               </div>
             </form>
           </div>
