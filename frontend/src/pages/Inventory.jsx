@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { QRCodeCanvas } from 'qrcode.react';
 
 const formatDate = (dateStr) => {
   if (!dateStr) return '';
@@ -103,6 +104,8 @@ export default function Inventory({ token }) {
   const [showContainerModal, setShowContainerModal] = useState(false);
   const [showCageModal, setShowCageModal] = useState(false);
   const [showEditCageModal, setShowEditCageModal] = useState(false);
+  const [showQRModal, setShowQRModal] = useState(false);
+  const [selectedQRCage, setSelectedQRCage] = useState(null);
   
   const [containerForm, setContainerForm] = useState({ id: null, name: '', containerStock: 0, containerCost: 0, originalProd: null });
 
@@ -872,6 +875,16 @@ export default function Inventory({ token }) {
                         <td style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>{cage.notes || '-'}</td>
                         <td>
                           <div style={{ display: 'flex', gap: '0.5rem' }}>
+                            <button 
+                              className="btn btn-primary" 
+                              style={{ padding: '0.25rem 0.5rem', fontSize: '0.8rem' }}
+                              onClick={() => {
+                                setSelectedQRCage(cage);
+                                setShowQRModal(true);
+                              }}
+                            >
+                              🖨️ Ver QR
+                            </button>
                             <button 
                               className="btn btn-secondary" 
                               style={{ padding: '0.25rem 0.5rem', fontSize: '0.8rem' }}
@@ -2094,6 +2107,69 @@ export default function Inventory({ token }) {
                 <button type="button" className="btn btn-secondary" style={{ flex: '1' }} onClick={() => setShowEditCageModal(false)}>Cancelar</button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* =======================================================
+          MODAL: VER QR
+         ======================================================= */}
+      {showQRModal && selectedQRCage && (
+        <div className="modal-overlay">
+          <div className="modal-content" style={{ textAlign: 'center' }}>
+            <h3 style={{ marginBottom: '0.5rem' }}>Código QR - Jaula {selectedQRCage.name}</h3>
+            <p style={{ color: 'var(--text-secondary)', marginBottom: '1.5rem', fontSize: '0.9rem' }}>
+              Escaneá este código con tu celular para ver y gestionar la jaula directamente.
+            </p>
+            
+            <div style={{ 
+              background: 'white', 
+              padding: '2rem', 
+              borderRadius: '1rem', 
+              display: 'inline-block',
+              boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.5)'
+            }}>
+              {/* Contenedor relativo para posicionar el texto al centro */}
+              <div style={{ position: 'relative', display: 'inline-block' }}>
+                <QRCodeCanvas 
+                  value={`${window.location.origin}/jaula/${selectedQRCage.id}`}
+                  size={256}
+                  level="H" // High error correction needed since we overlay text
+                  bgColor="#ffffff"
+                  fgColor="#0f172a"
+                />
+                <div style={{
+                  position: 'absolute',
+                  top: '50%',
+                  left: '50%',
+                  transform: 'translate(-50%, -50%)',
+                  background: 'white',
+                  padding: '0.2rem 0.5rem',
+                  borderRadius: '0.25rem',
+                  border: '2px solid #0f172a',
+                  fontWeight: '900',
+                  color: '#0f172a',
+                  fontSize: '1.2rem',
+                  fontFamily: 'monospace'
+                }}>
+                  {selectedQRCage.name}
+                </div>
+              </div>
+            </div>
+
+            <div style={{ marginTop: '2rem' }}>
+              <button 
+                type="button" 
+                className="btn btn-secondary" 
+                style={{ width: '100%' }} 
+                onClick={() => {
+                  setShowQRModal(false);
+                  setSelectedQRCage(null);
+                }}
+              >
+                Cerrar
+              </button>
+            </div>
           </div>
         </div>
       )}

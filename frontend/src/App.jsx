@@ -8,6 +8,7 @@ import CalendarView from './pages/CalendarView';
 import SettingsPage from './pages/SettingsPage';
 import Projections from './pages/Projections';
 import RecolectarHuevosApp from './pages/RecolectarHuevos';
+import CageDetail from './pages/CageDetail';
 
 export default function App() {
   const [token, setToken] = useState(localStorage.getItem('token') || null);
@@ -17,6 +18,9 @@ export default function App() {
     // Manejar acceso directo por URL
     if (window.location.pathname === '/recolectar-huevos') {
       return 'recolectar-huevos';
+    }
+    if (window.location.pathname.startsWith('/jaula/')) {
+      return 'jaula-detail';
     }
     const savedView = localStorage.getItem('currentView');
     const hasToken = !!localStorage.getItem('token');
@@ -30,6 +34,9 @@ export default function App() {
     // Si la vista es la especial, actualizamos la URL para que quede bonita, y no la guardamos como default
     if (view === 'recolectar-huevos') {
       window.history.pushState({}, '', '/recolectar-huevos');
+      return;
+    } else if (view === 'jaula-detail') {
+      // Mantenemos la URL que ya tiene el ID
       return;
     } else {
       window.history.pushState({}, '', '/');
@@ -69,7 +76,12 @@ export default function App() {
     setToken(newToken);
     setUsername(newUsername);
     setRole(newRole || 'admin');
-    setView((prevView) => prevView === 'recolectar-huevos' ? 'recolectar-huevos' : 'dashboard');
+    
+    if (view === 'recolectar-huevos' || view === 'jaula-detail') {
+      setView(view);
+    } else {
+      setView('dashboard');
+    }
   };
 
   const handleLogout = () => {
@@ -109,6 +121,10 @@ export default function App() {
         return token ? <Projections token={token} /> : <Login onLoginSuccess={handleLoginSuccess} onCancel={handleCancelLogin} />;
       case 'recolectar-huevos':
         return token ? <RecolectarHuevosApp token={token} onBack={() => setView('dashboard')} /> : <Login onLoginSuccess={handleLoginSuccess} onCancel={handleCancelLogin} />;
+      case 'jaula-detail': {
+        const id = window.location.pathname.split('/').pop();
+        return token ? <CageDetail token={token} cageId={id} onBack={() => { window.history.pushState({}, '', '/'); setView('inventory'); }} /> : <Login onLoginSuccess={handleLoginSuccess} onCancel={handleCancelLogin} />;
+      }
       default:
 
         return <Shop onAdminLoginClick={() => setView('login')} />;
@@ -116,7 +132,7 @@ export default function App() {
   };
 
   // Modo público: renderizar la tienda directamente sin barra lateral
-  if (view === 'shop' || view === 'login' || view === 'recolectar-huevos') {
+  if (view === 'shop' || view === 'login' || view === 'recolectar-huevos' || view === 'jaula-detail') {
     return (
       <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '1rem 2rem' }}>
         {renderPage()}

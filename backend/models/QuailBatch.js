@@ -296,6 +296,18 @@ export class QuailBatch {
     return rows.map(row => new QuailBatch(row));
   }
 
+  static async getActiveByCageId(cageId) {
+    const db = await getDatabaseConnection();
+    const rows = await db.all(`
+      SELECT q.*, c.name as cage_name 
+      FROM quail_batches q 
+      LEFT JOIN cages c ON q.cage_id = c.id 
+      WHERE q.status = 'active' AND q.cage_id = ?
+      ORDER BY q.birth_date DESC
+    `, [cageId]);
+    return rows.map(row => new QuailBatch(row));
+  }
+
   static async getAll() {
     const db = await getDatabaseConnection();
     const rows = await db.all(`

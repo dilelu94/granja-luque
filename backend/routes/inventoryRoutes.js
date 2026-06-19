@@ -449,6 +449,32 @@ router.get('/cages', authenticateToken, async (req, res) => {
 });
 
 /**
+ * GET /api/inventory/cages/:id
+ * ADMIN ONLY: Get a single cage and its active batches.
+ */
+router.get('/cages/:id', authenticateToken, async (req, res) => {
+  const { id } = req.params;
+  try {
+    const cage = await Cage.getById(id);
+    if (!cage) {
+      return res.status(404).json({ error: 'Jaula no encontrada.' });
+    }
+    const batches = await QuailBatch.getActiveByCageId(id);
+    
+    // Calcular ocupación actual
+    const currentOccupancy = batches.reduce((acc, b) => acc + b.currentQuantity, 0);
+
+    res.json({
+      cage: { ...cage, currentOccupancy },
+      batches
+    });
+  } catch (error) {
+    console.error('Error al obtener jaula:', error);
+    res.status(500).json({ error: 'Error al obtener la jaula.' });
+  }
+});
+
+/**
  * POST /api/inventory/cages
  * ADMIN ONLY: Create a new cage.
  */
