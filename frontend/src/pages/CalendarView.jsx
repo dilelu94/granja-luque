@@ -663,7 +663,7 @@ export default function CalendarView({ token }) {
                 <br />3. **Eclosión estimada** en el **Día 16 a 18** a la hora de inicio.
               </div>
 
-              <div style={{ display: 'flex', gap: '0.75rem' }}>
+              <div style={{ display: 'flex', flexDirection: 'row-reverse', gap: '0.75rem' }}>
                 <button type="submit" className="btn btn-gold" style={{ flex: '1' }}>
                   {incubatorForm.id ? 'Guardar Cambios' : 'Registrar e Iniciar'}
                 </button>
@@ -728,7 +728,7 @@ export default function CalendarView({ token }) {
                 />
               </div>
 
-              <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1.5rem' }}>
+              <div style={{ display: 'flex', flexDirection: 'row-reverse', gap: '0.75rem', marginTop: '1.5rem' }}>
                 <button type="submit" className="btn btn-primary" style={{ flex: '1' }}>Crear Evento</button>
                 <button type="button" className="btn btn-secondary" style={{ flex: '1' }} onClick={() => setShowEventModal(false)}>Cancelar</button>
               </div>

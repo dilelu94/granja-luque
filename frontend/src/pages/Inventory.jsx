@@ -1237,7 +1237,7 @@ export default function Inventory({ token }) {
                 <small style={{ color: 'var(--text-muted)' }}>Costo unitario del envase (se usa para calcular el costo total de fabricación).</small>
               </div>
 
-              <div style={{ display: 'flex', gap: '0.75rem', marginTop: '2rem' }}>
+              <div style={{ display: 'flex', flexDirection: 'row-reverse', gap: '0.75rem', marginTop: '2rem' }}>
                 <button type="submit" className="btn btn-primary" style={{ flex: '1' }}>Guardar Envase</button>
                 {containerForm.id && (
                   <button 
@@ -1415,7 +1415,7 @@ export default function Inventory({ token }) {
                 </div>
               </div>
 
-              <div style={{ display: 'flex', gap: '0.75rem' }}>
+              <div style={{ display: 'flex', flexDirection: 'row-reverse', gap: '0.75rem' }}>
                 <button type="submit" className="btn btn-primary" style={{ flex: '1' }}>Guardar Producto</button>
                 {productForm.id && (
                   <button 
@@ -1518,7 +1518,7 @@ export default function Inventory({ token }) {
                 />
               </div>
 
-              <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1.5rem' }}>
+              <div style={{ display: 'flex', flexDirection: 'row-reverse', gap: '0.75rem', marginTop: '1.5rem' }}>
                 <button type="submit" className="btn btn-primary" style={{ flex: '1' }}>Registrar</button>
                 <button type="button" className="btn btn-secondary" style={{ flex: '1' }} onClick={() => setShowBatchModal(false)}>Cancelar</button>
               </div>
@@ -1574,7 +1574,7 @@ export default function Inventory({ token }) {
                 Esto descontará la cantidad del lote activo y guardará el registro en sus notas.
               </p>
 
-              <div style={{ display: 'flex', gap: '0.75rem' }}>
+              <div style={{ display: 'flex', flexDirection: 'row-reverse', gap: '0.75rem' }}>
                 <button type="submit" className="btn btn-danger" style={{ flex: '1' }}>Guardar Bajas</button>
                 <button type="button" className="btn btn-secondary" style={{ flex: '1' }} onClick={() => setShowMortalityModal(false)}>Cancelar</button>
               </div>
@@ -1636,7 +1636,7 @@ export default function Inventory({ token }) {
                 />
               </div>
 
-              <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1.5rem' }}>
+              <div style={{ display: 'flex', flexDirection: 'row-reverse', gap: '0.75rem', marginTop: '1.5rem' }}>
                 <button type="submit" className="btn btn-primary" style={{ flex: '1' }}>Guardar</button>
                 <button type="button" className="btn btn-secondary" style={{ flex: '1' }} onClick={() => setShowEggModal(false)}>Cancelar</button>
               </div>
@@ -1775,7 +1775,7 @@ export default function Inventory({ token }) {
                   />
                 </div>
 
-                <div style={{ display: 'flex', gap: '0.75rem' }}>
+                <div style={{ display: 'flex', flexDirection: 'row-reverse', gap: '0.75rem' }}>
                   <button type="submit" className="btn btn-primary" style={{ flex: '1' }} disabled={looseEggs === 0 || eggProducts.length === 0}>Empaquetar</button>
                   <button type="button" className="btn btn-secondary" style={{ flex: '1' }} onClick={() => setShowPackModal(false)}>Cancelar</button>
                 </div>
@@ -1868,7 +1868,7 @@ export default function Inventory({ token }) {
                 </div>
               )}
 
-              <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1.5rem' }}>
+              <div style={{ display: 'flex', flexDirection: 'row-reverse', gap: '0.75rem', marginTop: '1.5rem' }}>
                 <button type="submit" className="btn btn-primary" style={{ flex: '1' }}>Guardar</button>
                 <button type="button" className="btn btn-secondary" style={{ flex: '1' }} onClick={() => setShowFeedModal(false)}>Cancelar</button>
               </div>
@@ -2012,7 +2012,7 @@ export default function Inventory({ token }) {
                 />
               </div>
 
-              <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1.5rem' }}>
+              <div style={{ display: 'flex', flexDirection: 'row-reverse', gap: '0.75rem', marginTop: '1.5rem' }}>
                 <button type="submit" className="btn btn-primary" style={{ flex: '1' }}>Guardar Cambios</button>
                 <button type="button" className="btn btn-secondary" style={{ flex: '1' }} onClick={() => setShowEditBatchModal(false)}>Cancelar</button>
               </div>
@@ -2063,7 +2063,7 @@ export default function Inventory({ token }) {
                 />
               </div>
 
-              <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1.5rem' }}>
+              <div style={{ display: 'flex', flexDirection: 'row-reverse', gap: '0.75rem', marginTop: '1.5rem' }}>
                 <button type="submit" className="btn btn-primary" style={{ flex: '1' }}>Crear</button>
                 <button type="button" className="btn btn-secondary" style={{ flex: '1' }} onClick={() => setShowCageModal(false)}>Cancelar</button>
               </div>
@@ -2111,7 +2111,7 @@ export default function Inventory({ token }) {
                 />
               </div>
 
-              <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1.5rem' }}>
+              <div style={{ display: 'flex', flexDirection: 'row-reverse', gap: '0.75rem', marginTop: '1.5rem' }}>
                 <button type="submit" className="btn btn-primary" style={{ flex: '1' }}>Guardar Cambios</button>
                 <button type="button" className="btn btn-secondary" style={{ flex: '1' }} onClick={() => setShowEditCageModal(false)}>Cancelar</button>
               </div>
