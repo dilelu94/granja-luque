@@ -20,6 +20,32 @@ const formatDate = (dateStr) => {
   return dateStr;
 };
 
+const getCageBadgeDataURL = (name) => {
+  if (typeof document === 'undefined') return '';
+  const canvas = document.createElement('canvas');
+  canvas.width = 120;
+  canvas.height = 48;
+  const ctx = canvas.getContext('2d');
+  
+  // Fondo blanco
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, 120, 48);
+  
+  // Borde oscuro
+  ctx.strokeStyle = '#0f172a';
+  ctx.lineWidth = 4;
+  ctx.strokeRect(2, 2, 116, 44);
+  
+  // Texto centrado
+  ctx.fillStyle = '#0f172a';
+  ctx.font = 'bold 22px monospace';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(name, 60, 24);
+  
+  return canvas.toDataURL();
+};
+
 const CollapsibleNotes = ({ notes }) => {
   const [expanded, setExpanded] = useState(false);
   if (!notes) return null;
@@ -2259,9 +2285,17 @@ export default function Inventory({ token }) {
               <QRCodeCanvas 
                 value={`${window.location.origin}/jaula/${selectedQRCage.id}`}
                 size={256}
-                level="Q" // Nivel Q para que sea menos denso y facil de escanear
+                level="H" // Nivel H para máxima tolerancia a errores y poder tapar el centro
                 bgColor="#ffffff"
                 fgColor="#0f172a"
+                imageSettings={{
+                  src: getCageBadgeDataURL(selectedQRCage.name),
+                  x: undefined,
+                  y: undefined,
+                  height: 38,
+                  width: 90,
+                  excavate: true // Esto limpia los módulos del QR debajo de la imagen para que sea escaneable
+                }}
               />
               <br />
               <div style={{
