@@ -266,7 +266,7 @@ export default function Dashboard({ token }) {
       )}
 
       {/* Grid de Métricas Principales */}
-      <div className="dashboard-grid">
+      <div className="grid-4-cols">
         
         {/* Card Codornices */}
         <div className="glass-card" style={{ borderLeft: '5px solid var(--accent-green)' }}>
@@ -339,10 +339,10 @@ export default function Dashboard({ token }) {
 
       </div>
 
-      <div style={{ display: 'flex', gap: '2rem', flexWrap: 'wrap', marginTop: '2rem' }}>
+      <div className="dashboard-bottom-grid">
         
         {/* Gráfico/Tabla de Postura */}
-        <div className="glass-card" style={{ flex: '2', minWidth: '320px' }}>
+        <div className="glass-card">
           <h3 style={{ marginBottom: '1.25rem', fontFamily: 'var(--font-heading)' }}>Postura de Huevos (Últimos 7 registros)</h3>
           {stats.eggs.history.length === 0 ? (
             <p style={{ color: 'var(--text-secondary)' }}>No hay datos de postura cargados todavía.</p>
@@ -381,7 +381,7 @@ export default function Dashboard({ token }) {
         </div>
 
         {/* Acciones Rápidas y Resumen de Ventas */}
-        <div className="glass-card" style={{ flex: '1', minWidth: '300px' }}>
+        <div className="glass-card">
           <h3 style={{ marginBottom: '1.25rem', fontFamily: 'var(--font-heading)' }}>Pedidos Pendientes ({pendingOrders.length})</h3>
           
           {pendingOrders.length === 0 ? (
