@@ -286,19 +286,19 @@ export default function Dashboard({ token }) {
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
             <div style={{ display: 'flex', gap: '0.8rem' }}>
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.2rem' }}>
-                <img src="/FemaleQuail.png" alt="♀️" style={{ width: '14px', height: '14px', borderRadius: '50%', objectFit: 'cover' }} />
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+                <img src="/FemaleQuail.png" alt="♀️" style={{ width: '16px', height: '16px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
                 Hembras: <strong style={{ color: 'white' }}>{stats.quails.females || 0}</strong>
               </span>
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.2rem' }}>
-                <img src="/MaleQuail.png" alt="♂️" style={{ width: '14px', height: '14px', borderRadius: '50%', objectFit: 'cover' }} />
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+                <img src="/MaleQuail.png" alt="♂️" style={{ width: '16px', height: '16px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
                 Machos: <strong style={{ color: 'white' }}>{stats.quails.males || 0}</strong>
               </span>
             </div>
             <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
               <span>Total Adultas: <strong style={{ color: 'white' }}>{stats.quails.adult}</strong></span>
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.2rem' }}>
-                <img src="/HatchlingQuail.png" alt="🐣" style={{ width: '14px', height: '14px', borderRadius: '50%', objectFit: 'cover' }} />
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+                <img src="/HatchlingQuail.png" alt="🐣" style={{ width: '16px', height: '16px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
                 Chicos: <strong style={{ color: 'white' }}>{stats.quails.chick}</strong>
               </span>
             </div>

@@ -2249,27 +2249,33 @@ export default function Inventory({ token }) {
               display: 'inline-block',
               boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.5)'
             }}>
-              <QRCodeCanvas 
-                value={`${window.location.origin}/jaula/${selectedQRCage.id}`}
-                size={256}
-                level="Q"
-                bgColor="#ffffff"
-                fgColor="#0f172a"
-              />
-              <br />
-              <div style={{
-                marginTop: '1.2rem',
-                background: '#f1f5f9',
-                padding: '0.4rem 1rem',
-                borderRadius: '0.5rem',
-                border: '2px solid #0f172a',
-                fontWeight: '900',
-                color: '#0f172a',
-                fontSize: '1.4rem',
-                fontFamily: 'monospace',
-                display: 'inline-block'
-              }}>
-                {selectedQRCage.name}
+              {/* Contenedor relativo para posicionar el texto al centro sin romper el escaneo */}
+              <div style={{ position: 'relative', display: 'inline-block' }}>
+                <QRCodeCanvas 
+                  value={`${window.location.origin}/jaula/${selectedQRCage.id}`}
+                  size={256}
+                  level="H" // Usar nivel H para que la corrección de errores permita escanear al tapar el centro
+                  bgColor="#ffffff"
+                  fgColor="#0f172a"
+                />
+                <div style={{
+                  position: 'absolute',
+                  top: '50%',
+                  left: '50%',
+                  transform: 'translate(-50%, -50%)',
+                  background: 'white',
+                  padding: '0.15rem 0.4rem',
+                  borderRadius: '0.25rem',
+                  border: '2px solid #0f172a',
+                  fontWeight: 'bold',
+                  color: '#0f172a',
+                  fontSize: '0.95rem',
+                  fontFamily: 'monospace',
+                  lineHeight: '1',
+                  boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                }}>
+                  {selectedQRCage.name}
+                </div>
               </div>
             </div>
 
