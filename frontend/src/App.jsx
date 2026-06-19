@@ -133,7 +133,7 @@ export default function App() {
         return token ? <CageDetail token={token} cageId={id} onBack={() => { window.history.pushState({}, '', '/'); setView('inventory'); }} /> : <Login onLoginSuccess={handleLoginSuccess} onCancel={handleCancelLogin} />;
       }
       case 'escanear':
-        return token ? <QRScanner onBack={() => { window.history.pushState({}, '', '/'); setView('dashboard'); }} /> : <Login onLoginSuccess={handleLoginSuccess} onCancel={handleCancelLogin} />;
+        return token ? <QRScanner token={token} onBack={() => { window.history.pushState({}, '', '/'); setView('dashboard'); }} /> : <Login onLoginSuccess={handleLoginSuccess} onCancel={handleCancelLogin} />;
       default:
 
         return <Shop onAdminLoginClick={() => setView('login')} />;
