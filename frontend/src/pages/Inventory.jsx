@@ -654,7 +654,7 @@ export default function Inventory({ token }) {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
         <h2 style={{ fontFamily: 'var(--font-heading)', fontSize: '1.8rem' }}>Inventario de Granja 📋</h2>
         <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-          <button className="btn btn-primary" onClick={() => setShowEggModal(true)} title="Hacer clic para recolectar huevos">🥚 Recolectar Huevos</button>
+          <button className="btn btn-primary" onClick={() => setShowEggModal(true)} title="Hacer clic para recolectar huevos"><img src="/QuailEggEmoji.png" alt="🥚" style={{ width: '1.2em', height: '1.2em', verticalAlign: 'middle', marginRight: '0.4rem' }} /> Recolectar Huevos</button>
           <button className="btn btn-secondary" onClick={() => setShowPackModal(true)} title="Descontar huevos sueltos y envases para armar el producto de venta">📦 Empaquetar</button>
           <button className="btn btn-secondary" onClick={() => setShowCageModal(true)} title="Hacer clic para 🪵 nueva jaula">🪵 Nueva Jaula</button>
           <button className="btn btn-secondary" onClick={() => setShowFeedModal(true)} title="Hacer clic para cargar alimento">🌾 Cargar Alimento</button>
@@ -1124,7 +1124,7 @@ export default function Inventory({ token }) {
                       <td style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
                         📦 Envase plástico: ${Number(containerCost).toFixed(2)}
                         <br />🏷️ Etiqueta: ${Number(labelCost).toFixed(2)}
-                        {eggCount > 0 && <><br />🥚 Huevos ({eggCount}): ${Number(rawCost).toFixed(2)} (${Number(eggUnitCost).toFixed(2)} c/u)</>}
+                        {eggCount > 0 && <><br /><img src="/QuailEggEmoji.png" alt="🥚" style={{ width: '1.2em', height: '1.2em', verticalAlign: 'middle', marginRight: '0.2rem' }} /> Huevos ({eggCount}): ${Number(rawCost).toFixed(2)} (${Number(eggUnitCost).toFixed(2)} c/u)</>}
                       </td>
                       <td style={{ fontWeight: 'bold' }}>${totalCost.toFixed(2)}</td>
                       <td style={{ color: margin >= 0 ? 'var(--accent-green)' : 'var(--accent-red)', fontWeight: 'bold' }}>

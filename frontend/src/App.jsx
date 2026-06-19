@@ -234,7 +234,7 @@ export default function App() {
             style={{ width: '100%', borderColor: 'transparent', background: 'rgba(255,255,255,0.02)' }}
             onClick={() => setView('shop')}
            title="Regresar a la tienda pública de huevos">
-            🥚 Ir a la Tienda
+            <img src="/QuailEggEmoji.png" alt="🥚" style={{ width: '1.2em', height: '1.2em', verticalAlign: 'middle', marginRight: '0.4rem' }} /> Ir a la Tienda
           </button>
           <button 
             className="btn btn-danger" 

@@ -86,8 +86,8 @@ export default function RecolectarHuevos({ token, onBack }) {
   return (
     <div style={{ padding: '1rem', maxWidth: '500px', margin: '0 auto', fontFamily: 'var(--font-main)' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-        <h2 style={{ fontFamily: 'var(--font-heading)', margin: 0, fontSize: '1.5rem', color: 'var(--text-primary)' }}>
-          🥚 Recolectar
+        <h2 style={{ fontFamily: 'var(--font-heading)', margin: 0, fontSize: '1.5rem', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+          <img src="/QuailEggEmoji.png" alt="🥚" style={{ width: '1.2em', height: '1.2em' }} /> Recolectar
         </h2>
         <button 
           onClick={onBack}
@@ -153,8 +153,8 @@ export default function RecolectarHuevos({ token, onBack }) {
       <form onSubmit={handleRecordEggs} className="glass-card" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1.2rem' }}>
         
         <div className="form-group" style={{ margin: 0 }}>
-          <label style={{ fontSize: '1.1rem', marginBottom: '0.5rem', display: 'block', color: 'var(--text-primary)' }}>
-            🥚 Huevos Sanos
+          <label style={{ fontSize: '1.1rem', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.4rem', color: 'var(--text-primary)' }}>
+            <img src="/QuailEggEmoji.png" alt="🥚" style={{ width: '1.2em', height: '1.2em' }} /> Huevos Sanos
           </label>
           <input 
             type="number" 

@@ -200,8 +200,8 @@ Quedo a la espera de su aprobación para proceder con el pago. ¡Muchas gracias!
         marginBottom: '2rem'
       }}>
         <div>
-          <h1 style={{ color: 'var(--accent-green)', fontSize: '2.2rem', fontFamily: 'var(--font-heading)' }}>
-            Granja Luque 🥚
+          <h1 style={{ color: 'var(--accent-green)', fontSize: '2.2rem', fontFamily: 'var(--font-heading)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+            Granja Luque <img src="/QuailEggEmoji.png" alt="🥚" style={{ width: '1.2em', height: '1.2em' }} />
           </h1>
           <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
             Codornices selectas y productos de granja de alta calidad
@@ -333,7 +333,7 @@ Quedo a la espera de su aprobación para proceder con el pago. ¡Muchas gracias!
 
               {cart.length === 0 ? (
                 <div style={{ textAlign: 'center', padding: '2rem 0', color: 'var(--text-secondary)' }}>
-                  <div style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>🥚</div>
+                  <div style={{ marginBottom: '0.5rem' }}><img src="/QuailEggEmoji.png" alt="🥚" style={{ width: '3rem', height: '3rem', verticalAlign: 'middle' }} /></div>
                   <p>Tu carrito está vacío.</p>
                   <p style={{ fontSize: '0.8rem' }}>Selecciona productos de la tienda.</p>
                 </div>

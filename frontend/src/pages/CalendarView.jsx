@@ -266,7 +266,7 @@ export default function CalendarView({ token }) {
   const getEventEmoji = (type) => {
     switch (type) {
       case 'incubator_turn': return '🔄';
-      case 'incubator_hatch': return '🥚';
+      case 'incubator_hatch': return <img src="/QuailEggEmoji.png" alt="🥚" style={{ width: '1.2em', height: '1.2em', verticalAlign: 'middle', marginRight: '0.2rem' }} />;
       case 'feed_transition': return '🌾';
       case 'egg_posture': return '🌟';
       case 'vaccine': return '💉';

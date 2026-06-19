@@ -434,7 +434,7 @@ export default function Projections({ token }) {
           <div className="form-group" style={{ margin: '0' }}>
             {projectionMode === 'eggs' ? (
               <>
-                <label htmlFor="target_eggs" style={{ fontSize: '0.85rem' }}>Meta de Huevos Diarios 🥚</label>
+                <label htmlFor="target_eggs" style={{ fontSize: '0.85rem', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>Meta de Huevos Diarios <img src="/QuailEggEmoji.png" alt="🥚" style={{ width: '1.2em', height: '1.2em', verticalAlign: 'middle' }} /></label>
                 <input 
                   type="number" 
                   id="target_eggs"

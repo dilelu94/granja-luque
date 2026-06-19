@@ -323,7 +323,7 @@ export default function Dashboard({ token }) {
         <div className="glass-card" style={{ borderLeft: '5px solid var(--text-primary)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span style={{ color: 'var(--text-secondary)', fontWeight: '500' }}>Tasa de Postura Reciente</span>
-            <span style={{ fontSize: '2rem' }}>🥚</span>
+            <span><img src="/QuailEggEmoji.png" alt="🥚" style={{ width: '2.5rem', height: '2.5rem', verticalAlign: 'middle' }} /></span>
           </div>
           <div style={{ fontSize: '2.5rem', fontWeight: 'bold', margin: '0.5rem 0', fontFamily: 'var(--font-heading)' }}>
             {lastEggCollection ? `${lastEggCollection.postureRate}%` : 'N/A'}
