@@ -783,9 +783,35 @@ export default function Inventory({ token }) {
                         </td>
                         <td>
                           {batch.cageName ? (
-                            <span style={{ fontWeight: '600', color: 'var(--accent-gold)' }}>
-                              🪵 {batch.cageName}
-                            </span>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                              <span style={{ fontWeight: '600', color: 'var(--accent-gold)' }}>
+                                🪵 {batch.cageName}
+                              </span>
+                              {cages.some(c => c.id === batch.cageId) && (
+                                <button
+                                  type="button"
+                                  className="btn"
+                                  style={{
+                                    padding: '0.15rem 0.35rem',
+                                    fontSize: '0.75rem',
+                                    background: 'rgba(255, 255, 255, 0.05)',
+                                    border: '1px solid var(--border-color)',
+                                    color: 'var(--text-primary)',
+                                    borderRadius: '4px'
+                                  }}
+                                  onClick={() => {
+                                    const cage = cages.find(c => c.id === batch.cageId);
+                                    if (cage) {
+                                      setSelectedQRCage(cage);
+                                      setShowQRModal(true);
+                                    }
+                                  }}
+                                  title={`Ver código QR de la jaula ${batch.cageName}`}
+                                >
+                                  📷 QR
+                                </button>
+                              )}
+                            </div>
                           ) : (
                             <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>-</span>
                           )}
