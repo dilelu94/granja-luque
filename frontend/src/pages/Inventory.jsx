@@ -819,8 +819,13 @@ export default function Inventory({ token }) {
                         <td>
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                              <span className={`badge ${batch.type === 'chick' ? 'badge-approved' : 'badge-pending'}`}>
-                                {batch.type === 'chick' ? '🐣 Polluelo' : 'Codorniz Adulta'}
+                              <span className={`badge ${batch.type === 'chick' ? 'badge-approved' : 'badge-pending'}`} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}>
+                                {batch.type === 'chick' ? (
+                                  <>
+                                    <img src="/HatchlingQuail.png" alt="🐣" style={{ width: '14px', height: '14px', borderRadius: '50%', objectFit: 'cover' }} />
+                                    Polluelo
+                                  </>
+                                ) : 'Codorniz Adulta'}
                               </span>
                               <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
                                 ({weeks} sem, {days} d)
