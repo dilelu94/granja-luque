@@ -21,7 +21,7 @@ const formatDate = (dateStr) => {
 
 export default function Dashboard({ token }) {
   const [stats, setStats] = useState({
-    quails: { chick: 0, adult: 0, total: 0 },
+    quails: { chick: 0, adult: 0, females: 0, males: 0, total: 0 },
     feed: {
       initiator: { stock: 0, dailyConsumption: 0, daysLeft: null },
       ponedora: { stock: 0, dailyConsumption: 0, daysLeft: null }
@@ -68,15 +68,22 @@ export default function Dashboard({ token }) {
         // Procesar totales de codornices
         let chicks = 0;
         let adults = 0;
+        let females = 0;
+        let males = 0;
         dataBatches.forEach(batch => {
           if (batch.status === 'active') {
-            if (batch.type === 'chick') chicks += batch.currentQuantity;
-            else adults += batch.currentQuantity;
+            if (batch.type === 'chick') {
+              chicks += batch.currentQuantity;
+            } else {
+              adults += batch.currentQuantity;
+              females += (batch.femalesQuantity || 0);
+              males += (batch.malesQuantity || 0);
+            }
           }
         });
 
         setStats({
-          quails: { chick: chicks, adult: adults, total: chicks + adults },
+          quails: { chick: chicks, adult: adults, females, males, total: chicks + adults },
           feed: dataFeed,
           eggs: dataEggs,
           orders: dataOrders,
@@ -277,9 +284,21 @@ export default function Dashboard({ token }) {
           <div style={{ fontSize: '2.5rem', fontWeight: 'bold', margin: '0.5rem 0', fontFamily: 'var(--font-heading)' }}>
             {stats.quails.total}
           </div>
-          <div style={{ display: 'flex', gap: '1rem', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-            <span>Adultas: <strong style={{ color: 'white' }}>{stats.quails.adult}</strong></span>
-            <span>Chicos: <strong style={{ color: 'white' }}>{stats.quails.chick}</strong></span>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+            <div style={{ display: 'flex', gap: '0.8rem' }}>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.2rem' }}>
+                <img src="/FemaleQuail.png" alt="♀️" style={{ width: '14px', height: '14px', borderRadius: '50%', objectFit: 'cover' }} />
+                Hembras: <strong style={{ color: 'white' }}>{stats.quails.females || 0}</strong>
+              </span>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.2rem' }}>
+                <img src="/MaleQuail.png" alt="♂️" style={{ width: '14px', height: '14px', borderRadius: '50%', objectFit: 'cover' }} />
+                Machos: <strong style={{ color: 'white' }}>{stats.quails.males || 0}</strong>
+              </span>
+            </div>
+            <div style={{ display: 'flex', gap: '1rem' }}>
+              <span>Total Adultas: <strong style={{ color: 'white' }}>{stats.quails.adult}</strong></span>
+              <span>Chicos: <strong style={{ color: 'white' }}>{stats.quails.chick}</strong></span>
+            </div>
           </div>
         </div>
 

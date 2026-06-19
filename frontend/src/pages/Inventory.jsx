@@ -817,12 +817,32 @@ export default function Inventory({ token }) {
                           )}
                         </td>
                         <td>
-                          <span className={`badge ${batch.type === 'chick' ? 'badge-approved' : 'badge-pending'}`}>
-                            {batch.type === 'chick' ? 'Polluelo' : 'Adulta'}
-                          </span>
-                          <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginLeft: '0.5rem' }}>
-                            ({weeks} sem, {days} d)
-                          </span>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                              <span className={`badge ${batch.type === 'chick' ? 'badge-approved' : 'badge-pending'}`}>
+                                {batch.type === 'chick' ? '🐣 Polluelo' : 'Codorniz Adulta'}
+                              </span>
+                              <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                                ({weeks} sem, {days} d)
+                              </span>
+                            </div>
+                            {batch.type !== 'chick' && (batch.femalesQuantity > 0 || batch.malesQuantity > 0) && (
+                              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                {batch.femalesQuantity > 0 && (
+                                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.2rem', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                                    <img src="/FemaleQuail.png" alt="♀️" style={{ width: '16px', height: '16px', borderRadius: '50%', objectFit: 'cover' }} />
+                                    {batch.femalesQuantity} H
+                                  </span>
+                                )}
+                                {batch.malesQuantity > 0 && (
+                                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.2rem', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                                    <img src="/MaleQuail.png" alt="♂️" style={{ width: '16px', height: '16px', borderRadius: '50%', objectFit: 'cover' }} />
+                                    {batch.malesQuantity} M
+                                  </span>
+                                )}
+                              </div>
+                            )}
+                          </div>
                         </td>
                         <td>{batch.initialQuantity}</td>
                         <td style={{ fontWeight: 'bold' }}>{batch.currentQuantity}</td>

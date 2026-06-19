@@ -149,9 +149,26 @@ export default function CageDetail({ token, onBack, cageId }) {
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
                   <div>
                     <h4 style={{ margin: '0 0 0.3rem 0', fontSize: '1.1rem' }}>{batch.name}</h4>
-                    <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', background: 'var(--bg-secondary)', padding: '0.2rem 0.5rem', borderRadius: '4px' }}>
-                      {batch.type === 'chick' ? '🐣 Pichón' : '🐓 Adulto'} • {ageWeeks} sem ({ageDays}d)
-                    </span>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', marginTop: '0.4rem', alignItems: 'center' }}>
+                      <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', background: 'var(--bg-secondary)', padding: '0.2rem 0.5rem', borderRadius: '4px', display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}>
+                        {batch.type === 'chick' ? '🐣 Pichón' : 'Codorniz Adulta'}
+                      </span>
+                      {batch.type !== 'chick' && batch.femalesQuantity > 0 && (
+                        <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', background: 'var(--bg-secondary)', padding: '0.2rem 0.5rem', borderRadius: '4px', display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}>
+                          <img src="/FemaleQuail.png" alt="♀️" style={{ width: '16px', height: '16px', borderRadius: '50%', objectFit: 'cover' }} />
+                          {batch.femalesQuantity} H
+                        </span>
+                      )}
+                      {batch.type !== 'chick' && batch.malesQuantity > 0 && (
+                        <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', background: 'var(--bg-secondary)', padding: '0.2rem 0.5rem', borderRadius: '4px', display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}>
+                          <img src="/MaleQuail.png" alt="♂️" style={{ width: '16px', height: '16px', borderRadius: '50%', objectFit: 'cover' }} />
+                          {batch.malesQuantity} M
+                        </span>
+                      )}
+                      <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', background: 'var(--bg-secondary)', padding: '0.2rem 0.5rem', borderRadius: '4px' }}>
+                        {ageWeeks} sem ({ageDays}d)
+                      </span>
+                    </div>
                   </div>
                   <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--accent-gold)' }}>
                     {batch.currentQuantity}
