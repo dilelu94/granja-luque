@@ -631,6 +631,15 @@ export default function Inventory({ token }) {
           <button className="btn btn-secondary" onClick={() => setShowCageModal(true)}>🪵 Nueva Jaula</button>
           <button className="btn btn-secondary" onClick={() => setShowFeedModal(true)}>🌾 Cargar Alimento</button>
           <button className="btn btn-gold" onClick={() => setShowBatchModal(true)}>🐤 Nuevo Lote Aves</button>
+          <button 
+            className="btn btn-primary" 
+            onClick={() => {
+              window.history.pushState({}, '', '/escanear');
+              window.location.reload();
+            }}
+          >
+            📷 Escanear QR
+          </button>
         </div>
       </div>
 

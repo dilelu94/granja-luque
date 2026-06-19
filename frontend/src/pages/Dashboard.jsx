@@ -223,9 +223,22 @@ export default function Dashboard({ token }) {
         </div>
       )}
 
-      <h2 style={{ marginBottom: '2rem', fontFamily: 'var(--font-heading)', fontSize: '1.8rem' }}>
-        Resumen Operativo de la Granja 🚜
-      </h2>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem', flexWrap: 'wrap', gap: '1rem' }}>
+        <h2 style={{ margin: 0, fontFamily: 'var(--font-heading)', fontSize: '1.8rem' }}>
+          Resumen Operativo de la Granja 🚜
+        </h2>
+        
+        <button 
+          className="btn btn-primary" 
+          style={{ padding: '0.75rem 1.5rem', fontSize: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)' }}
+          onClick={() => {
+            window.history.pushState({}, '', '/escanear');
+            window.location.reload();
+          }}
+        >
+          📷 Escanear Jaula
+        </button>
+      </div>
 
       {/* Caja de Alertas */}
       {alerts.length > 0 && (

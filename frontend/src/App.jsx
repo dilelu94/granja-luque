@@ -9,6 +9,7 @@ import SettingsPage from './pages/SettingsPage';
 import Projections from './pages/Projections';
 import RecolectarHuevosApp from './pages/RecolectarHuevos';
 import CageDetail from './pages/CageDetail';
+import QRScanner from './pages/QRScanner';
 
 export default function App() {
   const [token, setToken] = useState(localStorage.getItem('token') || null);
@@ -21,6 +22,9 @@ export default function App() {
     }
     if (window.location.pathname.startsWith('/jaula/')) {
       return 'jaula-detail';
+    }
+    if (window.location.pathname === '/escanear') {
+      return 'escanear';
     }
     const savedView = localStorage.getItem('currentView');
     const hasToken = !!localStorage.getItem('token');
@@ -37,6 +41,9 @@ export default function App() {
       return;
     } else if (view === 'jaula-detail') {
       // Mantenemos la URL que ya tiene el ID
+      return;
+    } else if (view === 'escanear') {
+      window.history.pushState({}, '', '/escanear');
       return;
     } else {
       window.history.pushState({}, '', '/');
@@ -125,6 +132,8 @@ export default function App() {
         const id = window.location.pathname.split('/').pop();
         return token ? <CageDetail token={token} cageId={id} onBack={() => { window.history.pushState({}, '', '/'); setView('inventory'); }} /> : <Login onLoginSuccess={handleLoginSuccess} onCancel={handleCancelLogin} />;
       }
+      case 'escanear':
+        return token ? <QRScanner onBack={() => { window.history.pushState({}, '', '/'); setView('dashboard'); }} /> : <Login onLoginSuccess={handleLoginSuccess} onCancel={handleCancelLogin} />;
       default:
 
         return <Shop onAdminLoginClick={() => setView('login')} />;
@@ -132,7 +141,7 @@ export default function App() {
   };
 
   // Modo público: renderizar la tienda directamente sin barra lateral
-  if (view === 'shop' || view === 'login' || view === 'recolectar-huevos' || view === 'jaula-detail') {
+  if (view === 'shop' || view === 'login' || view === 'recolectar-huevos' || view === 'jaula-detail' || view === 'escanear') {
     return (
       <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '1rem 2rem' }}>
         {renderPage()}
