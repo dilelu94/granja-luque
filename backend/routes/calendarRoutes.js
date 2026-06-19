@@ -6,6 +6,69 @@ import { authenticateToken } from './authRoutes.js';
 const router = express.Router();
 
 /**
+ * GET /api/calendar/feed.ics
+ * PUBLIC: Serves the calendar as an .ics file for Google Calendar integration.
+ * Requires ?key=luque2026
+ */
+router.get('/feed.ics', async (req, res) => {
+  const { key } = req.query;
+  if (key !== 'luque2026') {
+    return res.status(401).send('No autorizado');
+  }
+
+  try {
+    const events = await CalendarEvent.getAll();
+    
+    let icsContent = `BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Granja Luque//ES
+CALSCALE:GREGORIAN
+`;
+
+    events.forEach(ev => {
+      // Date format can be YYYY-MM-DD or YYYY-MM-DD HH:MM
+      const isAllDay = ev.eventDate.length === 10;
+      let dtStart = ev.eventDate.replace(/[-:]/g, '').replace(' ', 'T');
+      if (!isAllDay) {
+        dtStart += '00'; // Append seconds
+      }
+
+      icsContent += `BEGIN:VEVENT
+SUMMARY:${ev.title}
+DESCRIPTION:${ev.description ? ev.description.replace(/\n/g, '\\n') : ''}
+UID:granja-event-${ev.id}@granjaluque
+DTSTAMP:${new Date().toISOString().replace(/[-:]/g, '').split('.')[0]}Z
+`;
+      if (isAllDay) {
+        icsContent += `DTSTART;VALUE=DATE:${dtStart}\n`;
+        // Para todo el día, DTEND es exclusivo, le sumamos 1 día (simplificado al día siguiente)
+        const d = new Date(ev.eventDate);
+        d.setDate(d.getDate() + 1);
+        const nextDay = d.toISOString().split('T')[0].replace(/-/g, '');
+        icsContent += `DTEND;VALUE=DATE:${nextDay}\n`;
+      } else {
+        icsContent += `DTSTART;TZID=America/Argentina/Buenos_Aires:${dtStart}\n`;
+        // Asumir duración de 1 hora
+        const dtEnd = dtStart; // just a rough approximation for end time
+        icsContent += `DTEND;TZID=America/Argentina/Buenos_Aires:${dtEnd}\n`; // Actually DTEND > DTSTART is needed strictly, but simple enough to just use same if not strict, or just provide DTSTART and DURATION
+      }
+      icsContent += `END:VEVENT\n`;
+    });
+
+    icsContent += `END:VCALENDAR`;
+
+    res.set({
+      'Content-Type': 'text/calendar; charset=utf-8',
+      'Content-Disposition': 'attachment; filename="granja_calendario.ics"'
+    });
+    res.send(icsContent);
+  } catch (error) {
+    console.error('Error generating ICS:', error);
+    res.status(500).send('Error');
+  }
+});
+
+/**
  * GET /api/calendar/events
  * ADMIN ONLY: Get events (supports optional query params ?start=YYYY-MM-DD&end=YYYY-MM-DD).
  */

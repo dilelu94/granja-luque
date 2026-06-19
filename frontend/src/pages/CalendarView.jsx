@@ -72,6 +72,7 @@ export default function CalendarView({ token }) {
   // Modals
   const [showIncubatorModal, setShowIncubatorModal] = useState(false);
   const [showEventModal, setShowEventModal] = useState(false);
+  const [showSyncModal, setShowSyncModal] = useState(false);
   const [selectedDayEvents, setSelectedDayEvents] = useState(null); // { date: 'YYYY-MM-DD', list: [...] }
 
   // Forms inputs
@@ -295,8 +296,14 @@ export default function CalendarView({ token }) {
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
         <h2 style={{ fontFamily: 'var(--font-heading)', fontSize: '1.8rem' }}>Calendario de la Granja 📅</h2>
-        <div style={{ display: 'flex', gap: '0.75rem' }}>
-
+        <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+          <button 
+            className="btn btn-secondary" 
+            onClick={() => setShowSyncModal(true)}
+            style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+          >
+            🔗 Sincronizar Google Calendar
+          </button>
           <button 
             className="btn btn-primary" 
             onClick={() => {
@@ -729,6 +736,52 @@ export default function CalendarView({ token }) {
           </div>
         </div>
       )}
+
+      {/* =======================================================
+          MODAL: SINCRONIZAR CON GOOGLE CALENDAR
+         ======================================================= */}
+      {showSyncModal && (
+        <div className="modal-overlay">
+          <div className="modal-content">
+            <h3 style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              🔗 Sincronizar con Google Calendar
+            </h3>
+            
+            <p style={{ color: 'var(--text-secondary)', marginBottom: '1rem', lineHeight: '1.5' }}>
+              Para ver las alarmas y eventos de la granja en tu celular, copia el siguiente enlace y agrégalo en Google Calendar como una suscripción por URL.
+            </p>
+
+            <div style={{ background: 'rgba(0,0,0,0.2)', padding: '1rem', borderRadius: '4px', marginBottom: '1.5rem', wordBreak: 'break-all', fontFamily: 'monospace', color: 'var(--accent-green)', border: '1px solid rgba(255,255,255,0.1)' }}>
+              {window.location.origin}/api/calendar/feed.ics?key=luque2026
+            </div>
+
+            <div style={{ marginBottom: '2rem' }}>
+              <h4 style={{ marginBottom: '0.5rem', fontSize: '1rem' }}>Instrucciones rápidas:</h4>
+              <ol style={{ color: 'var(--text-secondary)', paddingLeft: '1.5rem', lineHeight: '1.6', fontSize: '0.9rem' }}>
+                <li>Copia el enlace de arriba.</li>
+                <li>Abre <a href="https://calendar.google.com" target="_blank" rel="noreferrer" style={{ color: 'var(--accent-blue)' }}>calendar.google.com</a> en tu PC.</li>
+                <li>En la barra lateral izquierda, junto a "Otros calendarios", haz clic en el <strong>+</strong> y selecciona <strong>Desde URL</strong>.</li>
+                <li>Pega el enlace y haz clic en "Agregar calendario". ¡Listo! (Puede tardar unos minutos en aparecer en tu celular).</li>
+              </ol>
+            </div>
+
+            <div style={{ display: 'flex', gap: '0.75rem' }}>
+              <button 
+                className="btn btn-primary" 
+                style={{ flex: '1' }} 
+                onClick={() => {
+                  navigator.clipboard.writeText(`${window.location.origin}/api/calendar/feed.ics?key=luque2026`);
+                  alert('¡Enlace copiado al portapapeles!');
+                }}
+              >
+                📋 Copiar Enlace
+              </button>
+              <button type="button" className="btn btn-secondary" style={{ flex: '1' }} onClick={() => setShowSyncModal(false)}>Cerrar</button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
