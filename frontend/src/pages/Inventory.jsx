@@ -23,25 +23,27 @@ const formatDate = (dateStr) => {
 const getCageBadgeDataURL = (name) => {
   if (typeof document === 'undefined') return '';
   const canvas = document.createElement('canvas');
-  canvas.width = 120;
+  // Hacemos el canvas un poco más ancho (160) para soportar códigos de 5 caracteres como AA000
+  canvas.width = 160;
   canvas.height = 48;
   const ctx = canvas.getContext('2d');
   
   // Fondo blanco
   ctx.fillStyle = '#ffffff';
-  ctx.fillRect(0, 0, 120, 48);
+  ctx.fillRect(0, 0, 160, 48);
   
   // Borde oscuro
   ctx.strokeStyle = '#0f172a';
   ctx.lineWidth = 4;
-  ctx.strokeRect(2, 2, 116, 44);
+  ctx.strokeRect(2, 2, 156, 44);
   
-  // Texto centrado
+  // Texto centrado (ajustamos el tamaño si el texto es largo)
   ctx.fillStyle = '#0f172a';
-  ctx.font = 'bold 22px monospace';
+  const fontSize = name.length > 4 ? '18px' : '22px';
+  ctx.font = `bold ${fontSize} monospace`;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.fillText(name, 60, 24);
+  ctx.fillText(name, 80, 24);
   
   return canvas.toDataURL();
 };
@@ -2292,8 +2294,8 @@ export default function Inventory({ token }) {
                   src: getCageBadgeDataURL(selectedQRCage.name),
                   x: undefined,
                   y: undefined,
-                  height: 38,
-                  width: 90,
+                  height: 32,
+                  width: 108, // Ajustamos la anchura a 108 para la excavación de textos de 5 dígitos (AA000)
                   excavate: true // Esto limpia los módulos del QR debajo de la imagen para que sea escaneable
                 }}
               />
