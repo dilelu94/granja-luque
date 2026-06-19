@@ -15,6 +15,7 @@ export default function App() {
   const [token, setToken] = useState(localStorage.getItem('token') || null);
   const [username, setUsername] = useState(localStorage.getItem('username') || '');
   const [role, setRole] = useState(localStorage.getItem('role') || 'admin');
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [view, setView] = useState(() => {
     // Manejar acceso directo por URL
     if (window.location.pathname === '/recolectar-huevos') {
@@ -49,6 +50,7 @@ export default function App() {
       window.history.pushState({}, '', '/');
     }
     localStorage.setItem('currentView', view);
+    setIsMobileMenuOpen(false); // Cerrar menú móvil al cambiar de vista
   }, [view]);
 
   // Si hay un cambio en el token, verificar validez al arrancar
@@ -152,8 +154,22 @@ export default function App() {
   // Modo administrador: renderizar barra de navegación y panel
   return (
     <div className="app-container">
+      {/* Mobile Header */}
+      <header className="mobile-header">
+        <h2 style={{ color: 'var(--accent-green)', fontSize: '1.2rem', fontFamily: 'var(--font-heading)', margin: 0 }}>
+          Granja Admin 🚜
+        </h2>
+        <button 
+          className="btn btn-secondary" 
+          style={{ padding: '0.4rem 0.8rem', fontSize: '1.2rem' }}
+          onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+        >
+          {isMobileMenuOpen ? '✕' : '☰'}
+        </button>
+      </header>
+
       {/* Sidebar Navigation */}
-      <aside className="sidebar">
+      <aside className={`sidebar ${isMobileMenuOpen ? 'open' : ''}`}>
         <div style={{ marginBottom: '2.5rem', textAlign: 'center' }}>
           <h2 style={{ color: 'var(--accent-green)', fontSize: '1.4rem', fontFamily: 'var(--font-heading)' }}>
             Granja Admin 🚜

@@ -304,16 +304,38 @@ tr:hover td {
 }
 
 /* --- RESPONSIVO --- */
+.mobile-header {
+  display: none;
+}
+
 @media (max-width: 768px) {
   .app-container {
     flex-direction: column;
   }
   
+  .mobile-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 1.5rem;
+    background: var(--bg-secondary);
+    border-bottom: 1px solid var(--border-color);
+    position: sticky;
+    top: 0;
+    z-index: 50;
+  }
+
   .sidebar {
+    display: none;
     width: 100%;
     border-right: none;
     border-bottom: 1px solid var(--border-color);
-    padding: 1rem 1.5rem;
+    padding: 1.5rem;
+    background: var(--bg-primary);
+  }
+
+  .sidebar.open {
+    display: flex;
   }
   
   .main-content {
