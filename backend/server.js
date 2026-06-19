@@ -7,6 +7,9 @@ import { fileURLToPath } from 'url';
 // Inicializar variables de entorno
 dotenv.config();
 
+// Forzar zona horaria a Argentina (Buenos Aires) para el servidor Oracle/Node
+process.env.TZ = 'America/Argentina/Buenos_Aires';
+
 import { initializeDatabase } from './db/schema.js';
 import authRoutes from './routes/authRoutes.js';
 import inventoryRoutes from './routes/inventoryRoutes.js';
