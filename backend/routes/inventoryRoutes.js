@@ -505,17 +505,24 @@ router.post('/cages', authenticateToken, async (req, res) => {
   const { name, capacity, notes } = req.body;
 
   if (!name) {
-    return res.status(400).json({ error: 'El nombre de la jaula es obligatorio.' });
+    return res.status(400).json({ error: 'El identificador de la jaula es obligatorio.' });
   }
 
+  const cageNameRegex = /^[A-Za-z]{2}\d{3}$/;
+  if (!cageNameRegex.test(name)) {
+    return res.status(400).json({ error: 'El identificador debe tener exactamente 2 letras y 3 números (ej. AA000).' });
+  }
+
+  const upperName = name.toUpperCase();
+
   try {
-    const existing = await Cage.getByName(name);
+    const existing = await Cage.getByName(upperName);
     if (existing) {
-      return res.status(400).json({ error: 'Ya existe una jaula con este nombre.' });
+      return res.status(400).json({ error: 'Ya existe una jaula con este identificador.' });
     }
 
     const cage = new Cage({
-      name,
+      name: upperName,
       capacity: capacity !== undefined ? Number(capacity) : 50,
       notes
     });
@@ -537,8 +544,15 @@ router.put('/cages/:id', authenticateToken, async (req, res) => {
   const { name, capacity, notes } = req.body;
 
   if (!name) {
-    return res.status(400).json({ error: 'El nombre de la jaula es obligatorio.' });
+    return res.status(400).json({ error: 'El identificador de la jaula es obligatorio.' });
   }
+
+  const cageNameRegex = /^[A-Za-z]{2}\d{3}$/;
+  if (!cageNameRegex.test(name)) {
+    return res.status(400).json({ error: 'El identificador debe tener exactamente 2 letras y 3 números (ej. AA000).' });
+  }
+
+  const upperName = name.toUpperCase();
 
   try {
     const cage = await Cage.getById(id);
@@ -546,12 +560,12 @@ router.put('/cages/:id', authenticateToken, async (req, res) => {
       return res.status(404).json({ error: 'Jaula no encontrada.' });
     }
 
-    const existing = await Cage.getByName(name);
+    const existing = await Cage.getByName(upperName);
     if (existing && existing.id !== Number(id)) {
-      return res.status(400).json({ error: 'Ya existe otra jaula con ese nombre.' });
+      return res.status(400).json({ error: 'Ya existe otra jaula con ese identificador.' });
     }
 
-    cage.name = name;
+    cage.name = upperName;
     cage.capacity = capacity !== undefined ? Number(capacity) : cage.capacity;
     cage.notes = notes !== undefined ? notes : cage.notes;
 

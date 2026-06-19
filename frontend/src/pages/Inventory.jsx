@@ -441,12 +441,18 @@ export default function Inventory({ token }) {
   // 4.5. CRUD de Jaulas
   const handleCreateCage = async (e) => {
     e.preventDefault();
+    const nameTrim = cageForm.name.trim();
+    const cageNameRegex = /^[A-Za-z]{2}\d{3}$/;
+    if (!cageNameRegex.test(nameTrim)) {
+      showNotification('El identificador debe tener exactamente 2 letras y 3 números (ej. AA000).', true);
+      return;
+    }
     try {
       const res = await fetch('/api/inventory/cages', {
         method: 'POST',
         headers,
         body: JSON.stringify({
-          name: cageForm.name,
+          name: nameTrim.toUpperCase(),
           capacity: Number(cageForm.capacity),
           notes: cageForm.notes
         })
@@ -475,12 +481,18 @@ export default function Inventory({ token }) {
 
   const handleSaveCage = async (e) => {
     e.preventDefault();
+    const nameTrim = editCageForm.name.trim();
+    const cageNameRegex = /^[A-Za-z]{2}\d{3}$/;
+    if (!cageNameRegex.test(nameTrim)) {
+      showNotification('El identificador debe tener exactamente 2 letras y 3 números (ej. AA000).', true);
+      return;
+    }
     try {
       const res = await fetch(`/api/inventory/cages/${editCageForm.id}`, {
         method: 'PUT',
         headers,
         body: JSON.stringify({
-          name: editCageForm.name,
+          name: nameTrim.toUpperCase(),
           capacity: Number(editCageForm.capacity),
           notes: editCageForm.notes
         })
@@ -511,6 +523,81 @@ export default function Inventory({ token }) {
     } catch (err) {
       showNotification(err.message, true);
     }
+  };
+
+  const handlePrintQR = () => {
+    const canvas = document.querySelector('.modal-content canvas');
+    if (!canvas) return;
+    const qrDataUrl = canvas.toDataURL();
+    
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      showNotification('Por favor permite las ventanas emergentes (popups) para imprimir.', true);
+      return;
+    }
+    
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>Imprimir QR - Jaula ${selectedQRCage.name}</title>
+          <style>
+            body {
+              margin: 0;
+              padding: 0;
+              display: flex;
+              flex-direction: column;
+              align-items: center;
+              justify-content: center;
+              height: 100vh;
+              font-family: monospace;
+              text-align: center;
+              background: white;
+              color: black;
+            }
+            .container {
+              padding: 20px;
+              display: inline-block;
+            }
+            img {
+              width: 250px;
+              height: 250px;
+            }
+            .name {
+              margin-top: 15px;
+              font-size: 24px;
+              font-weight: bold;
+              border: 2px solid #000;
+              padding: 5px 15px;
+              display: inline-block;
+              border-radius: 5px;
+            }
+            @media print {
+              body {
+                height: auto;
+              }
+              .container {
+                border: none;
+                box-shadow: none;
+              }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <img src="${qrDataUrl}" alt="QR" />
+            <br />
+            <div class="name">${selectedQRCage.name}</div>
+          </div>
+          <script>
+            window.onload = function() {
+              window.print();
+              setTimeout(function() { window.close(); }, 500);
+            };
+          </script>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
   };
 
   // 5. Cargar / Ajustar alimento (incluyendo precio y flete)
@@ -2180,8 +2267,11 @@ export default function Inventory({ token }) {
                 <input 
                   type="text" 
                   className="form-control" 
-                  placeholder="Jaula A1" 
+                  placeholder="Ej: AA000" 
                   required
+                  maxLength={5}
+                  pattern="[A-Za-z]{2}[0-9]{3}"
+                  title="Debe tener exactamente 2 letras y 3 números (ej. AA000)"
                   value={cageForm.name}
                   onChange={e => setCageForm({ ...cageForm, name: e.target.value })}
                 />
@@ -2232,6 +2322,9 @@ export default function Inventory({ token }) {
                   type="text" 
                   className="form-control" 
                   required
+                  maxLength={5}
+                  pattern="[A-Za-z]{2}[0-9]{3}"
+                  title="Debe tener exactamente 2 letras y 3 números (ej. AA000)"
                   value={editCageForm.name}
                   onChange={e => setEditCageForm({ ...editCageForm, name: e.target.value })}
                 />
@@ -2316,11 +2409,19 @@ export default function Inventory({ token }) {
               </div>
             </div>
 
-            <div style={{ marginTop: '2rem' }}>
+            <div style={{ marginTop: '2rem', display: 'flex', gap: '0.75rem' }}>
+              <button 
+                type="button" 
+                className="btn btn-primary" 
+                style={{ flex: 1 }} 
+                onClick={handlePrintQR}
+               title="Imprimir el código QR de esta jaula">
+                🖨️ Imprimir
+              </button>
               <button 
                 type="button" 
                 className="btn btn-secondary" 
-                style={{ width: '100%' }} 
+                style={{ flex: 1 }} 
                 onClick={() => {
                   setShowQRModal(false);
                   setSelectedQRCage(null);
