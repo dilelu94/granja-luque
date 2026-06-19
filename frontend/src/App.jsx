@@ -7,13 +7,17 @@ import Orders from './pages/Orders';
 import CalendarView from './pages/CalendarView';
 import SettingsPage from './pages/SettingsPage';
 import Projections from './pages/Projections';
-
+import RecolectarHuevosApp from './pages/RecolectarHuevos';
 
 export default function App() {
   const [token, setToken] = useState(localStorage.getItem('token') || null);
   const [username, setUsername] = useState(localStorage.getItem('username') || '');
   const [role, setRole] = useState(localStorage.getItem('role') || 'admin');
   const [view, setView] = useState(() => {
+    // Manejar acceso directo por URL
+    if (window.location.pathname === '/recolectar-huevos') {
+      return 'recolectar-huevos';
+    }
     const savedView = localStorage.getItem('currentView');
     const hasToken = !!localStorage.getItem('token');
     if (!hasToken) {
@@ -23,6 +27,13 @@ export default function App() {
   });
 
   useEffect(() => {
+    // Si la vista es la especial, actualizamos la URL para que quede bonita, y no la guardamos como default
+    if (view === 'recolectar-huevos') {
+      window.history.pushState({}, '', '/recolectar-huevos');
+      return;
+    } else {
+      window.history.pushState({}, '', '/');
+    }
     localStorage.setItem('currentView', view);
   }, [view]);
 
@@ -58,7 +69,7 @@ export default function App() {
     setToken(newToken);
     setUsername(newUsername);
     setRole(newRole || 'admin');
-    setView('dashboard'); // Redirigir al dashboard tras loguear
+    setView((prevView) => prevView === 'recolectar-huevos' ? 'recolectar-huevos' : 'dashboard');
   };
 
   const handleLogout = () => {
@@ -96,6 +107,8 @@ export default function App() {
         return token ? <SettingsPage token={token} role={role} /> : <Login onLoginSuccess={handleLoginSuccess} onCancel={handleCancelLogin} />;
       case 'projections':
         return token ? <Projections token={token} /> : <Login onLoginSuccess={handleLoginSuccess} onCancel={handleCancelLogin} />;
+      case 'recolectar-huevos':
+        return token ? <RecolectarHuevosApp token={token} onBack={() => setView('dashboard')} /> : <Login onLoginSuccess={handleLoginSuccess} onCancel={handleCancelLogin} />;
       default:
 
         return <Shop onAdminLoginClick={() => setView('login')} />;
@@ -103,7 +116,7 @@ export default function App() {
   };
 
   // Modo público: renderizar la tienda directamente sin barra lateral
-  if (view === 'shop' || view === 'login') {
+  if (view === 'shop' || view === 'login' || view === 'recolectar-huevos') {
     return (
       <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '1rem 2rem' }}>
         {renderPage()}

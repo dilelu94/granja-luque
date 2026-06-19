@@ -60,7 +60,8 @@ export default function Dashboard({ token }) {
         const dataOrders = await resOrders.json();
 
         // 5. Cargar Eventos de hoy
-        const todayStr = new Date().toISOString().split('T')[0];
+        const d = new Date();
+        const todayStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
         const resEvents = await fetch(`/api/calendar/events?start=${todayStr}&end=${todayStr}`, { headers });
         const dataEvents = await resEvents.json();
 
@@ -176,7 +177,9 @@ export default function Dashboard({ token }) {
 
             {modalContent.events.length > 0 && (
               <div style={{ marginBottom: '1.5rem' }}>
-                <h4 style={{ color: 'var(--text-secondary)', marginBottom: '0.75rem', fontSize: '0.9rem', textTransform: 'uppercase' }}>📅 Calendario de Hoy</h4>
+                <h4 style={{ color: 'var(--text-secondary)', marginBottom: '0.75rem', fontSize: '0.9rem', textTransform: 'uppercase' }}>
+                  📅 Calendario de Hoy ({formatDate(`${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-${String(new Date().getDate()).padStart(2, '0')}`)})
+                </h4>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                   {modalContent.events.map(ev => (
                     <div key={ev.id} style={{ background: 'rgba(255,255,255,0.05)', padding: '0.75rem', borderRadius: '4px', borderLeft: '3px solid var(--accent-blue)' }}>
