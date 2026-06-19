@@ -15,7 +15,8 @@ export default function RecolectarHuevos({ token, onBack }) {
   const todayStr = getLocalDateString(today);
   const yesterdayStr = getLocalDateString(yesterday);
 
-  const [activeDate, setActiveDate] = useState(todayStr); // todayStr or yesterdayStr
+  const [dateMode, setDateMode] = useState('hoy'); // 'hoy' | 'ayer' | 'manual'
+  const [activeDate, setActiveDate] = useState(todayStr);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
@@ -25,6 +26,19 @@ export default function RecolectarHuevos({ token, onBack }) {
     quantityBroken: '',
     notes: ''
   });
+
+  const handleDateModeCycle = () => {
+    if (dateMode === 'hoy') {
+      setDateMode('ayer');
+      setActiveDate(yesterdayStr);
+    } else if (dateMode === 'ayer') {
+      setDateMode('manual');
+      // keep activeDate as whatever it is, or reset to today
+    } else {
+      setDateMode('hoy');
+      setActiveDate(todayStr);
+    }
+  };
 
   const showNotification = (msg, isErr = false) => {
     if (isErr) {
@@ -84,47 +98,44 @@ export default function RecolectarHuevos({ token, onBack }) {
         </button>
       </div>
 
-      <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: '1.5rem' }}>
         <button
+          type="button"
+          onClick={handleDateModeCycle}
           style={{
-            flex: 1,
+            width: '100%',
             padding: '1rem',
             borderRadius: 'var(--border-radius-sm)',
-            border: activeDate === yesterdayStr ? '2px solid var(--accent-green)' : '1px solid var(--border-color)',
-            background: activeDate === yesterdayStr ? 'var(--accent-green-glow)' : 'var(--bg-secondary)',
-            color: activeDate === yesterdayStr ? 'var(--text-primary)' : 'var(--text-secondary)',
+            border: '2px solid var(--accent-green)',
+            background: 'var(--accent-green-glow)',
+            color: 'var(--text-primary)',
             fontWeight: 'bold',
             fontSize: '1.1rem',
             cursor: 'pointer',
-            transition: 'all 0.2s ease'
+            transition: 'all 0.2s ease',
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            gap: '0.5rem'
           }}
-          onClick={() => setActiveDate(yesterdayStr)}
         >
-          Ayer
-          <div style={{ fontSize: '0.8rem', fontWeight: 'normal', opacity: 0.8, marginTop: '0.2rem' }}>
-            {yesterday.toLocaleDateString('es-AR', { day: 'numeric', month: 'short' })}
-          </div>
+          📅 {dateMode === 'hoy' ? 'Hoy' : dateMode === 'ayer' ? 'Ayer' : 'Fecha Manual'} 🔄
+          <span style={{ fontSize: '0.8rem', fontWeight: 'normal', opacity: 0.8, marginLeft: '0.5rem' }}>
+            ({dateMode === 'hoy' ? today.toLocaleDateString('es-AR', { day: 'numeric', month: 'short' }) : 
+               dateMode === 'ayer' ? yesterday.toLocaleDateString('es-AR', { day: 'numeric', month: 'short' }) : 'Seleccionar'})
+          </span>
         </button>
-        <button
-          style={{
-            flex: 1,
-            padding: '1rem',
-            borderRadius: 'var(--border-radius-sm)',
-            border: activeDate === todayStr ? '2px solid var(--accent-green)' : '1px solid var(--border-color)',
-            background: activeDate === todayStr ? 'var(--accent-green-glow)' : 'var(--bg-secondary)',
-            color: activeDate === todayStr ? 'var(--text-primary)' : 'var(--text-secondary)',
-            fontWeight: 'bold',
-            fontSize: '1.1rem',
-            cursor: 'pointer',
-            transition: 'all 0.2s ease'
-          }}
-          onClick={() => setActiveDate(todayStr)}
-        >
-          Hoy
-          <div style={{ fontSize: '0.8rem', fontWeight: 'normal', opacity: 0.8, marginTop: '0.2rem' }}>
-            {today.toLocaleDateString('es-AR', { day: 'numeric', month: 'short' })}
-          </div>
-        </button>
+
+        {dateMode === 'manual' && (
+          <input 
+            type="date"
+            className="form-control"
+            value={activeDate}
+            onChange={(e) => setActiveDate(e.target.value)}
+            style={{ marginTop: '0.5rem' }}
+            max={todayStr}
+          />
+        )}
       </div>
 
       {message && (

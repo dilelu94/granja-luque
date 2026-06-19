@@ -367,11 +367,34 @@ router.post('/eggs/collect', authenticateToken, async (req, res) => {
   }
 
   try {
+    let temp_min = null;
+    let temp_max = null;
+    let temp_avg = null;
+
+    // Fetch weather data for El Talar, BA
+    // LAT: -34.4754, LON: -58.6508
+    try {
+      const weatherRes = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=-34.4754&longitude=-58.6508&daily=temperature_2m_max,temperature_2m_min,temperature_2m_mean&timezone=America%2FArgentina%2FBuenos_Aires&start_date=${date}&end_date=${date}`);
+      const weatherData = await weatherRes.json();
+      
+      if (weatherData && weatherData.daily && weatherData.daily.temperature_2m_max && weatherData.daily.temperature_2m_max.length > 0) {
+        temp_max = weatherData.daily.temperature_2m_max[0];
+        temp_min = weatherData.daily.temperature_2m_min[0];
+        temp_avg = weatherData.daily.temperature_2m_mean[0];
+      }
+    } catch (err) {
+      console.error('Error fetching weather data from Open-Meteo:', err.message);
+      // Fallback silently if weather fails
+    }
+
     const collection = new EggCollection({
       date,
       quantityCollected: Number(quantityCollected),
       quantityBroken: Number(quantityBroken || 0),
-      notes
+      notes,
+      temp_min,
+      temp_max,
+      temp_avg
     });
 
     await collection.save();

@@ -7,6 +7,9 @@ export class EggCollection {
     this.quantityCollected = data.quantity_collected || data.quantityCollected || 0;
     this.quantityBroken = data.quantity_broken || data.quantityBroken || 0;
     this.notes = data.notes || '';
+    this.tempMin = data.temp_min !== undefined ? data.temp_min : null;
+    this.tempMax = data.temp_max !== undefined ? data.temp_max : null;
+    this.tempAvg = data.temp_avg !== undefined ? data.temp_avg : null;
   }
 
   /**
@@ -40,15 +43,15 @@ export class EggCollection {
     if (isUpdate) {
       await db.run(
         `UPDATE egg_production 
-         SET quantity_collected = ?, quantity_broken = ?, notes = ? 
+         SET quantity_collected = ?, quantity_broken = ?, notes = ?, temp_min = ?, temp_max = ?, temp_avg = ?
          WHERE id = ?`,
-        [this.quantityCollected, this.quantityBroken, this.notes, this.id]
+        [this.quantityCollected, this.quantityBroken, this.notes, this.tempMin, this.tempMax, this.tempAvg, this.id]
       );
     } else {
       const result = await db.run(
-        `INSERT INTO egg_production (date, quantity_collected, quantity_broken, notes)
-         VALUES (?, ?, ?, ?)`,
-        [this.date, this.quantityCollected, this.quantityBroken, this.notes]
+        `INSERT INTO egg_production (date, quantity_collected, quantity_broken, notes, temp_min, temp_max, temp_avg)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        [this.date, this.quantityCollected, this.quantityBroken, this.notes, this.tempMin, this.tempMax, this.tempAvg]
       );
       this.id = result.lastID;
     }
@@ -124,7 +127,10 @@ export class EggCollection {
         adultQuailsCount: adultCount,
         postureRate, // ej: 80%
         expectedEggs: Math.round(adultCount * 0.8), // 80 huevos cada 100 codornices
-        notes: col.notes
+        notes: col.notes,
+        tempMin: col.temp_min,
+        tempMax: col.temp_max,
+        tempAvg: col.temp_avg
       });
     }
 

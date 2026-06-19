@@ -99,18 +99,28 @@ export default function QRScanner({ token, onBack }) {
         ) : (
           <div style={{ width: '100%', maxWidth: '500px', display: 'flex', flexDirection: 'column', gap: '1.5rem', marginTop: '2rem' }}>
             <div className="form-group">
-              <label style={{ color: 'var(--text-secondary)' }}>Selecciona una Jaula</label>
-              <select 
+              <label style={{ color: 'var(--text-secondary)' }}>Escribe o selecciona una Jaula</label>
+              <input 
+                type="text"
                 className="form-control" 
                 style={{ background: 'rgba(255,255,255,0.1)', color: 'white' }}
-                value={selectedCageId}
-                onChange={(e) => setSelectedCageId(e.target.value)}
-              >
-                <option value="">-- Seleccionar Jaula --</option>
+                placeholder="Ej: AA1"
+                list="cages-datalist"
+                onChange={(e) => {
+                  const val = e.target.value;
+                  const found = cages.find(c => c.name === val);
+                  if (found) {
+                    setSelectedCageId(found.id);
+                  } else {
+                    setSelectedCageId('');
+                  }
+                }}
+              />
+              <datalist id="cages-datalist">
                 {cages.map(c => (
-                  <option key={c.id} value={c.id}>{c.name}</option>
+                  <option key={c.id} value={c.name} />
                 ))}
-              </select>
+              </datalist>
             </div>
             <button 
               className="btn btn-primary" 

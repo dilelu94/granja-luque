@@ -114,6 +114,11 @@ export async function initializeDatabase() {
   await addColumnIfNotExists(db, 'quail_batches', 'females_quantity', 'INTEGER DEFAULT 0');
   await addColumnIfNotExists(db, 'quail_batches', 'males_quantity', 'INTEGER DEFAULT 0');
 
+  // --- MIGRACIONES PARA LA TABLA EGG_PRODUCTION (Clima) ---
+  await addColumnIfNotExists(db, 'egg_production', 'temp_min', 'REAL');
+  await addColumnIfNotExists(db, 'egg_production', 'temp_max', 'REAL');
+  await addColumnIfNotExists(db, 'egg_production', 'temp_avg', 'REAL');
+
   // 7. Tabla de Pedidos de Venta
   await db.exec(`
     CREATE TABLE IF NOT EXISTS orders (
