@@ -658,7 +658,10 @@ export default function Inventory({ token }) {
           <button className="btn btn-secondary" onClick={() => setShowPackModal(true)} title="Descontar huevos sueltos y envases para armar el producto de venta">📦 Empaquetar</button>
           <button className="btn btn-secondary" onClick={() => setShowCageModal(true)} title="Hacer clic para 🪵 nueva jaula">🪵 Nueva Jaula</button>
           <button className="btn btn-secondary" onClick={() => setShowFeedModal(true)} title="Hacer clic para cargar alimento">🌾 Cargar Alimento</button>
-          <button className="btn btn-gold" onClick={() => setShowBatchModal(true)} title="Hacer clic para nuevo lote aves">🐤 Nuevo Lote Aves</button>
+          <button className="btn btn-gold" onClick={() => setShowBatchModal(true)} title="Hacer clic para nuevo lote aves" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}>
+            <img src="/HatchlingQuail.png" alt="🐣" style={{ width: '1.2em', height: '1.2em', borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
+            Nuevo Lote Aves
+          </button>
           <button 
             className="btn btn-primary" 
             onClick={() => {
@@ -678,11 +681,15 @@ export default function Inventory({ token }) {
           style={{
             borderBottom: activeTab === 'birds' ? '2px solid var(--accent-green)' : 'none',
             borderRadius: '0', background: 'none', color: activeTab === 'birds' ? 'var(--text-primary)' : 'var(--text-secondary)',
-            fontWeight: '600'
+            fontWeight: '600',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '0.4rem'
           }}
           onClick={() => setActiveTab('birds')}
          title="Hacer clic para lotes de aves">
-          🐤 Lotes de Aves
+          <img src="/Quails.png" alt="🐤" style={{ width: '1.2em', height: '1.2em', borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
+          Lotes de Aves
         </button>
         <button 
           className="btn" 
