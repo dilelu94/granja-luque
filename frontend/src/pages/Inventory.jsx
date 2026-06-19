@@ -785,7 +785,7 @@ export default function Inventory({ token }) {
                           {batch.cageName ? (
                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                               <span style={{ fontWeight: '600', color: 'var(--accent-gold)' }}>
-                                🪵 {batch.cageName}
+                                {batch.cageName}
                               </span>
                               {cages.some(c => c.id === batch.cageId) && (
                                 <button
@@ -2224,31 +2224,27 @@ export default function Inventory({ token }) {
               display: 'inline-block',
               boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.5)'
             }}>
-              {/* Contenedor relativo para posicionar el texto al centro */}
-              <div style={{ position: 'relative', display: 'inline-block' }}>
-                <QRCodeCanvas 
-                  value={`${window.location.origin}/jaula/${selectedQRCage.id}`}
-                  size={256}
-                  level="H" // High error correction needed since we overlay text
-                  bgColor="#ffffff"
-                  fgColor="#0f172a"
-                />
-                <div style={{
-                  position: 'absolute',
-                  top: '50%',
-                  left: '50%',
-                  transform: 'translate(-50%, -50%)',
-                  background: 'white',
-                  padding: '0.2rem 0.5rem',
-                  borderRadius: '0.25rem',
-                  border: '2px solid #0f172a',
-                  fontWeight: '900',
-                  color: '#0f172a',
-                  fontSize: '1.2rem',
-                  fontFamily: 'monospace'
-                }}>
-                  {selectedQRCage.name}
-                </div>
+              <QRCodeCanvas 
+                value={`${window.location.origin}/jaula/${selectedQRCage.id}`}
+                size={256}
+                level="Q"
+                bgColor="#ffffff"
+                fgColor="#0f172a"
+              />
+              <br />
+              <div style={{
+                marginTop: '1.2rem',
+                background: '#f1f5f9',
+                padding: '0.4rem 1rem',
+                borderRadius: '0.5rem',
+                border: '2px solid #0f172a',
+                fontWeight: '900',
+                color: '#0f172a',
+                fontSize: '1.4rem',
+                fontFamily: 'monospace',
+                display: 'inline-block'
+              }}>
+                {selectedQRCage.name}
               </div>
             </div>
 

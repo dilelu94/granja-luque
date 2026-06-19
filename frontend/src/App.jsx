@@ -27,8 +27,15 @@ export default function App() {
     if (window.location.pathname === '/escanear') {
       return 'escanear';
     }
-    const savedView = localStorage.getItem('currentView');
+    
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
     const hasToken = !!localStorage.getItem('token');
+    
+    if (isStandalone && hasToken) {
+      return 'recolectar-huevos';
+    }
+
+    const savedView = localStorage.getItem('currentView');
     if (!hasToken) {
       return 'shop';
     }
@@ -86,7 +93,10 @@ export default function App() {
     setUsername(newUsername);
     setRole(newRole || 'admin');
     
-    if (view === 'recolectar-huevos' || view === 'jaula-detail') {
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+    if (isStandalone) {
+      setView('recolectar-huevos');
+    } else if (view === 'recolectar-huevos' || view === 'jaula-detail') {
       setView(view);
     } else {
       setView('dashboard');
