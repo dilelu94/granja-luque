@@ -791,10 +791,10 @@ export default function Inventory({ token }) {
                   <tr>
                     <th>Lote</th>
                     <th>Jaula</th>
-                    <th>Tipo / Edad</th>
                     <th>Cantidad Inicial</th>
                     <th>Cantidad Actual</th>
                     <th>Fecha de Ingreso</th>
+                    <th>Tipo / Edad</th>
                     <th>Estado</th>
                     <th>Acciones</th>
                   </tr>
@@ -849,32 +849,35 @@ export default function Inventory({ token }) {
                             <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>-</span>
                           )}
                         </td>
+                        <td>{batch.initialQuantity}</td>
+                        <td style={{ fontWeight: 'bold' }}>{batch.currentQuantity}</td>
+                        <td>{formatDate(batch.birthDate)}</td>
                         <td>
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                              <span className={`badge ${batch.type === 'chick' ? 'badge-approved' : 'badge-pending'}`} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'nowrap' }}>
+                              <span className={`badge ${batch.type === 'chick' ? 'badge-approved' : 'badge-pending'}`} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', whiteSpace: 'nowrap' }}>
                                 {batch.type === 'chick' ? (
                                   <>
-                                    <img src="/HatchlingQuail.png" alt="🐣" style={{ width: '14px', height: '14px', borderRadius: '50%', objectFit: 'cover' }} />
+                                    <img src="/HatchlingQuail.png" alt="🐣" style={{ width: '14px', height: '14px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
                                     Polluelo
                                   </>
                                 ) : 'Codorniz Adulta'}
                               </span>
-                              <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                              <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
                                 ({weeks} sem, {days} d)
                               </span>
                             </div>
                             {batch.type !== 'chick' && (batch.femalesQuantity > 0 || batch.malesQuantity > 0) && (
-                              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                              <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'nowrap' }}>
                                 {batch.femalesQuantity > 0 && (
-                                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.2rem', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-                                    <img src="/FemaleQuail.png" alt="♀️" style={{ width: '16px', height: '16px', borderRadius: '50%', objectFit: 'cover' }} />
+                                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.2rem', fontSize: '0.8rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
+                                    <img src="/FemaleQuail.png" alt="♀️" style={{ width: '16px', height: '16px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
                                     {batch.femalesQuantity} H
                                   </span>
                                 )}
                                 {batch.malesQuantity > 0 && (
-                                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.2rem', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-                                    <img src="/MaleQuail.png" alt="♂️" style={{ width: '16px', height: '16px', borderRadius: '50%', objectFit: 'cover' }} />
+                                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.2rem', fontSize: '0.8rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
+                                    <img src="/MaleQuail.png" alt="♂️" style={{ width: '16px', height: '16px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
                                     {batch.malesQuantity} M
                                   </span>
                                 )}
@@ -882,9 +885,6 @@ export default function Inventory({ token }) {
                             )}
                           </div>
                         </td>
-                        <td>{batch.initialQuantity}</td>
-                        <td style={{ fontWeight: 'bold' }}>{batch.currentQuantity}</td>
-                        <td>{formatDate(batch.birthDate)}</td>
                         <td>
                           <span className={`badge ${batch.status === 'active' ? 'badge-paid' : 'badge-cancelled'}`}>
                             {batch.status === 'active' ? 'Activo' : batch.status === 'sold' ? 'Vendido' : 'Retirado'}
