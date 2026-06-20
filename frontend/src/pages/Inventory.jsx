@@ -1114,6 +1114,16 @@ export default function Inventory({ token }) {
                 let cols = [...new Set(typeCages.map(c => c.col))].sort();
                 if (cols.length === 0) {
                   cols = ['100', '101', '102', '103', '104'];
+                } else {
+                  const lastCol = cols[cols.length - 1];
+                  const lastColNum = parseInt(lastCol, 10);
+                  if (!isNaN(lastColNum)) {
+                    const nextColNum = lastColNum + 1;
+                    const nextColStr = String(nextColNum).padStart(lastCol.length, '0');
+                    if (!cols.includes(nextColStr)) {
+                      cols.push(nextColStr);
+                    }
+                  }
                 }
                 
                 const standardHeights = type === 'A' ? ['E', 'D', 'C', 'B', 'A'] : ['A'];
