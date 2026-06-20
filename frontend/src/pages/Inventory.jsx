@@ -957,7 +957,7 @@ export default function Inventory({ token }) {
                                   }}
                                   title={`Ver código QR de la jaula ${batch.cageName}`}
                                 >
-                                  📷 QR
+                                  QR
                                 </button>
                               )}
                             </div>
