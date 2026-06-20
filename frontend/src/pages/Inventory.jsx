@@ -830,7 +830,7 @@ export default function Inventory({ token }) {
           }}
           onClick={() => setActiveTab('birds')}
          title="Hacer clic para lotes de aves">
-          <img src="/Quails.png" alt="🐤" style={{ width: '1.2em', height: '1.2em', borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
+          <img src="/FemaleQuail.png" alt="🐤" style={{ width: '1.2em', height: '1.2em', borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
           Lotes de Aves
         </button>
         <button 

@@ -289,7 +289,7 @@ export default function Dashboard({ token }) {
         <div className="glass-card" style={{ borderLeft: '5px solid var(--accent-green)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span style={{ color: 'var(--text-secondary)', fontWeight: '500' }}>Codornices Activas</span>
-            <img src="/Quails.png" alt="Codornices" style={{ width: '36px', height: '36px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
+            <img src="/FemaleQuail.png" alt="Codornices" style={{ width: '36px', height: '36px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
           </div>
           <div style={{ fontSize: '2.5rem', fontWeight: 'bold', margin: '0.5rem 0', fontFamily: 'var(--font-heading)' }}>
             {stats.quails.total}
