@@ -932,7 +932,7 @@ export default function Inventory({ token }) {
                       <tr key={batch.id} style={{ opacity: batch.status !== 'active' ? 0.6 : 1 }}>
                         <td>
                           {batch.cageName ? (
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.25rem' }}>
                               <span style={{ fontWeight: '600', color: 'var(--accent-gold)' }}>
                                 {batch.cageName}
                               </span>
