@@ -599,15 +599,6 @@ export default function Inventory({ token }) {
               width: 250px;
               height: 250px;
             }
-            .name {
-              margin-top: 15px;
-              font-size: 24px;
-              font-weight: bold;
-              border: 2px solid #000;
-              padding: 5px 15px;
-              display: inline-block;
-              border-radius: 5px;
-            }
             @media print {
               body {
                 height: auto;
@@ -622,8 +613,6 @@ export default function Inventory({ token }) {
         <body>
           <div class="container">
             <img src="${qrDataUrl}" alt="QR" />
-            <br />
-            <div class="name">${selectedQRCage.name}</div>
           </div>
           <script>
             window.onload = function() {
