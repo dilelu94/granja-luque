@@ -910,11 +910,11 @@ export default function Inventory({ token }) {
                 <thead>
                   <tr>
                     <th>Jaula</th>
-                    <th>Cantidad Inicial</th>
                     <th>Cantidad Actual</th>
+                    <th>Tipo / Edad</th>
+                    <th>Cantidad Inicial</th>
                     <th>Fecha de Ingreso</th>
                     <th>Lote</th>
-                    <th>Tipo / Edad</th>
                     <th>Estado</th>
                     <th>Acciones</th>
                   </tr>
@@ -965,13 +965,7 @@ export default function Inventory({ token }) {
                             <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>-</span>
                           )}
                         </td>
-                        <td>{batch.initialQuantity}</td>
                         <td style={{ fontWeight: 'bold' }}>{batch.currentQuantity}</td>
-                        <td>{formatDate(batch.birthDate)}</td>
-                        <td style={{ fontWeight: '600', minWidth: '180px' }}>
-                          {batch.name}
-                          <CollapsibleNotes notes={batch.notes} />
-                        </td>
                         <td>
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'nowrap' }}>
@@ -1004,6 +998,12 @@ export default function Inventory({ token }) {
                               </div>
                             )}
                           </div>
+                        </td>
+                        <td>{batch.initialQuantity}</td>
+                        <td>{formatDate(batch.birthDate)}</td>
+                        <td style={{ fontWeight: '600', minWidth: '180px' }}>
+                          {batch.name}
+                          <CollapsibleNotes notes={batch.notes} />
                         </td>
                         <td>
                           <span className={`badge ${batch.status === 'active' ? 'badge-paid' : 'badge-cancelled'}`}>
