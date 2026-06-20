@@ -1124,7 +1124,7 @@ export default function Inventory({ token }) {
                   cols = ['100', '101', '102', '103', '104'];
                 }
                 
-                const standardHeights = ['E', 'D', 'C', 'B', 'A'];
+                const standardHeights = type === 'A' ? ['E', 'D', 'C', 'B', 'A'] : ['A'];
                 const activeHeights = [...new Set(typeCages.map(c => c.height))];
                 const extraHeights = activeHeights.filter(h => !standardHeights.includes(h)).sort().reverse();
                 const heightsToRender = [...extraHeights, ...standardHeights];
@@ -1164,7 +1164,7 @@ export default function Inventory({ token }) {
                                 background: 'transparent',
                                 borderBottom: 'none'
                               }}>
-                                Nivel {height}
+                                {type === 'A' ? `Nivel ${height}` : 'Único'}
                               </td>
                               {cols.map(col => {
                                 const cage = typeCages.find(c => c.height === height && c.col === col);
@@ -1310,7 +1310,7 @@ export default function Inventory({ token }) {
                 const typeInfo = typeDetails[type] || { title: `Módulos de Tipo ${type}`, desc: `Jaulas de tipo ${type}` };
                 const typeCages = parsedCages.filter(c => c.type === type);
                 const cols = [...new Set(typeCages.map(c => c.col))].sort();
-                const standardHeights = ['E', 'D', 'C', 'B', 'A'];
+                const standardHeights = type === 'A' ? ['E', 'D', 'C', 'B', 'A'] : ['A'];
                 const activeHeights = [...new Set(typeCages.map(c => c.height))];
                 const extraHeights = activeHeights.filter(h => !standardHeights.includes(h)).sort().reverse();
                 const heightsToRender = [...extraHeights, ...standardHeights];
@@ -1352,7 +1352,7 @@ export default function Inventory({ token }) {
                                       borderRadius: '4px'
                                     }}>
                                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.35rem' }}>
-                                        <strong style={{ fontSize: '0.95rem', color: 'var(--text-primary)' }}>{cage.name} (Nivel {cage.height})</strong>
+                                        <strong style={{ fontSize: '0.95rem', color: 'var(--text-primary)' }}>{cage.name}{type === 'A' ? ` (Nivel ${cage.height})` : ''}</strong>
                                         <span style={{ fontSize: '0.75rem', color: occupancyPercent > 100 ? 'var(--accent-red)' : occupancyPercent === 0 ? 'var(--text-muted)' : 'var(--accent-green)', fontWeight: 'bold' }}>
                                           {cage.current_occupancy}/{cage.capacity} u
                                         </span>
@@ -2688,14 +2688,20 @@ export default function Inventory({ token }) {
                 <input 
                   type="text" 
                   className="form-control" 
-                  placeholder="Ej: AA000" 
+                  placeholder="Ej: AA100" 
                   required
                   maxLength={5}
                   pattern="[A-Za-z]{2}[0-9]{3}"
-                  title="Debe tener exactamente 2 letras y 3 números (ej. AA000)"
+                  title="Debe tener exactamente 2 letras y 3 números (ej. AA100)"
                   value={cageForm.name}
                   onChange={e => setCageForm({ ...cageForm, name: e.target.value })}
                 />
+                <small style={{ color: 'var(--text-secondary)', display: 'block', marginTop: '0.4rem', fontSize: '0.8rem', lineHeight: '1.4' }}>
+                  💡 <strong>Formato: [Tipo][Nivel][Columna]</strong> (ej: <code>AA100</code>)<br />
+                  • Primera letra: <code>A</code> (Módulo normal 25 aves), <code>B</code> (Experimental), <code>C</code> (Criadora).<br />
+                  • Segunda letra: Nivel (<code>E</code> a <code>A</code> para tipo A; siempre usar <code>A</code> para tipo B y C).<br />
+                  • Tres números: Columna de 3 dígitos (ej: <code>100</code>, <code>101</code>...).
+                </small>
               </div>
 
               <div className="form-group">
