@@ -20,12 +20,45 @@ export default function RecolectarHuevos({ token, onBack }) {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
+  const [cages, setCages] = useState([]);
+  const [eggData, setEggData] = useState({ history: [], totals: { collected: 0, broken: 0 }, cageCollections: [] });
 
   const [form, setForm] = useState({
     quantityCollected: '',
     quantityBroken: '',
-    notes: ''
+    notes: '',
+    cageId: ''
   });
+
+  const fetchEggData = async () => {
+    try {
+      const headers = { 'Authorization': `Bearer ${token}` };
+      const resEggs = await fetch('/api/inventory/eggs?limit=100', { headers });
+      const dataEggs = await resEggs.json();
+      setEggData(dataEggs);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  React.useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const headers = { 'Authorization': `Bearer ${token}` };
+        const resCages = await fetch('/api/inventory/cages', { headers });
+        const dataCages = await resCages.json();
+        setCages(dataCages);
+        await fetchEggData();
+      } catch (err) {
+        console.error('Error fetching data in RecolectarHuevos:', err);
+      }
+    };
+    fetchData();
+  }, [token]);
+
+  const hasExistingCollection = eggData.cageCollections?.some(
+    col => col.date === activeDate && Number(col.cageId) === Number(form.cageId)
+  );
 
   const handleDateModeCycle = () => {
     if (dateMode === 'hoy') {
@@ -56,6 +89,10 @@ export default function RecolectarHuevos({ token, onBack }) {
 
   const handleRecordEggs = async (e) => {
     e.preventDefault();
+    if (!form.cageId) {
+      showNotification('Por favor, selecciona una jaula.', true);
+      return;
+    }
     setLoading(true);
     try {
       const res = await fetch('/api/inventory/eggs/collect', {
@@ -68,14 +105,16 @@ export default function RecolectarHuevos({ token, onBack }) {
           date: activeDate,
           quantityCollected: form.quantityCollected,
           quantityBroken: form.quantityBroken || '0',
-          notes: form.notes
+          notes: form.notes,
+          cageId: form.cageId
         })
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Error al guardar');
 
-      showNotification('✅ Recolección guardada exitosamente.');
-      setForm({ quantityCollected: '', quantityBroken: '', notes: '' });
+      showNotification(data.message || '✅ Recolección guardada exitosamente.');
+      setForm({ quantityCollected: '', quantityBroken: '', notes: '', cageId: '' });
+      await fetchEggData();
     } catch (err) {
       showNotification(err.message, true);
     } finally {
@@ -152,6 +191,44 @@ export default function RecolectarHuevos({ token, onBack }) {
 
       <form onSubmit={handleRecordEggs} className="glass-card" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1.2rem' }}>
         
+        <div className="form-group" style={{ margin: 0 }}>
+          <label style={{ fontSize: '1.1rem', marginBottom: '0.5rem', display: 'block', color: 'var(--text-primary)' }}>
+            Jaula 🪵 *
+          </label>
+          <select
+            className="form-control"
+            required
+            style={{ fontSize: '1.2rem', padding: '0.75rem' }}
+            value={form.cageId}
+            onChange={e => setForm({ ...form, cageId: e.target.value })}
+          >
+            <option value="">-- Seleccionar Jaula --</option>
+            {cages.filter(c => c.status !== 'inactive').map(cage => (
+              <option key={cage.id} value={cage.id}>
+                {cage.name} (Capac: {cage.capacity})
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {hasExistingCollection && (
+          <div style={{
+            background: 'rgba(245, 158, 11, 0.1)',
+            border: '1px solid #f59e0b',
+            color: '#fbbf24',
+            padding: '0.75rem',
+            borderRadius: 'var(--border-radius-sm)',
+            fontSize: '0.85rem',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem',
+            animation: 'fadeIn 0.3s ease-in-out'
+          }}>
+            <span>⚠️</span>
+            <span><strong>Aviso de acumulación:</strong> Ya existe un registro para esta jaula en esta fecha. La nueva cantidad se sumará a la anterior de forma automática.</span>
+          </div>
+        )}
+
         <div className="form-group" style={{ margin: 0 }}>
           <label style={{ fontSize: '1.1rem', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.4rem', color: 'var(--text-primary)' }}>
             <img src="/QuailEggEmoji.png" alt="🥚" style={{ width: '1.2em', height: '1.2em' }} /> Huevos Sanos

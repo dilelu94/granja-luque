@@ -10,6 +10,7 @@ export class EggCollection {
     this.tempMin = data.temp_min !== undefined ? data.temp_min : null;
     this.tempMax = data.temp_max !== undefined ? data.temp_max : null;
     this.tempAvg = data.temp_avg !== undefined ? data.temp_avg : null;
+    this.humidity = data.humidity !== undefined ? data.humidity : null;
   }
 
   /**
@@ -43,15 +44,15 @@ export class EggCollection {
     if (isUpdate) {
       await db.run(
         `UPDATE egg_production 
-         SET quantity_collected = ?, quantity_broken = ?, notes = ?, temp_min = ?, temp_max = ?, temp_avg = ?
+         SET quantity_collected = ?, quantity_broken = ?, notes = ?, temp_min = ?, temp_max = ?, temp_avg = ?, humidity = ?
          WHERE id = ?`,
-        [this.quantityCollected, this.quantityBroken, this.notes, this.tempMin, this.tempMax, this.tempAvg, this.id]
+        [this.quantityCollected, this.quantityBroken, this.notes, this.tempMin, this.tempMax, this.tempAvg, this.humidity, this.id]
       );
     } else {
       const result = await db.run(
-        `INSERT INTO egg_production (date, quantity_collected, quantity_broken, notes, temp_min, temp_max, temp_avg)
-         VALUES (?, ?, ?, ?, ?, ?, ?)`,
-        [this.date, this.quantityCollected, this.quantityBroken, this.notes, this.tempMin, this.tempMax, this.tempAvg]
+        `INSERT INTO egg_production (date, quantity_collected, quantity_broken, notes, temp_min, temp_max, temp_avg, humidity)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        [this.date, this.quantityCollected, this.quantityBroken, this.notes, this.tempMin, this.tempMax, this.tempAvg, this.humidity]
       );
       this.id = result.lastID;
     }
@@ -130,7 +131,8 @@ export class EggCollection {
         notes: col.notes,
         tempMin: col.temp_min,
         tempMax: col.temp_max,
-        tempAvg: col.temp_avg
+        tempAvg: col.temp_avg,
+        humidity: col.humidity
       });
     }
 

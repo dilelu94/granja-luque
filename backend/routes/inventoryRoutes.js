@@ -2,6 +2,7 @@ import express from 'express';
 import { QuailBatch } from '../models/QuailBatch.js';
 import { FeedStock } from '../models/FeedStock.js';
 import { EggCollection } from '../models/EggCollection.js';
+import { CageEggCollection } from '../models/CageEggCollection.js';
 import { Settings } from '../models/Settings.js';
 import { Cage } from '../models/Cage.js';
 import { Product } from '../models/Product.js';
@@ -358,7 +359,7 @@ router.post('/feed/consume', authenticateToken, async (req, res) => {
 
 /**
  * GET /api/inventory/eggs
- * ADMIN ONLY: Get egg collection logs and daily posture rate statistics.
+ * ADMIN ONLY: Get egg collection logs, daily posture rate statistics, and cage breakdowns.
  */
 router.get('/eggs', authenticateToken, async (req, res) => {
   const limit = req.query.limit ? Number(req.query.limit) : 14;
@@ -369,12 +370,16 @@ router.get('/eggs', authenticateToken, async (req, res) => {
     const db = await getDatabaseConnection();
     const sumRow = await db.get('SELECT SUM(quantity_collected) as totalCollected, SUM(quantity_broken) as totalBroken FROM egg_production');
     
+    // Obtener desglose por jaulas
+    const cageCollections = await CageEggCollection.getAll();
+    
     res.json({
       history: stats,
       totals: {
         collected: sumRow ? (sumRow.totalCollected || 0) : 0,
         broken: sumRow ? (sumRow.totalBroken || 0) : 0
-      }
+      },
+      cageCollections
     });
   } catch (error) {
     console.error('Error al obtener recolecciones de huevos:', error);
@@ -384,48 +389,30 @@ router.get('/eggs', authenticateToken, async (req, res) => {
 
 /**
  * POST /api/inventory/eggs/collect
- * ADMIN ONLY: Log daily egg collection.
+ * ADMIN ONLY: Log daily egg collection per cage (with automatic summing and weather import).
  */
 router.post('/eggs/collect', authenticateToken, async (req, res) => {
-  const { date, quantityCollected, quantityBroken, notes } = req.body;
+  const { date, quantityCollected, quantityBroken, notes, cageId } = req.body;
 
-  if (!date || quantityCollected === undefined) {
-    return res.status(400).json({ error: 'Faltan campos requeridos (fecha y cantidad recolectada).' });
+  if (!date || quantityCollected === undefined || !cageId) {
+    return res.status(400).json({ error: 'Faltan campos requeridos (fecha, cantidad recolectada y jaula).' });
   }
 
   try {
-    let temp_min = null;
-    let temp_max = null;
-    let temp_avg = null;
-
-    // Fetch weather data for El Talar, BA
-    // LAT: -34.4754, LON: -58.6508
-    try {
-      const weatherRes = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=-34.4754&longitude=-58.6508&daily=temperature_2m_max,temperature_2m_min,temperature_2m_mean&timezone=America%2FArgentina%2FBuenos_Aires&start_date=${date}&end_date=${date}`);
-      const weatherData = await weatherRes.json();
-      
-      if (weatherData && weatherData.daily && weatherData.daily.temperature_2m_max && weatherData.daily.temperature_2m_max.length > 0) {
-        temp_max = weatherData.daily.temperature_2m_max[0];
-        temp_min = weatherData.daily.temperature_2m_min[0];
-        temp_avg = weatherData.daily.temperature_2m_mean[0];
-      }
-    } catch (err) {
-      console.error('Error fetching weather data from Open-Meteo:', err.message);
-      // Fallback silently if weather fails
-    }
-
-    const collection = new EggCollection({
+    const result = await CageEggCollection.saveCollection(
       date,
-      quantityCollected: Number(quantityCollected),
-      quantityBroken: Number(quantityBroken || 0),
-      notes,
-      temp_min,
-      temp_max,
-      temp_avg
-    });
+      Number(cageId),
+      Number(quantityCollected),
+      Number(quantityBroken || 0),
+      notes
+    );
 
-    await collection.save();
-    res.status(201).json({ message: 'Recolección de huevos registrada.', collection });
+    res.status(201).json({ 
+      message: result.isAddition 
+        ? 'Recolección acumulada con éxito a la anterior para esta jaula.' 
+        : 'Recolección de huevos registrada.',
+      collection: result 
+    });
   } catch (error) {
     console.error('Error al registrar huevos:', error);
     res.status(500).json({ error: 'Error al registrar huevos recogidos.' });

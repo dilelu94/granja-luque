@@ -83,7 +83,24 @@ export async function initializeDatabase() {
       date TEXT UNIQUE NOT NULL,
       quantity_collected INTEGER NOT NULL DEFAULT 0,
       quantity_broken INTEGER NOT NULL DEFAULT 0,
-      notes TEXT
+      notes TEXT,
+      temp_min REAL,
+      temp_max REAL,
+      temp_avg REAL,
+      humidity REAL
+    )
+  `);
+
+  // 5.5. Tabla de Recolección de Huevos por Jaula
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS cage_egg_production (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      date TEXT NOT NULL,
+      cage_id INTEGER NOT NULL REFERENCES cages(id),
+      quantity_collected INTEGER NOT NULL DEFAULT 0,
+      quantity_broken INTEGER NOT NULL DEFAULT 0,
+      notes TEXT,
+      UNIQUE(date, cage_id)
     )
   `);
 
@@ -122,6 +139,7 @@ export async function initializeDatabase() {
   await addColumnIfNotExists(db, 'egg_production', 'temp_min', 'REAL');
   await addColumnIfNotExists(db, 'egg_production', 'temp_max', 'REAL');
   await addColumnIfNotExists(db, 'egg_production', 'temp_avg', 'REAL');
+  await addColumnIfNotExists(db, 'egg_production', 'humidity', 'REAL');
 
   // 7. Tabla de Pedidos de Venta
   await db.exec(`

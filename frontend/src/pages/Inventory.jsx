@@ -151,6 +151,9 @@ export default function Inventory({ token }) {
   const [showEditCageModal, setShowEditCageModal] = useState(false);
   const [showQRModal, setShowQRModal] = useState(false);
   const [selectedQRCage, setSelectedQRCage] = useState(null);
+  const [hoveredChart1, setHoveredChart1] = useState(null);
+  const [hoveredChart2, setHoveredChart2] = useState(null);
+  const [hoveredChart3, setHoveredChart3] = useState(null);
   
   const [containerForm, setContainerForm] = useState({ id: null, name: '', containerStock: 0, containerCost: 0, originalProd: null });
 
@@ -160,7 +163,8 @@ export default function Inventory({ token }) {
   const [selectedBatchId, setSelectedBatchId] = useState(null);
   const [mortalityForm, setMortalityForm] = useState({ count: '', reason: 'Muerte / Enfermedad', notes: '' });
   
-  const [eggForm, setEggForm] = useState({ date: todayStr, quantityCollected: '', quantityBroken: '', notes: '' });
+  const [eggData, setEggData] = useState({ history: [], totals: { collected: 0, broken: 0 }, cageCollections: [] });
+  const [eggForm, setEggForm] = useState({ date: todayStr, quantityCollected: '', quantityBroken: '', notes: '', cageId: '' });
   const [packForm, setPackForm] = useState({ productId: '', packagesCount: '', eggsPerPackage: '' });
   const [feedForm, setFeedForm] = useState({ type: 'ponedora', action: 'buy', quantity: '', price: '', shippingCost: '', purchaseDate: new Date().toISOString().split('T')[0] });
   const [feedPurchases, setFeedPurchases] = useState([]);
@@ -224,6 +228,11 @@ export default function Inventory({ token }) {
       const resSettings = await fetch('/api/settings', { headers });
       const dataSettings = await resSettings.json();
       setSettings(dataSettings);
+
+      // 5. Egg production data
+      const resEggs = await fetch('/api/inventory/eggs?limit=100', { headers });
+      const dataEggs = await resEggs.json();
+      setEggData(dataEggs);
     } catch (err) {
       console.error('Error al cargar inventario:', err);
       setError('Error al sincronizar datos del inventario.');
@@ -371,9 +380,9 @@ export default function Inventory({ token }) {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
 
-      showNotification('Recolección diaria de huevos guardada.');
+      showNotification(data.message || 'Recolección diaria de huevos guardada.');
       setShowEggModal(false);
-      setEggForm({ date: todayStr, quantityCollected: '', quantityBroken: '', notes: '' });
+      setEggForm({ date: todayStr, quantityCollected: '', quantityBroken: '', notes: '', cageId: '' });
       setEggDateMode('hoy');
       fetchData();
     } catch (err) {
@@ -789,6 +798,10 @@ export default function Inventory({ token }) {
 
   const eggUnitCost = Number(settings.egg_base_cost || 15.0);
 
+  const hasExistingCollection = eggData.cageCollections?.some(
+    col => col.date === eggForm.date && Number(col.cageId) === Number(eggForm.cageId)
+  );
+
   if (loading) return <p style={{ color: 'var(--text-secondary)' }}>Cargando datos de inventario...</p>;
 
   return (
@@ -843,6 +856,21 @@ export default function Inventory({ token }) {
           onClick={() => setActiveTab('cages')}
          title="Hacer clic para 🪵 jaulas">
           🪵 Jaulas
+        </button>
+        <button 
+          className="btn" 
+          style={{
+            borderBottom: activeTab === 'eggProduction' ? '2px solid var(--accent-green)' : 'none',
+            borderRadius: '0', background: 'none', color: activeTab === 'eggProduction' ? 'var(--text-primary)' : 'var(--text-secondary)',
+            fontWeight: '600',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '0.4rem'
+          }}
+          onClick={() => setActiveTab('eggProduction')}
+         title="Hacer clic para ver el control y gráficos de producción de huevos">
+          <img src="/QuailEggEmoji.png" alt="🥚" style={{ width: '1.2em', height: '1.2em', verticalAlign: 'middle' }} />
+          Producción de Huevos
         </button>
         <button 
           className="btn" 
@@ -1563,6 +1591,629 @@ export default function Inventory({ token }) {
                           );
                         })
                       )}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* =======================================================
+          TAB: PRODUCCIÓN DE HUEVOS
+         ======================================================= */}
+      {activeTab === 'eggProduction' && (() => {
+        const formatDate = (dateStr) => {
+          if (!dateStr) return '';
+          const parts = dateStr.split('-');
+          if (parts.length !== 3) return dateStr;
+          return `${parts[2]}/${parts[1]}`;
+        };
+
+        const formatFullDate = (dateStr) => {
+          if (!dateStr) return '';
+          const parts = dateStr.split('-');
+          if (parts.length !== 3) return dateStr;
+          return `${parts[2]}/${parts[1]}/${parts[0]}`;
+        };
+
+        const history = eggData.history || [];
+        const totals = eggData.totals || { collected: 0, broken: 0 };
+
+        const totalCollected = totals.collected || 0;
+        const totalBroken = totals.broken || 0;
+        
+        const rates = history.filter(h => h.adultQuailsCount > 0);
+        const avgPosture = rates.length 
+          ? (rates.reduce((sum, h) => sum + h.postureRate, 0) / rates.length).toFixed(1) 
+          : '0.0';
+
+        const temps = history.filter(h => h.tempAvg !== null);
+        const avgTemp = temps.length 
+          ? (temps.reduce((sum, h) => sum + h.tempAvg, 0) / temps.length).toFixed(1) 
+          : null;
+
+        const hums = history.filter(h => h.humidity !== null);
+        const avgHum = hums.length 
+          ? (hums.reduce((sum, h) => sum + h.humidity, 0) / hums.length).toFixed(0) 
+          : null;
+
+        const getISOWeekDetails = (dateStr) => {
+          const d = new Date(dateStr + 'T12:00:00');
+          const day = d.getDay();
+          const diffToMonday = d.getDate() - day + (day === 0 ? -6 : 1);
+          const monday = new Date(new Date(d).setDate(diffToMonday));
+          const sunday = new Date(new Date(monday).setDate(monday.getDate() + 6));
+          
+          const target = new Date(monday.valueOf());
+          const dayNr = (monday.getDay() + 6) % 7;
+          target.setDate(target.getDate() - dayNr + 3);
+          const firstThursday = target.valueOf();
+          target.setMonth(0, 1);
+          if (target.getDay() !== 4) {
+            target.setMonth(0, 1 + ((4 - target.getDay()) + 7) % 7);
+          }
+          const weekNo = 1 + Math.ceil((firstThursday - target) / 604800000);
+
+          const pad = (num) => String(num).padStart(2, '0');
+          const weekKey = `${monday.getFullYear()}-W${pad(weekNo)}`;
+          const label = `Semana ${weekNo} (${pad(monday.getDate())}/${pad(monday.getMonth() + 1)} al ${pad(sunday.getDate())}/${pad(sunday.getMonth() + 1)})`;
+          
+          return { weekKey, label };
+        };
+
+        const weeklyGroups = {};
+        history.forEach(record => {
+          const { weekKey, label } = getISOWeekDetails(record.date);
+          if (!weeklyGroups[weekKey]) {
+            weeklyGroups[weekKey] = {
+              label,
+              collected: 0,
+              broken: 0,
+              postureSum: 0,
+              postureCount: 0,
+              tempSum: 0,
+              tempCount: 0,
+              humSum: 0,
+              humCount: 0
+            };
+          }
+          const g = weeklyGroups[weekKey];
+          g.collected += record.quantityCollected;
+          g.broken += record.quantityBroken;
+          if (record.adultQuailsCount > 0) {
+            g.postureSum += record.postureRate;
+            g.postureCount += 1;
+          }
+          if (record.tempAvg !== null) {
+            g.tempSum += record.tempAvg;
+            g.tempCount += 1;
+          }
+          if (record.humidity !== null) {
+            g.humSum += record.humidity;
+            g.humCount += 1;
+          }
+        });
+
+        const weeklySummary = Object.keys(weeklyGroups).map(weekKey => {
+          const g = weeklyGroups[weekKey];
+          return {
+            weekKey,
+            label: g.label,
+            collected: g.collected,
+            broken: g.broken,
+            postureRate: g.postureCount > 0 ? Math.round((g.postureSum / g.postureCount) * 10) / 10 : 0,
+            avgTemp: g.tempCount > 0 ? Math.round((g.tempSum / g.tempCount) * 10) / 10 : null,
+            avgHum: g.humCount > 0 ? Math.round((g.humSum / g.humCount) * 10) / 10 : null
+          };
+        }).sort((a, b) => b.weekKey.localeCompare(a.weekKey));
+
+        const cageBreakdownByDate = {};
+        (eggData.cageCollections || []).forEach(cc => {
+          if (!cageBreakdownByDate[cc.date]) {
+            cageBreakdownByDate[cc.date] = [];
+          }
+          cageBreakdownByDate[cc.date].push(cc);
+        });
+
+        const dailyPoints = history.map((h, i) => {
+          const x = 60 + (i / Math.max(1, history.length - 1)) * 680;
+          const y = 200 - (h.postureRate / 100) * 180;
+          return { x, y, data: h };
+        });
+
+        const weeklyPoints = [...weeklySummary].reverse().map((w, i) => {
+          const x = 60 + (i / Math.max(1, weeklySummary.length - 1)) * 680;
+          const y = 200 - (w.postureRate / 100) * 180;
+          return { x, y, data: w };
+        });
+
+        const barHistory = history.slice(-14);
+        const maxEggs = Math.max(...barHistory.map(h => h.quantityCollected + h.quantityBroken), 10);
+        const barWidth = 35;
+        const barGap = 15;
+        const barOffset = (800 - (barHistory.length * (barWidth + barGap))) / 2;
+
+        const climatePoints = history.map((h, i) => {
+          const x = 60 + (i / Math.max(1, history.length - 1)) * 680;
+          const yTemp = h.tempAvg !== null ? 200 - (h.tempAvg / 45) * 180 : null;
+          const yHum = h.humidity !== null ? 200 - (h.humidity / 100) * 180 : null;
+          const yPosture = 200 - (h.postureRate / 100) * 180;
+          return { x, yTemp, yHum, yPosture, data: h };
+        });
+
+        return (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem', marginBottom: '3rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1.5rem' }}>
+              <div className="glass-card" style={{ borderLeft: '5px solid var(--accent-green)', display: 'flex', alignItems: 'center', gap: '1rem', padding: '1.25rem' }}>
+                <div style={{ fontSize: '2.5rem' }}>🥚</div>
+                <div>
+                  <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Huevos Recolectados (Total)</div>
+                  <div style={{ fontSize: '1.6rem', fontWeight: 'bold', color: 'var(--accent-green)' }}>{totalCollected} u</div>
+                </div>
+              </div>
+
+              <div className="glass-card" style={{ borderLeft: '5px solid var(--accent-red)', display: 'flex', alignItems: 'center', gap: '1rem', padding: '1.25rem' }}>
+                <div style={{ fontSize: '2.5rem' }}>💔</div>
+                <div>
+                  <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Huevos Rotos (Total)</div>
+                  <div style={{ fontSize: '1.6rem', fontWeight: 'bold', color: 'var(--accent-red)' }}>{totalBroken} u</div>
+                </div>
+              </div>
+
+              <div className="glass-card" style={{ borderLeft: '5px solid var(--accent-gold)', display: 'flex', alignItems: 'center', gap: '1rem', padding: '1.25rem' }}>
+                <div style={{ fontSize: '2.5rem' }}>📈</div>
+                <div>
+                  <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Tasa de Postura Promedio</div>
+                  <div style={{ fontSize: '1.6rem', fontWeight: 'bold', color: 'var(--accent-gold)' }}>{avgPosture}%</div>
+                </div>
+              </div>
+
+              <div className="glass-card" style={{ borderLeft: '5px solid var(--accent-blue)', display: 'flex', alignItems: 'center', gap: '1rem', padding: '1.25rem' }}>
+                <div style={{ fontSize: '2.5rem' }}>🌡️</div>
+                <div>
+                  <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Clima Promedio (El Talar)</div>
+                  <div style={{ fontSize: '1.05rem', fontWeight: 'bold', color: 'var(--text-primary)', marginTop: '0.2rem' }}>
+                    {avgTemp ? `🌡️ ${avgTemp} °C` : 'Temp: N/D'}<br />
+                    {avgHum ? `💧 ${avgHum}% Hum` : 'Hum: N/D'}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: '1.5rem' }}>
+              
+              <div className="glass-card" style={{ position: 'relative', padding: '1.25rem' }}>
+                <h4 style={{ marginBottom: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span>📈 Tasa de Postura Diaria y Semanal</span>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Eje Y: 0% - 100%</span>
+                </h4>
+                {history.length === 0 ? (
+                  <p style={{ color: 'var(--text-secondary)', padding: '2rem', textAlign: 'center' }}>Sin datos suficientes</p>
+                ) : (
+                  <div style={{ position: 'relative', width: '100%', overflow: 'hidden' }}>
+                    <svg width="100%" height="220" viewBox="0 0 800 220" preserveAspectRatio="xMidYMid meet">
+                      <defs>
+                        <linearGradient id="postureGrad" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="var(--accent-green)" stopOpacity="0.4" />
+                          <stop offset="100%" stopColor="var(--accent-green)" stopOpacity="0.0" />
+                        </linearGradient>
+                      </defs>
+                      {[0, 25, 50, 75, 100].map(val => {
+                        const y = 200 - (val / 100) * 180;
+                        return (
+                          <g key={val}>
+                            <line x1="60" y1={y} x2="740" y2={y} stroke="rgba(255,255,255,0.05)" strokeDasharray="3,3" />
+                            <text x="50" y={y + 4} fill="var(--text-secondary)" fontSize="10" textAnchor="end">{val}%</text>
+                          </g>
+                        );
+                      })}
+                      
+                      {dailyPoints.length > 0 && (
+                        <>
+                          <path d={dailyPoints.length ? `${dailyPoints.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ')} L ${dailyPoints[dailyPoints.length-1].x} 200 L ${dailyPoints[0].x} 200 Z` : ''} fill="url(#postureGrad)" />
+                          <path d={dailyPoints.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ')} fill="none" stroke="var(--accent-green)" strokeWidth="2.5" />
+                        </>
+                      )}
+
+                      {weeklyPoints.length > 0 && (
+                        <path d={weeklyPoints.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ')} fill="none" stroke="var(--accent-gold)" strokeWidth="2" strokeDasharray="5,3" />
+                      )}
+
+                      {dailyPoints.filter((_, idx) => idx % Math.max(1, Math.floor(dailyPoints.length / 5)) === 0).map(p => (
+                        <g key={p.data.date}>
+                          <line x1={p.x} y1="200" x2={p.x} y2="204" stroke="rgba(255,255,255,0.15)" />
+                          <text x={p.x} y="215" fill="var(--text-secondary)" fontSize="9" textAnchor="middle">{formatDate(p.data.date)}</text>
+                        </g>
+                      ))}
+
+                      {dailyPoints.map((p, idx) => (
+                        <circle
+                          key={idx}
+                          cx={p.x}
+                          cy={p.y}
+                          r="5"
+                          fill="var(--accent-green)"
+                          stroke="#1e293b"
+                          strokeWidth="1.5"
+                          style={{ cursor: 'pointer', opacity: hoveredChart1 === idx ? 1 : 0 }}
+                          onMouseEnter={() => setHoveredChart1(idx)}
+                          onMouseLeave={() => setHoveredChart1(null)}
+                        />
+                      ))}
+                      {dailyPoints.map((p, idx) => {
+                        const stepWidth = 700 / Math.max(1, dailyPoints.length - 1);
+                        return (
+                          <rect
+                            key={`rect-${idx}`}
+                            x={p.x - stepWidth/2}
+                            y="20"
+                            width={stepWidth}
+                            height="180"
+                            fill="transparent"
+                            style={{ cursor: 'pointer' }}
+                            onMouseEnter={() => setHoveredChart1(idx)}
+                            onMouseLeave={() => setHoveredChart1(null)}
+                          />
+                        );
+                      })}
+                    </svg>
+
+                    {hoveredChart1 !== null && dailyPoints[hoveredChart1] && (
+                      <div style={{
+                        position: 'absolute',
+                        left: `${(dailyPoints[hoveredChart1].x / 800) * 100}%`,
+                        top: `${(dailyPoints[hoveredChart1].y / 220) * 100}%`,
+                        transform: 'translate(-50%, -115%)',
+                        background: 'rgba(15, 23, 42, 0.95)',
+                        border: '1px solid var(--border-color)',
+                        color: '#fff',
+                        padding: '0.5rem 0.75rem',
+                        borderRadius: '4px',
+                        fontSize: '0.75rem',
+                        pointerEvents: 'none',
+                        zIndex: 10,
+                        boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.5)',
+                        whiteSpace: 'nowrap'
+                      }}>
+                        <strong>Día: {formatFullDate(dailyPoints[hoveredChart1].data.date)}</strong><br />
+                        Postura: <span style={{ color: 'var(--accent-green)', fontWeight: 'bold' }}>{dailyPoints[hoveredChart1].data.postureRate}%</span><br />
+                        Recolectados: {dailyPoints[hoveredChart1].data.quantityCollected} u<br />
+                        Hembras Activas: {dailyPoints[hoveredChart1].data.adultQuailsCount}
+                      </div>
+                    )}
+                  </div>
+                )}
+                <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', fontSize: '0.75rem', marginTop: '0.5rem' }}>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                    <span style={{ width: '12px', height: '3px', background: 'var(--accent-green)', display: 'inline-block' }}></span> Diaria
+                  </span>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                    <span style={{ width: '12px', height: '3px', background: 'var(--accent-gold)', borderStyle: 'dashed', borderWidth: '1px', display: 'inline-block' }}></span> Promedio Semanal
+                  </span>
+                </div>
+              </div>
+
+              <div className="glass-card" style={{ position: 'relative', padding: '1.25rem' }}>
+                <h4 style={{ marginBottom: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span>📊 Huevos Recolectados vs Rotos (Últimos 14 días)</span>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Eje Y: Huevos Totales</span>
+                </h4>
+                {barHistory.length === 0 ? (
+                  <p style={{ color: 'var(--text-secondary)', padding: '2rem', textAlign: 'center' }}>Sin datos suficientes</p>
+                ) : (
+                  <div style={{ position: 'relative', width: '100%', overflow: 'hidden' }}>
+                    <svg width="100%" height="220" viewBox="0 0 800 220" preserveAspectRatio="xMidYMid meet">
+                      {[0, 0.25, 0.5, 0.75, 1].map(pct => {
+                        const val = Math.round(pct * maxEggs);
+                        const y = 200 - pct * 180;
+                        return (
+                          <g key={pct}>
+                            <line x1="60" y1={y} x2="740" y2={y} stroke="rgba(255,255,255,0.05)" strokeDasharray="3,3" />
+                            <text x="50" y={y + 4} fill="var(--text-secondary)" fontSize="10" textAnchor="end">{val}</text>
+                          </g>
+                        );
+                      })}
+
+                      {barHistory.map((h, idx) => {
+                        const x = barOffset + idx * (barWidth + barGap);
+                        const hColl = (h.quantityCollected / maxEggs) * 180;
+                        const hBrok = (h.quantityBroken / maxEggs) * 180;
+                        
+                        const yColl = 200 - hColl;
+                        const yBrok = yColl - hBrok;
+                        
+                        return (
+                          <g key={h.date}>
+                            <rect
+                              x={x}
+                              y={yColl}
+                              width={barWidth}
+                              height={hColl}
+                              fill="var(--accent-green)"
+                              rx="3"
+                              style={{ transition: 'opacity 0.2s', opacity: hoveredChart2 === idx || hoveredChart2 === null ? 1 : 0.6 }}
+                            />
+                            {h.quantityBroken > 0 && (
+                              <rect
+                                x={x}
+                                y={yBrok}
+                                width={barWidth}
+                                height={hBrok}
+                                fill="var(--accent-red)"
+                                rx="3"
+                                style={{ transition: 'opacity 0.2s', opacity: hoveredChart2 === idx || hoveredChart2 === null ? 1 : 0.6 }}
+                              />
+                            )}
+                            
+                            <text x={x + barWidth/2} y="215" fill="var(--text-secondary)" fontSize="9" textAnchor="middle">{formatDate(h.date)}</text>
+                            
+                            <rect
+                              x={x - barGap/2}
+                              y="20"
+                              width={barWidth + barGap}
+                              height="180"
+                              fill="transparent"
+                              style={{ cursor: 'pointer' }}
+                              onMouseEnter={() => setHoveredChart2(idx)}
+                              onMouseLeave={() => setHoveredChart2(null)}
+                            />
+                          </g>
+                        );
+                      })}
+                    </svg>
+
+                    {hoveredChart2 !== null && barHistory[hoveredChart2] && (
+                      <div style={{
+                        position: 'absolute',
+                        left: `${((barOffset + hoveredChart2 * (barWidth + barGap) + barWidth/2) / 800) * 100}%`,
+                        top: `${((200 - ((barHistory[hoveredChart2].quantityCollected + barHistory[hoveredChart2].quantityBroken) / maxEggs) * 180) / 220) * 100}%`,
+                        transform: 'translate(-50%, -115%)',
+                        background: 'rgba(15, 23, 42, 0.95)',
+                        border: '1px solid var(--border-color)',
+                        color: '#fff',
+                        padding: '0.5rem 0.75rem',
+                        borderRadius: '4px',
+                        fontSize: '0.75rem',
+                        pointerEvents: 'none',
+                        zIndex: 10,
+                        boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.5)',
+                        whiteSpace: 'nowrap'
+                      }}>
+                        <strong>{formatFullDate(barHistory[hoveredChart2].date)}</strong><br />
+                        Sanos: <span style={{ color: 'var(--accent-green)', fontWeight: 'bold' }}>{barHistory[hoveredChart2].quantityCollected} u</span><br />
+                        Rotos: <span style={{ color: 'var(--accent-red)', fontWeight: 'bold' }}>{barHistory[hoveredChart2].quantityBroken} u</span><br />
+                        Total: {barHistory[hoveredChart2].quantityCollected + barHistory[hoveredChart2].quantityBroken} u
+                      </div>
+                    )}
+                  </div>
+                )}
+                <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', fontSize: '0.75rem', marginTop: '0.5rem' }}>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                    <span style={{ width: '12px', height: '12px', background: 'var(--accent-green)', borderRadius: '2px', display: 'inline-block' }}></span> Sanos
+                  </span>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                    <span style={{ width: '12px', height: '12px', background: 'var(--accent-red)', borderRadius: '2px', display: 'inline-block' }}></span> Rotos / Descartados
+                  </span>
+                </div>
+              </div>
+
+              <div className="glass-card" style={{ position: 'relative', padding: '1.25rem', gridColumn: 'span 2' }}>
+                <h4 style={{ marginBottom: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span>🌡️ Correlación: Temperatura, Humedad y Postura</span>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Ejes: Izq (Postura: 0-100%) | Der (Clima)</span>
+                </h4>
+                {history.length === 0 ? (
+                  <p style={{ color: 'var(--text-secondary)', padding: '2rem', textAlign: 'center' }}>Sin datos suficientes</p>
+                ) : (
+                  <div style={{ position: 'relative', width: '100%', overflow: 'hidden' }}>
+                    <svg width="100%" height="220" viewBox="0 0 800 220" preserveAspectRatio="xMidYMid meet">
+                      {[0, 25, 50, 75, 100].map(pct => {
+                        const y = 200 - (pct / 100) * 180;
+                        const tempVal = Math.round((pct / 100) * 45);
+                        return (
+                          <g key={pct}>
+                            <line x1="60" y1={y} x2="740" y2={y} stroke="rgba(255,255,255,0.05)" strokeDasharray="3,3" />
+                            <text x="50" y={y + 4} fill="var(--accent-green)" fontSize="10" textAnchor="end">{pct}%</text>
+                            <text x="750" y={y + 4} fill="var(--accent-blue)" fontSize="10" textAnchor="start">{pct}% / {tempVal}°C</text>
+                          </g>
+                        );
+                      })}
+
+                      {climatePoints.filter(p => p.yHum !== null).length > 0 && (
+                        <>
+                          <path
+                            d={(() => {
+                              const valid = climatePoints.filter(p => p.yHum !== null);
+                              return valid.length ? `${valid.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.yHum}`).join(' ')} L ${valid[valid.length-1].x} 200 L ${valid[0].x} 200 Z` : '';
+                            })()}
+                            fill="rgba(59, 130, 246, 0.05)"
+                          />
+                          <path
+                            d={climatePoints.filter(p => p.yHum !== null).map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.yHum}`).join(' ')}
+                            fill="none"
+                            stroke="rgba(59, 130, 246, 0.5)"
+                            strokeWidth="1.5"
+                          />
+                        </>
+                      )}
+
+                      {climatePoints.filter(p => p.yTemp !== null).length > 0 && (
+                        <path
+                          d={climatePoints.filter(p => p.yTemp !== null).map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.yTemp}`).join(' ')}
+                          fill="none"
+                          stroke="var(--accent-gold)"
+                          strokeWidth="2"
+                        />
+                      )}
+
+                      {climatePoints.length > 0 && (
+                        <path
+                          d={climatePoints.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.yPosture}`).join(' ')}
+                          fill="none"
+                          stroke="var(--accent-green)"
+                          strokeWidth="2.5"
+                        />
+                      )}
+
+                      {climatePoints.filter((_, idx) => idx % Math.max(1, Math.floor(climatePoints.length / 5)) === 0).map(p => (
+                        <text key={p.data.date} x={p.x} y="215" fill="var(--text-secondary)" fontSize="9" textAnchor="middle">{formatDate(p.data.date)}</text>
+                      ))}
+
+                      {climatePoints.map((p, idx) => (
+                        <g key={`dots-${idx}`}>
+                          {hoveredChart3 === idx && (
+                            <>
+                              <circle cx={p.x} cy={p.yPosture} r="5" fill="var(--accent-green)" stroke="#1e293b" />
+                              {p.yTemp !== null && <circle cx={p.x} cy={p.yTemp} r="4" fill="var(--accent-gold)" stroke="#1e293b" />}
+                              {p.yHum !== null && <circle cx={p.x} cy={p.yHum} r="4" fill="#3b82f6" stroke="#1e293b" />}
+                            </>
+                          )}
+                        </g>
+                      ))}
+
+                      {climatePoints.map((p, idx) => {
+                        const stepWidth = 700 / Math.max(1, climatePoints.length - 1);
+                        return (
+                          <rect
+                            key={`cl-rect-${idx}`}
+                            x={p.x - stepWidth/2}
+                            y="20"
+                            width={stepWidth}
+                            height="180"
+                            fill="transparent"
+                            style={{ cursor: 'pointer' }}
+                            onMouseEnter={() => setHoveredChart3(idx)}
+                            onMouseLeave={() => setHoveredChart3(null)}
+                          />
+                        );
+                      })}
+                    </svg>
+
+                    {hoveredChart3 !== null && climatePoints[hoveredChart3] && (
+                      <div style={{
+                        position: 'absolute',
+                        left: `${(climatePoints[hoveredChart3].x / 800) * 100}%`,
+                        top: '40%',
+                        transform: 'translate(-50%, -50%)',
+                        background: 'rgba(15, 23, 42, 0.95)',
+                        border: '1px solid var(--border-color)',
+                        color: '#fff',
+                        padding: '0.6rem 0.8rem',
+                        borderRadius: '4px',
+                        fontSize: '0.75rem',
+                        pointerEvents: 'none',
+                        zIndex: 10,
+                        boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.5)',
+                        whiteSpace: 'nowrap'
+                      }}>
+                        <strong>{formatFullDate(climatePoints[hoveredChart3].data.date)}</strong><br />
+                        Tasa Postura: <span style={{ color: 'var(--accent-green)', fontWeight: 'bold' }}>{climatePoints[hoveredChart3].data.postureRate}%</span><br />
+                        Temperatura: <span style={{ color: 'var(--accent-gold)', fontWeight: 'bold' }}>{climatePoints[hoveredChart3].data.tempAvg !== null ? `${climatePoints[hoveredChart3].data.tempAvg.toFixed(1)} °C` : 'N/D'}</span><br />
+                        Humedad: <span style={{ color: '#3b82f6', fontWeight: 'bold' }}>{climatePoints[hoveredChart3].data.humidity !== null ? `${Math.round(climatePoints[hoveredChart3].data.humidity)}%` : 'N/D'}</span>
+                      </div>
+                    )}
+                  </div>
+                )}
+                <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', fontSize: '0.75rem', marginTop: '0.5rem' }}>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                    <span style={{ width: '12px', height: '3px', background: 'var(--accent-green)', display: 'inline-block' }}></span> Tasa de Postura (%)
+                  </span>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                    <span style={{ width: '12px', height: '3px', background: 'var(--accent-gold)', display: 'inline-block' }}></span> Temperatura (°C)
+                  </span>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                    <span style={{ width: '12px', height: '3px', background: 'rgba(59, 130, 246, 0.7)', display: 'inline-block' }}></span> Humedad (%)
+                  </span>
+                </div>
+              </div>
+
+            </div>
+
+            <div className="glass-card">
+              <h3 style={{ marginBottom: '1rem', fontFamily: 'var(--font-heading)', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem' }}>
+                Resumen Semanal de Postura
+              </h3>
+              {weeklySummary.length === 0 ? (
+                <p style={{ color: 'var(--text-secondary)', padding: '1rem' }}>No hay datos suficientes para agrupar semanalmente.</p>
+              ) : (
+                <div className="table-container">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Semana</th>
+                        <th style={{ textAlign: 'center' }}>Total Huevos Recolectados</th>
+                        <th style={{ textAlign: 'center' }}>Total Huevos Rotos</th>
+                        <th style={{ textAlign: 'center' }}>Tasa de Postura Promedio</th>
+                        <th style={{ textAlign: 'center' }}>Temp. Promedio</th>
+                        <th style={{ textAlign: 'center' }}>Humedad Promedio</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {weeklySummary.map(row => (
+                        <tr key={row.weekKey}>
+                          <td style={{ fontWeight: '600' }}>{row.label}</td>
+                          <td style={{ textAlign: 'center', color: 'var(--accent-green)', fontWeight: '600' }}>{row.collected} u</td>
+                          <td style={{ textAlign: 'center', color: 'var(--accent-red)' }}>{row.broken} u</td>
+                          <td style={{ textAlign: 'center', color: 'var(--accent-gold)', fontWeight: '600' }}>{row.postureRate}%</td>
+                          <td style={{ textAlign: 'center' }}>{row.avgTemp !== null ? `🌡️ ${row.avgTemp} °C` : 'N/D'}</td>
+                          <td style={{ textAlign: 'center' }}>{row.avgHum !== null ? `💧 ${row.avgHum}%` : 'N/D'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+
+            <div className="glass-card">
+              <h3 style={{ marginBottom: '1rem', fontFamily: 'var(--font-heading)', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem' }}>
+                Historial de Recolección Diaria
+              </h3>
+              {history.length === 0 ? (
+                <p style={{ color: 'var(--text-secondary)', padding: '1rem' }}>No hay registros en el historial.</p>
+              ) : (
+                <div className="table-container">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Fecha</th>
+                        <th>Desglose por Jaula</th>
+                        <th style={{ textAlign: 'center' }}>Huevos Sanos</th>
+                        <th style={{ textAlign: 'center' }}>Huevos Rotos</th>
+                        <th style={{ textAlign: 'center' }}>Clima Promedio</th>
+                        <th style={{ textAlign: 'center' }}>Tasa de Postura</th>
+                        <th>Observaciones</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {[...history].reverse().map(row => {
+                        const breakdown = cageBreakdownByDate[row.date] || [];
+                        const breakdownStr = breakdown.map(cc => `${cc.cageName} (${cc.quantityCollected} u)`).join(' | ');
+
+                        return (
+                          <tr key={row.id}>
+                            <td style={{ fontWeight: '600', whiteSpace: 'nowrap' }}>{formatFullDate(row.date)}</td>
+                            <td style={{ fontSize: '0.85rem', color: 'var(--accent-gold)', maxWidth: '280px', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                              {breakdownStr || <span style={{ color: 'var(--text-secondary)' }}>Sin desglose</span>}
+                            </td>
+                            <td style={{ textAlign: 'center', color: 'var(--accent-green)', fontWeight: '600' }}>{row.quantityCollected} u</td>
+                            <td style={{ textAlign: 'center', color: 'var(--accent-red)' }}>{row.quantityBroken} u</td>
+                            <td style={{ textAlign: 'center', fontSize: '0.85rem', whiteSpace: 'nowrap' }}>
+                              {row.tempAvg !== null ? `🌡️ ${row.tempAvg.toFixed(1)}°C` : ''}
+                              {row.humidity !== null ? ` | 💧 ${Math.round(row.humidity)}%` : ''}
+                              {row.tempAvg === null && row.humidity === null ? 'N/D' : ''}
+                            </td>
+                            <td style={{ textAlign: 'center', fontWeight: '600' }}>
+                              {row.postureRate > 0 ? `${row.postureRate}%` : '0%'}
+                            </td>
+                            <td style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                              {row.notes || '-'}
+                            </td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>
@@ -2308,12 +2959,50 @@ export default function Inventory({ token }) {
               </div>
 
               <div className="form-group">
+                <label>Jaula 🪵 *</label>
+                <select
+                  className="form-control"
+                  required
+                  value={eggForm.cageId}
+                  onChange={e => setEggForm({ ...eggForm, cageId: e.target.value })}
+                >
+                  <option value="">-- Seleccionar Jaula --</option>
+                  {cages.filter(c => c.status !== 'inactive').map(cage => (
+                    <option key={cage.id} value={cage.id}>
+                      {cage.name} (Capac: {cage.capacity})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {hasExistingCollection && (
+                <div style={{
+                  background: 'rgba(245, 158, 11, 0.1)',
+                  border: '1px solid #f59e0b',
+                  color: '#fbbf24',
+                  padding: '0.75rem',
+                  borderRadius: 'var(--border-radius-sm)',
+                  fontSize: '0.85rem',
+                  marginTop: '1rem',
+                  marginBottom: '1rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  animation: 'fadeIn 0.3s ease-in-out'
+                }}>
+                  <span>⚠️</span>
+                  <span><strong>Aviso de acumulación:</strong> Ya existe un registro para esta jaula en esta fecha. La nueva cantidad se sumará a la anterior de forma automática.</span>
+                </div>
+              )}
+
+              <div className="form-group">
                 <label>Huevos Sanos Recolectados</label>
                 <input 
                   type="number" 
                   className="form-control" 
                   placeholder="80" 
                   required
+                  min="0"
                   value={eggForm.quantityCollected}
                   onChange={e => setEggForm({ ...eggForm, quantityCollected: e.target.value })}
                 />
@@ -2325,6 +3014,7 @@ export default function Inventory({ token }) {
                   type="number" 
                   className="form-control" 
                   placeholder="3" 
+                  min="0"
                   value={eggForm.quantityBroken}
                   onChange={e => setEggForm({ ...eggForm, quantityBroken: e.target.value })}
                 />
@@ -2343,7 +3033,7 @@ export default function Inventory({ token }) {
 
               <div style={{ display: 'flex', flexDirection: 'row-reverse', gap: '0.75rem', marginTop: '1.5rem' }}>
                 <button type="submit" className="btn btn-primary" style={{ flex: '1' }} title="Confirmar y guardar los datos ingresados">Guardar</button>
-                <button type="button" className="btn btn-secondary" style={{ flex: '1' }} onClick={() => { setShowEggModal(false); setEggDateMode('hoy'); setEggForm(prev => ({ ...prev, date: todayStr })); }} title="Cancelar la acción actual sin guardar los cambios">Cancelar</button>
+                <button type="button" className="btn btn-secondary" style={{ flex: '1' }} onClick={() => { setShowEggModal(false); setEggDateMode('hoy'); setEggForm({ date: todayStr, quantityCollected: '', quantityBroken: '', notes: '', cageId: '' }); }} title="Cancelar la acción actual sin guardar los cambios">Cancelar</button>
               </div>
             </form>
           </div>
