@@ -136,7 +136,7 @@ export default function Inventory({ token }) {
   const [settings, setSettings] = useState({ egg_base_cost: '15.0' });
   const [cages, setCages] = useState([]);
   const [showInactiveProducts, setShowInactiveProducts] = useState(false);
-  const [cageViewMode, setCageViewMode] = useState('grid'); // 'grid' | 'list' | 'table'
+  const [cageViewMode, setCageViewMode] = useState('list'); // 'grid' | 'list' | 'table'
   
   // Modals / Forms States
   const [showBatchModal, setShowBatchModal] = useState(false);
