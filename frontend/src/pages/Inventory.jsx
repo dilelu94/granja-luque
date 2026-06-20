@@ -911,14 +911,14 @@ export default function Inventory({ token }) {
               <table>
                 <thead>
                   <tr>
-                    <th>Jaula</th>
-                    <th>Cantidad Actual</th>
-                    <th>Tipo / Edad</th>
-                    <th>Cantidad Inicial</th>
-                    <th>Fecha de Ingreso</th>
+                    <th style={{ textAlign: 'center' }}>Jaula</th>
+                    <th style={{ textAlign: 'center' }}>Cantidad Actual</th>
+                    <th style={{ textAlign: 'center' }}>Tipo / Edad</th>
+                    <th style={{ textAlign: 'center' }}>Cantidad Inicial</th>
+                    <th style={{ textAlign: 'center' }}>Fecha de Ingreso</th>
                     <th>Lote</th>
-                    <th>Estado</th>
-                    <th>Acciones</th>
+                    <th style={{ textAlign: 'center' }}>Estado</th>
+                    <th style={{ textAlign: 'center' }}>Acciones</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -932,9 +932,9 @@ export default function Inventory({ token }) {
 
                     return (
                       <tr key={batch.id} style={{ opacity: batch.status !== 'active' ? 0.6 : 1 }}>
-                        <td>
+                        <td style={{ textAlign: 'center', verticalAlign: 'middle' }}>
                           {batch.cageName ? (
-                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.25rem' }}>
+                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.25rem', justifyContent: 'center' }}>
                               <span style={{ fontWeight: '600', color: 'var(--accent-gold)' }}>
                                 {batch.cageName}
                               </span>
@@ -964,12 +964,12 @@ export default function Inventory({ token }) {
                               )}
                             </div>
                           ) : (
-                            <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>-</span>
+                            <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem', display: 'block', textAlign: 'center' }}>-</span>
                           )}
                         </td>
-                        <td style={{ fontWeight: 'bold' }}>{batch.currentQuantity}</td>
-                        <td>
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                        <td style={{ fontWeight: 'bold', textAlign: 'center', verticalAlign: 'middle' }}>{batch.currentQuantity}</td>
+                        <td style={{ textAlign: 'center', verticalAlign: 'middle' }}>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', alignItems: 'center', justifyContent: 'center' }}>
                             <div>
                               <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
                                 ({weeks} sem, {days} d)
@@ -986,7 +986,7 @@ export default function Inventory({ token }) {
                               </span>
                             </div>
                             {batch.type !== 'chick' && (batch.femalesQuantity > 0 || batch.malesQuantity > 0) && (
-                              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.8rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
+                              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.8rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap', justifyContent: 'center' }}>
                                 {batch.femalesQuantity > 0 ? (
                                   <>
                                     <img src="/FemaleQuail.png" alt="♀️" style={{ width: '16px', height: '16px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
@@ -1007,19 +1007,19 @@ export default function Inventory({ token }) {
                             )}
                           </div>
                         </td>
-                        <td>{batch.initialQuantity}</td>
-                        <td>{formatDate(batch.birthDate)}</td>
-                        <td style={{ fontWeight: '600', minWidth: '180px' }}>
+                        <td style={{ textAlign: 'center', verticalAlign: 'middle' }}>{batch.initialQuantity}</td>
+                        <td style={{ textAlign: 'center', verticalAlign: 'middle' }}>{formatDate(batch.birthDate)}</td>
+                        <td style={{ fontWeight: '600', minWidth: '180px', verticalAlign: 'middle' }}>
                           {batch.name}
                           <CollapsibleNotes notes={batch.notes} />
                         </td>
-                        <td>
-                          <span className={`badge ${batch.status === 'active' ? 'badge-paid' : 'badge-cancelled'}`}>
+                        <td style={{ textAlign: 'center', verticalAlign: 'middle' }}>
+                          <span className={`badge ${batch.status === 'active' ? 'badge-paid' : 'badge-cancelled'}`} style={{ display: 'inline-flex', justifyContent: 'center' }}>
                             {batch.status === 'active' ? 'Activo' : batch.status === 'sold' ? 'Vendido' : 'Retirado'}
                           </span>
                         </td>
-                        <td>
-                          <div style={{ display: 'flex', gap: '0.35rem' }}>
+                        <td style={{ textAlign: 'center', verticalAlign: 'middle' }}>
+                          <div style={{ display: 'flex', gap: '0.35rem', justifyContent: 'center', alignItems: 'center' }}>
                             {batch.status === 'active' && (
                               <button 
                                 className="btn btn-danger" 
