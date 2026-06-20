@@ -799,12 +799,6 @@ export default function Inventory({ token }) {
         <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
           <button className="btn btn-primary" onClick={() => setShowEggModal(true)} title="Hacer clic para recolectar huevos"><img src="/QuailEggEmoji.png" alt="🥚" style={{ width: '1.2em', height: '1.2em', verticalAlign: 'middle', marginRight: '0.4rem' }} /> Recolectar Huevos</button>
           <button className="btn btn-secondary" onClick={() => setShowPackModal(true)} title="Descontar huevos sueltos y envases para armar el producto de venta">📦 Empaquetar</button>
-          <button className="btn btn-secondary" onClick={() => {
-            const suggested = getNextSuggestedCageName(cages);
-            const defaultCap = suggested.startsWith('A') ? 25 : 50;
-            setCageForm({ name: suggested, capacity: String(defaultCap), notes: '' });
-            setShowCageModal(true);
-          }} title="Hacer clic para 🪵 nueva jaula">🪵 Nueva Jaula</button>
           <button className="btn btn-secondary" onClick={() => setShowFeedModal(true)} title="Hacer clic para cargar alimento">🌾 Cargar Alimento</button>
           <button className="btn btn-gold" onClick={() => setShowBatchModal(true)} title="Hacer clic para nuevo lote aves" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}>
             <img src="/HatchlingQuail.png" alt="🐣" style={{ width: '1.2em', height: '1.2em', borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
