@@ -2286,7 +2286,7 @@ export default function Inventory({ token }) {
                 <input 
                   type="text" 
                   className="form-control" 
-                  placeholder="Humedad alta, postura normal..."
+                  placeholder="Postura normal, incidencias, notas de la recolección..."
                   value={eggForm.notes}
                   onChange={e => setEggForm({ ...eggForm, notes: e.target.value })}
                 />
