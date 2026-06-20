@@ -166,7 +166,7 @@ export default function Inventory({ token }) {
   const [feedPurchases, setFeedPurchases] = useState([]);
 
   const [cageForm, setCageForm] = useState({ name: '', capacity: '50', notes: '' });
-  const [editCageForm, setEditCageForm] = useState({ id: '', name: '', capacity: '', notes: '' });
+  const [editCageForm, setEditCageForm] = useState({ id: '', name: '', capacity: '', notes: '', status: 'active' });
   
   // Producto Form (Crear / Editar)
   const [productForm, setProductForm] = useState({
@@ -476,7 +476,8 @@ export default function Inventory({ token }) {
       id: cage.id,
       name: cage.name,
       capacity: cage.capacity,
-      notes: cage.notes || ''
+      notes: cage.notes || '',
+      status: cage.status || 'active'
     });
     setShowEditCageModal(true);
   };
@@ -496,7 +497,8 @@ export default function Inventory({ token }) {
         body: JSON.stringify({
           name: nameTrim.toUpperCase(),
           capacity: Number(editCageForm.capacity),
-          notes: editCageForm.notes
+          notes: editCageForm.notes,
+          status: editCageForm.status || 'active'
         })
       });
       const data = await res.json();
@@ -968,7 +970,12 @@ export default function Inventory({ token }) {
                         <td style={{ fontWeight: 'bold' }}>{batch.currentQuantity}</td>
                         <td>
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'nowrap' }}>
+                            <div>
+                              <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
+                                ({weeks} sem, {days} d)
+                              </span>
+                            </div>
+                            <div>
                               <span className={`badge ${batch.type === 'chick' ? 'badge-approved' : 'badge-pending'}`} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', whiteSpace: 'nowrap' }}>
                                 {batch.type === 'chick' ? (
                                   <>
@@ -976,9 +983,6 @@ export default function Inventory({ token }) {
                                     Polluelo
                                   </>
                                 ) : 'Codorniz Adulta'}
-                              </span>
-                              <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
-                                ({weeks} sem, {days} d)
                               </span>
                             </div>
                             {batch.type !== 'chick' && (batch.femalesQuantity > 0 || batch.malesQuantity > 0) && (
@@ -1057,10 +1061,11 @@ export default function Inventory({ token }) {
           return { ...c, type, height, col };
         });
 
+        const activeParsedCages = parsedCages.filter(c => c.status !== 'inactive');
         const activeTypesOrder = ['A', 'C', 'B'];
         const activeTypes = cages.length === 0
           ? activeTypesOrder
-          : [...new Set(parsedCages.map(c => c.type))].sort((a, b) => activeTypesOrder.indexOf(a) - activeTypesOrder.indexOf(b));
+          : [...new Set(activeParsedCages.map(c => c.type))].sort((a, b) => activeTypesOrder.indexOf(a) - activeTypesOrder.indexOf(b));
         const typeDetails = {
           A: { title: 'Módulos Estándar (Tipo A)', desc: 'Módulos normales de producción (Capacidad: 25 aves por jaula)' },
           B: { title: 'Módulos Temporales / Experimentales (Tipo B)', desc: 'Jaulas experimentales o de uso temporal' },
@@ -1112,7 +1117,7 @@ export default function Inventory({ token }) {
               {/* 1. VISTA DE CUADRÍCULA (GRID VIEW) */}
               {cageViewMode === 'grid' && activeTypes.map(type => {
                 const typeInfo = typeDetails[type] || { title: `Módulos de Tipo ${type}`, desc: `Jaulas de tipo ${type}` };
-                const typeCages = parsedCages.filter(c => c.type === type);
+                const typeCages = activeParsedCages.filter(c => c.type === type);
                 
                 // Si está vacío, pre-poblar columnas por defecto para servir de guía (100 a 104)
                 let cols = [...new Set(typeCages.map(c => c.col))].sort();
@@ -1134,6 +1139,9 @@ export default function Inventory({ token }) {
                 const activeHeights = [...new Set(typeCages.map(c => c.height))];
                 const extraHeights = activeHeights.filter(h => !standardHeights.includes(h)).sort().reverse();
                 const heightsToRender = [...extraHeights, ...standardHeights];
+
+                const firstActiveIdx = heightsToRender.findIndex(h => typeCages.some(c => c.height === h));
+                const referenceIdx = firstActiveIdx === -1 ? heightsToRender.length - 1 : firstActiveIdx;
 
                 return (
                   <div key={type} style={{ marginBottom: '2.5rem', background: 'rgba(255,255,255,0.01)', padding: '1.25rem', borderRadius: 'var(--border-radius-md)', border: '1px solid rgba(255,255,255,0.03)' }}>
@@ -1157,153 +1165,189 @@ export default function Inventory({ token }) {
                           </tr>
                         </thead>
                         <tbody>
-                          {heightsToRender.map(height => (
-                            <tr key={height}>
-                              <td style={{ 
-                                fontWeight: 'bold', 
-                                verticalAlign: 'middle', 
-                                color: 'var(--text-secondary)', 
-                                fontSize: '0.85rem',
-                                textAlign: 'right',
-                                paddingRight: '0.75rem',
-                                borderRight: '2px solid rgba(255,255,255,0.05)',
-                                background: 'transparent',
-                                borderBottom: 'none'
-                              }}>
-                                {type === 'A' ? `Nivel ${height}` : 'Único'}
-                              </td>
-                              {cols.map(col => {
-                                const cage = typeCages.find(c => c.height === height && c.col === col);
-                                if (cage) {
-                                  const occupancyPercent = cage.capacity > 0 ? Math.round((cage.current_occupancy / cage.capacity) * 100) : 0;
-                                  const cageBatches = batches.filter(b => b.cageId === cage.id && b.status === 'active');
-                                  return (
-                                    <td key={cage.id} style={{ verticalAlign: 'top', padding: 0, border: 'none' }}>
-                                      <div className="glass-card" style={{
-                                        padding: '0.85rem',
-                                        border: occupancyPercent > 100 ? '1px solid rgba(239, 68, 68, 0.4)' : occupancyPercent === 0 ? '1px dashed rgba(255, 255, 255, 0.15)' : '1px solid rgba(16, 185, 129, 0.3)',
-                                        background: occupancyPercent > 100 ? 'rgba(239, 68, 68, 0.04)' : occupancyPercent === 0 ? 'rgba(255, 255, 255, 0.01)' : 'rgba(16, 185, 129, 0.02)',
-                                        borderRadius: 'var(--border-radius-sm)',
-                                        display: 'flex',
-                                        flexDirection: 'column',
-                                        justifyContent: 'space-between',
-                                        minHeight: '180px',
-                                        boxShadow: 'none'
-                                      }}>
-                                        <div>
-                                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-                                            <strong style={{ fontSize: '1.1rem', color: 'var(--text-primary)' }}>{cage.name}</strong>
-                                            <span style={{ 
-                                              fontSize: '0.7rem', 
-                                              padding: '0.1rem 0.3rem', 
-                                              borderRadius: '4px', 
-                                              background: occupancyPercent > 100 ? 'rgba(239, 68, 68, 0.2)' : occupancyPercent === 0 ? 'rgba(255, 255, 255, 0.05)' : 'rgba(16, 185, 129, 0.2)',
-                                              color: occupancyPercent > 100 ? 'var(--accent-red)' : occupancyPercent === 0 ? 'var(--text-secondary)' : 'var(--accent-green)',
-                                              fontWeight: 'bold'
-                                            }}>
-                                              {occupancyPercent > 100 ? 'Lleno+' : occupancyPercent === 0 ? 'Vacío' : 'OK'}
-                                            </span>
-                                          </div>
-
-                                          <div style={{ fontSize: '0.8rem', marginBottom: '0.5rem' }}>
-                                            <strong style={{ color: occupancyPercent > 100 ? 'var(--accent-red)' : occupancyPercent === 0 ? 'var(--text-secondary)' : 'var(--accent-green)' }}>
-                                              {cage.current_occupancy}
-                                            </strong>
-                                            <span style={{ color: 'var(--text-muted)' }}> / {cage.capacity} aves ({occupancyPercent}%)</span>
-                                            <div style={{ width: '100%', height: '5px', background: 'rgba(255,255,255,0.05)', borderRadius: '2px', marginTop: '0.25rem', overflow: 'hidden' }}>
-                                              <div style={{
-                                                width: `${Math.min(100, occupancyPercent)}%`,
-                                                height: '100%',
-                                                background: occupancyPercent > 100 ? 'var(--accent-red)' : occupancyPercent === 0 ? 'rgba(255,255,255,0.1)' : 'var(--accent-green)'
-                                              }} />
+                          {heightsToRender.map((height, idx) => {
+                            const isLevelEmpty = !typeCages.some(c => c.height === height);
+                            const isCompressed = idx < referenceIdx && isLevelEmpty;
+                            return (
+                              <tr key={height}>
+                                <td style={{ 
+                                  fontWeight: isCompressed ? 'normal' : 'bold', 
+                                  verticalAlign: 'middle', 
+                                  color: isCompressed ? 'rgba(255, 255, 255, 0.25)' : 'var(--text-secondary)', 
+                                  fontSize: isCompressed ? '0.75rem' : '0.85rem',
+                                  textAlign: 'right',
+                                  paddingRight: '0.75rem',
+                                  borderRight: '2px solid rgba(255,255,255,0.05)',
+                                  background: 'transparent',
+                                  borderBottom: 'none'
+                                }}>
+                                  {isCompressed ? (
+                                    <span style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.3)', fontWeight: 'normal' }}>Nivel {height}</span>
+                                  ) : (
+                                    type === 'A' ? `Nivel ${height}` : 'Único'
+                                  )}
+                                </td>
+                                {cols.map(col => {
+                                  const cage = typeCages.find(c => c.height === height && c.col === col);
+                                  if (cage) {
+                                    const occupancyPercent = cage.capacity > 0 ? Math.round((cage.current_occupancy / cage.capacity) * 100) : 0;
+                                    const cageBatches = batches.filter(b => b.cageId === cage.id && b.status === 'active');
+                                    return (
+                                      <td key={cage.id} style={{ verticalAlign: 'top', padding: 0, border: 'none' }}>
+                                        <div className="glass-card" style={{
+                                          padding: '0.85rem',
+                                          border: occupancyPercent > 100 ? '1px solid rgba(239, 68, 68, 0.4)' : occupancyPercent === 0 ? '1px dashed rgba(255, 255, 255, 0.15)' : '1px solid rgba(16, 185, 129, 0.3)',
+                                          background: occupancyPercent > 100 ? 'rgba(239, 68, 68, 0.04)' : occupancyPercent === 0 ? 'rgba(255, 255, 255, 0.01)' : 'rgba(16, 185, 129, 0.02)',
+                                          borderRadius: 'var(--border-radius-sm)',
+                                          display: 'flex',
+                                          flexDirection: 'column',
+                                          justifyContent: 'space-between',
+                                          minHeight: '180px',
+                                          boxShadow: 'none'
+                                        }}>
+                                          <div>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                                              <strong style={{ fontSize: '1.1rem', color: 'var(--text-primary)' }}>{cage.name}</strong>
+                                              <span style={{ 
+                                                fontSize: '0.7rem', 
+                                                padding: '0.1rem 0.3rem', 
+                                                borderRadius: '4px', 
+                                                background: occupancyPercent > 100 ? 'rgba(239, 68, 68, 0.2)' : occupancyPercent === 0 ? 'rgba(255, 255, 255, 0.05)' : 'rgba(16, 185, 129, 0.2)',
+                                                color: occupancyPercent > 100 ? 'var(--accent-red)' : occupancyPercent === 0 ? 'var(--text-secondary)' : 'var(--accent-green)',
+                                                fontWeight: 'bold'
+                                              }}>
+                                                {occupancyPercent > 100 ? 'Lleno+' : occupancyPercent === 0 ? 'Vacío' : 'OK'}
+                                              </span>
                                             </div>
-                                          </div>
 
-                                          <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>
-                                            {cageBatches.length === 0 ? (
-                                              <span style={{ fontStyle: 'italic', color: 'var(--text-muted)' }}>Vacía</span>
-                                            ) : (
-                                              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem' }}>
-                                                {cageBatches.map(b => (
-                                                  <div key={b.id} style={{ display: 'flex', justifyContent: 'space-between', background: 'rgba(0,0,0,0.2)', padding: '0.15rem 0.3rem', borderRadius: '4px' }}>
-                                                    <span style={{ fontWeight: '500', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap', maxWidth: '110px' }} title={b.name}>{b.name}</span>
-                                                    <span>{b.currentQuantity} u</span>
-                                                  </div>
-                                                ))}
+                                            <div style={{ fontSize: '0.8rem', marginBottom: '0.5rem' }}>
+                                              <strong style={{ color: occupancyPercent > 100 ? 'var(--accent-red)' : occupancyPercent === 0 ? 'var(--text-secondary)' : 'var(--accent-green)' }}>
+                                                {cage.current_occupancy}
+                                              </strong>
+                                              <span style={{ color: 'var(--text-muted)' }}> / {cage.capacity} aves ({occupancyPercent}%)</span>
+                                              <div style={{ width: '100%', height: '5px', background: 'rgba(255,255,255,0.05)', borderRadius: '2px', marginTop: '0.25rem', overflow: 'hidden' }}>
+                                                <div style={{
+                                                  width: `${Math.min(100, occupancyPercent)}%`,
+                                                  height: '100%',
+                                                  background: occupancyPercent > 100 ? 'var(--accent-red)' : occupancyPercent === 0 ? 'rgba(255,255,255,0.1)' : 'var(--accent-green)'
+                                                }} />
+                                              </div>
+                                            </div>
+
+                                            <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>
+                                              {cageBatches.length === 0 ? (
+                                                <span style={{ fontStyle: 'italic', color: 'var(--text-muted)' }}>Vacía</span>
+                                              ) : (
+                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem' }}>
+                                                  {cageBatches.map(b => (
+                                                    <div key={b.id} style={{ display: 'flex', justifyContent: 'space-between', background: 'rgba(0,0,0,0.2)', padding: '0.15rem 0.3rem', borderRadius: '4px' }}>
+                                                      <span style={{ fontWeight: '500', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap', maxWidth: '110px' }} title={b.name}>{b.name}</span>
+                                                      <span>{b.currentQuantity} u</span>
+                                                    </div>
+                                                  ))}
+                                                </div>
+                                              )}
+                                            </div>
+                                            {cage.notes && (
+                                              <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginTop: '0.25rem' }} title={cage.notes}>
+                                                📝 {cage.notes}
                                               </div>
                                             )}
                                           </div>
-                                          {cage.notes && (
-                                            <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginTop: '0.25rem' }} title={cage.notes}>
-                                              📝 {cage.notes}
-                                            </div>
-                                          )}
-                                        </div>
 
-                                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.25rem', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '0.4rem', marginTop: '0.5rem' }}>
-                                          <button 
-                                            className="btn btn-primary" 
-                                            style={{ padding: '0.15rem 0.35rem', fontSize: '0.7rem' }}
-                                            onClick={() => {
-                                              setSelectedQRCage(cage);
-                                              setShowQRModal(true);
-                                            }}
-                                            title="Imprimir Código QR de la jaula"
-                                          >
-                                            🖨️ QR
-                                          </button>
+                                          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.25rem', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '0.4rem', marginTop: '0.5rem' }}>
+                                            <button 
+                                              className="btn btn-primary" 
+                                              style={{ padding: '0.15rem 0.35rem', fontSize: '0.7rem' }}
+                                              onClick={() => {
+                                                setSelectedQRCage(cage);
+                                                setShowQRModal(true);
+                                              }}
+                                              title="Imprimir Código QR de la jaula"
+                                            >
+                                              🖨️ QR
+                                            </button>
+                                            <button 
+                                              className="btn btn-secondary" 
+                                              style={{ padding: '0.15rem 0.35rem', fontSize: '0.7rem' }}
+                                              onClick={() => handleEditCageClick(cage)}
+                                              title="Editar Jaula"
+                                            >
+                                              ✏️
+                                            </button>
+                                            <button 
+                                              className="btn btn-secondary" 
+                                              style={{ padding: '0.15rem 0.35rem', fontSize: '0.7rem', borderColor: 'rgba(239,68,68,0.3)', color: 'var(--accent-red)', background: 'transparent' }}
+                                              onClick={() => handleDeleteCage(cage.id)}
+                                              title="Eliminar Jaula"
+                                            >
+                                              🗑️
+                                            </button>
+                                          </div>
+                                        </div>
+                                      </td>
+                                    );
+                                  } else {
+                                    if (isCompressed) {
+                                      return (
+                                        <td key={`${height}-${col}`} style={{ verticalAlign: 'top', padding: 0, border: 'none' }}>
+                                          <div style={{
+                                            border: '1px dashed rgba(255, 255, 255, 0.05)',
+                                            borderRadius: 'var(--border-radius-sm)',
+                                            height: '50px',
+                                            display: 'flex',
+                                            flexDirection: 'row',
+                                            justifyContent: 'space-between',
+                                            alignItems: 'center',
+                                            background: 'rgba(255, 255, 255, 0.002)',
+                                            color: 'var(--text-muted)',
+                                            padding: '0 0.75rem'
+                                          }}>
+                                            <span style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.15)' }}>{type}{height}{col}</span>
+                                            <button 
+                                              className="btn btn-secondary" 
+                                              style={{ padding: '0.1rem 0.35rem', fontSize: '0.7rem', opacity: 0.4, border: '1px solid rgba(255,255,255,0.1)' }}
+                                              onClick={() => handleQuickCreateCageClick(type, height, col)}
+                                              title={`Instalar jaula ${type}${height}${col}`}
+                                            >
+                                              ➕
+                                            </button>
+                                          </div>
+                                        </td>
+                                      );
+                                    }
+                                    return (
+                                      <td key={`${height}-${col}`} style={{ verticalAlign: 'top', padding: 0, border: 'none' }}>
+                                        <div style={{
+                                          border: '1px dashed rgba(255, 255, 255, 0.08)',
+                                          borderRadius: 'var(--border-radius-sm)',
+                                          height: '100%',
+                                          minHeight: '180px',
+                                          display: 'flex',
+                                          flexDirection: 'column',
+                                          justifyContent: 'center',
+                                          alignItems: 'center',
+                                          background: 'rgba(255, 255, 255, 0.005)',
+                                          color: 'var(--text-muted)',
+                                          padding: '0.85rem'
+                                        }}>
+                                          <span style={{ fontSize: '0.75rem', marginBottom: '0.5rem', color: 'rgba(255,255,255,0.2)' }}>Vacío ({type}{height}{col})</span>
                                           <button 
                                             className="btn btn-secondary" 
-                                            style={{ padding: '0.15rem 0.35rem', fontSize: '0.7rem' }}
-                                            onClick={() => handleEditCageClick(cage)}
-                                            title="Editar Jaula"
+                                            style={{ padding: '0.2rem 0.5rem', fontSize: '0.75rem', opacity: 0.5, border: '1px solid rgba(255,255,255,0.1)' }}
+                                            onClick={() => handleQuickCreateCageClick(type, height, col)}
+                                            title={`Instalar jaula ${type}${height}${col}`}
                                           >
-                                            ✏️
-                                          </button>
-                                          <button 
-                                            className="btn btn-secondary" 
-                                            style={{ padding: '0.15rem 0.35rem', fontSize: '0.7rem', borderColor: 'rgba(239,68,68,0.3)', color: 'var(--accent-red)', background: 'transparent' }}
-                                            onClick={() => handleDeleteCage(cage.id)}
-                                            title="Eliminar Jaula"
-                                          >
-                                            🗑️
+                                            ➕ Instalar
                                           </button>
                                         </div>
-                                      </div>
-                                    </td>
-                                  );
-                                } else {
-                                  return (
-                                    <td key={`${height}-${col}`} style={{ verticalAlign: 'top', padding: 0, border: 'none' }}>
-                                      <div style={{
-                                        border: '1px dashed rgba(255, 255, 255, 0.08)',
-                                        borderRadius: 'var(--border-radius-sm)',
-                                        height: '100%',
-                                        minHeight: '180px',
-                                        display: 'flex',
-                                        flexDirection: 'column',
-                                        justifyContent: 'center',
-                                        alignItems: 'center',
-                                        background: 'rgba(255, 255, 255, 0.005)',
-                                        color: 'var(--text-muted)',
-                                        padding: '0.85rem'
-                                      }}>
-                                        <span style={{ fontSize: '0.75rem', marginBottom: '0.5rem', color: 'rgba(255,255,255,0.2)' }}>Vacío ({type}{height}{col})</span>
-                                        <button 
-                                          className="btn btn-secondary" 
-                                          style={{ padding: '0.2rem 0.5rem', fontSize: '0.75rem', opacity: 0.5, border: '1px solid rgba(255,255,255,0.1)' }}
-                                          onClick={() => handleQuickCreateCageClick(type, height, col)}
-                                          title={`Instalar jaula ${type}${height}${col}`}
-                                        >
-                                          ➕ Instalar
-                                        </button>
-                                      </div>
-                                    </td>
-                                  );
-                                }
-                              })}
-                            </tr>
-                          ))}
+                                      </td>
+                                    );
+                                  }
+                                })}
+                              </tr>
+                            );
+                          })}
                         </tbody>
                       </table>
                     </div>
@@ -1314,7 +1358,7 @@ export default function Inventory({ token }) {
               {/* 2. VISTA DE PILAS POR COLUMNA (COLUMN VIEW) */}
               {cageViewMode === 'list' && activeTypes.map(type => {
                 const typeInfo = typeDetails[type] || { title: `Módulos de Tipo ${type}`, desc: `Jaulas de tipo ${type}` };
-                const typeCages = parsedCages.filter(c => c.type === type);
+                const typeCages = activeParsedCages.filter(c => c.type === type);
                 const cols = [...new Set(typeCages.map(c => c.col))].sort();
                 const standardHeights = type === 'A' ? ['E', 'D', 'C', 'B', 'A'] : ['A'];
                 const activeHeights = [...new Set(typeCages.map(c => c.height))];
@@ -1448,7 +1492,14 @@ export default function Inventory({ token }) {
                           
                           return (
                             <tr key={cage.id}>
-                              <td style={{ fontWeight: 'bold' }}>{cage.name}</td>
+                              <td style={{ fontWeight: 'bold' }}>
+                                {cage.name}
+                                {cage.status === 'inactive' && (
+                                  <span className="badge" style={{ marginLeft: '0.5rem', fontSize: '0.7rem', padding: '0.1rem 0.35rem', background: 'rgba(239, 68, 68, 0.15)', color: 'rgba(239, 68, 68, 0.95)', border: '1px solid rgba(239, 68, 68, 0.3)', borderRadius: '4px' }}>
+                                    Inactiva
+                                  </span>
+                                )}
+                              </td>
                               <td>{cage.capacity} aves</td>
                               <td>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -2782,6 +2833,19 @@ export default function Inventory({ token }) {
                   onChange={e => setEditCageForm({ ...editCageForm, notes: e.target.value })}
                 />
               </div>
+
+              {(editCageForm.name.toUpperCase().startsWith('B') || editCageForm.name.toUpperCase().startsWith('C')) && (
+                <div className="form-group" style={{ marginBottom: '1rem' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontWeight: 'normal' }}>
+                    <input 
+                      type="checkbox" 
+                      checked={editCageForm.status === 'inactive'}
+                      onChange={e => setEditCageForm({ ...editCageForm, status: e.target.checked ? 'inactive' : 'active' })}
+                    />
+                    <span>Desactivar jaula (no mostrar en la vista general)</span>
+                  </label>
+                </div>
+              )}
 
               <div style={{ display: 'flex', flexDirection: 'row-reverse', gap: '0.75rem', marginTop: '1.5rem' }}>
                 <button type="submit" className="btn btn-primary" style={{ flex: '1' }} title="Confirmar y aplicar los cambios realizados">Guardar Cambios</button>

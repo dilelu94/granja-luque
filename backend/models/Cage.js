@@ -6,6 +6,7 @@ export class Cage {
     this.name = data.name;
     this.capacity = data.capacity !== undefined ? data.capacity : 50;
     this.notes = data.notes || '';
+    this.status = data.status || 'active';
   }
 
   /**
@@ -18,9 +19,9 @@ export class Cage {
       
       await db.run(
         `UPDATE cages 
-         SET name = ?, capacity = ?, notes = ?
+         SET name = ?, capacity = ?, notes = ?, status = ?
          WHERE id = ?`,
-        [this.name, this.capacity, this.notes, this.id]
+        [this.name, this.capacity, this.notes, this.status, this.id]
       );
 
       // Si cambió el nombre de la jaula, sincronizar eventos de calendario de sus lotes
@@ -36,9 +37,9 @@ export class Cage {
       }
     } else {
       const result = await db.run(
-        `INSERT INTO cages (name, capacity, notes)
-         VALUES (?, ?, ?)`,
-        [this.name, this.capacity, this.notes]
+        `INSERT INTO cages (name, capacity, notes, status)
+         VALUES (?, ?, ?, ?)`,
+        [this.name, this.capacity, this.notes, this.status]
       );
       this.id = result.lastID;
     }
@@ -84,7 +85,7 @@ export class Cage {
   static async getCagesOccupancy() {
     const db = await getDatabaseConnection();
     const rows = await db.all(`
-      SELECT c.id, c.name, c.capacity, c.notes,
+      SELECT c.id, c.name, c.capacity, c.notes, c.status,
              COALESCE(SUM(CASE WHEN q.status = 'active' THEN q.current_quantity ELSE 0 END), 0) as current_occupancy
       FROM cages c
       LEFT JOIN quail_batches q ON q.cage_id = c.id

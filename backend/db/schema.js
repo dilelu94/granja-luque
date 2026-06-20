@@ -47,7 +47,8 @@ export async function initializeDatabase() {
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       name TEXT UNIQUE NOT NULL,
       capacity INTEGER NOT NULL DEFAULT 50,
-      notes TEXT
+      notes TEXT,
+      status TEXT CHECK(status IN ('active', 'inactive')) NOT NULL DEFAULT 'active'
     )
   `);
 
@@ -108,6 +109,9 @@ export async function initializeDatabase() {
 
   // --- MIGRACIONES PARA LA TABLA USERS (Roles) ---
   await addColumnIfNotExists(db, 'users', 'role', "TEXT CHECK(role IN ('super_admin', 'admin')) NOT NULL DEFAULT 'admin'");
+
+  // --- MIGRACIONES PARA LA TABLA CAGES (Desactivación) ---
+  await addColumnIfNotExists(db, 'cages', 'status', "TEXT CHECK(status IN ('active', 'inactive')) NOT NULL DEFAULT 'active'");
 
   // --- MIGRACIONES PARA LA TABLA QUAIL_BATCHES (Jaulas) ---
   await addColumnIfNotExists(db, 'quail_batches', 'cage_id', 'INTEGER REFERENCES cages(id)');

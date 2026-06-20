@@ -529,7 +529,7 @@ router.get('/cages/:id', authenticateToken, async (req, res) => {
  * ADMIN ONLY: Create a new cage.
  */
 router.post('/cages', authenticateToken, async (req, res) => {
-  const { name, capacity, notes } = req.body;
+  const { name, capacity, notes, status } = req.body;
 
   if (!name) {
     return res.status(400).json({ error: 'El identificador de la jaula es obligatorio.' });
@@ -551,7 +551,8 @@ router.post('/cages', authenticateToken, async (req, res) => {
     const cage = new Cage({
       name: upperName,
       capacity: capacity !== undefined ? Number(capacity) : 50,
-      notes
+      notes,
+      status: status || 'active'
     });
 
     await cage.save();
@@ -568,7 +569,7 @@ router.post('/cages', authenticateToken, async (req, res) => {
  */
 router.put('/cages/:id', authenticateToken, async (req, res) => {
   const { id } = req.params;
-  const { name, capacity, notes } = req.body;
+  const { name, capacity, notes, status } = req.body;
 
   if (!name) {
     return res.status(400).json({ error: 'El identificador de la jaula es obligatorio.' });
@@ -595,6 +596,7 @@ router.put('/cages/:id', authenticateToken, async (req, res) => {
     cage.name = upperName;
     cage.capacity = capacity !== undefined ? Number(capacity) : cage.capacity;
     cage.notes = notes !== undefined ? notes : cage.notes;
+    cage.status = status !== undefined ? status : cage.status;
 
     await cage.save();
     res.json({ message: 'Jaula actualizada con éxito.', cage });
