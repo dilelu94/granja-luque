@@ -1053,7 +1053,10 @@ export default function Inventory({ token }) {
           return { ...c, type, height, col };
         });
 
-        const activeTypes = cages.length === 0 ? ['A', 'B', 'C'] : [...new Set(parsedCages.map(c => c.type))].sort();
+        const activeTypesOrder = ['A', 'C', 'B'];
+        const activeTypes = cages.length === 0
+          ? activeTypesOrder
+          : [...new Set(parsedCages.map(c => c.type))].sort((a, b) => activeTypesOrder.indexOf(a) - activeTypesOrder.indexOf(b));
         const typeDetails = {
           A: { title: 'Módulos Estándar (Tipo A)', desc: 'Módulos normales de producción (Capacidad: 25 aves por jaula)' },
           B: { title: 'Módulos Temporales / Experimentales (Tipo B)', desc: 'Jaulas experimentales o de uso temporal' },
