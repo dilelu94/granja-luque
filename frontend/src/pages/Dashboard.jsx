@@ -103,15 +103,18 @@ export default function Dashboard({ token }) {
         localStorage.setItem('dashboardAlertPrefs', JSON.stringify(prefs));
 
         const todayEventsList = Array.isArray(dataEvents) ? dataEvents.filter(e => e.eventDate && e.eventDate.startsWith(todayStr)) : [];
+        const dismissedEventIds = prefs.dismissedEventIds || [];
+        const activeEventsList = todayEventsList.filter(e => !dismissedEventIds.includes(e.id));
+
         const initiatorLow = dataFeed.initiator.daysLeft !== null && dataFeed.initiator.daysLeft <= 14;
         const ponedoraLow = dataFeed.ponedora.daysLeft !== null && dataFeed.ponedora.daysLeft <= 14;
 
-        const showCalendar = todayEventsList.length > 0 && prefs.dismissedDate !== todayStr;
+        const showCalendar = activeEventsList.length > 0;
         const showInitiator = initiatorLow && prefs.dismissedInitiatorStock === undefined;
         const showPonedora = ponedoraLow && prefs.dismissedPonedoraStock === undefined;
 
         if (showCalendar || showInitiator || showPonedora) {
-          setModalContent({ events: todayEventsList, initiatorLow: showInitiator, ponedoraLow: showPonedora });
+          setModalContent({ events: activeEventsList, initiatorLow: showInitiator, ponedoraLow: showPonedora });
           setShowWelcomeModal(true);
         }
       } catch (err) {
@@ -159,7 +162,12 @@ export default function Dashboard({ token }) {
     if (dontShowAgain) {
       const prefs = JSON.parse(localStorage.getItem('dashboardAlertPrefs') || '{}');
       if (modalContent.events.length > 0) {
-        prefs.dismissedDate = new Date().toISOString().split('T')[0];
+        prefs.dismissedEventIds = prefs.dismissedEventIds || [];
+        modalContent.events.forEach(ev => {
+          if (!prefs.dismissedEventIds.includes(ev.id)) {
+            prefs.dismissedEventIds.push(ev.id);
+          }
+        });
       }
       if (modalContent.initiatorLow) {
         prefs.dismissedInitiatorStock = stats.feed.initiator.stock;
@@ -219,7 +227,9 @@ export default function Dashboard({ token }) {
             <div style={{ marginTop: '2rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
               <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
                 <input type="checkbox" checked={dontShowAgain} onChange={(e) => setDontShowAgain(e.target.checked)} />
-                No volver a mostrar estas alertas
+                {((modalContent.events?.length || 0) + (modalContent.initiatorLow ? 1 : 0) + (modalContent.ponedoraLow ? 1 : 0)) > 1 
+                  ? "No volver a mostrar estas alertas" 
+                  : "No volver a mostrar esta alerta"}
               </label>
               
               <button className="btn btn-primary" style={{ width: '100%', padding: '0.75rem', fontSize: '1rem' }} onClick={handleCloseWelcomeModal} title="Cerrar ventana de alerta y continuar al panel">
