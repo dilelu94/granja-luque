@@ -132,20 +132,13 @@ router.delete('/products/:id', authenticateToken, async (req, res) => {
       returnedMessage = ` Se desempacó el stock: ${returnedEggs} huevos devueltos al stock suelto y ${returnedContainers} envases recuperados.`;
     }
 
-    // Volver a consultar el producto para obtener el container_stock actualizado tras el desempaque
-    const updatedProduct = await db.get('SELECT container_stock FROM products WHERE id = ?', [id]);
-    const finalContainerStock = updatedProduct ? Number(updatedProduct.container_stock || 0) : 0;
-
     // Verificar si el producto tiene dependencias en order_items
     const hasOrders = await db.get('SELECT id FROM order_items WHERE product_id = ? LIMIT 1', [id]);
     
-    if (hasOrders || finalContainerStock > 0) {
-      // En lugar de borrarlo físicamente, lo desactivamos para no romper historial de ventas ni perder stock de envases
+    if (hasOrders) {
+      // En lugar de borrarlo físicamente, lo desactivamos para no romper historial de ventas
       await db.run("UPDATE products SET status = 'inactive' WHERE id = ?", [id]);
-      const reason = hasOrders 
-        ? 'El producto está asociado a pedidos antiguos' 
-        : 'El producto posee stock de envases vacíos que no se deben perder';
-      return res.json({ message: `${reason}. Se ha desactivado en su lugar.${returnedMessage}` });
+      return res.json({ message: `El producto está asociado a pedidos antiguos. Se ha desactivado en su lugar.${returnedMessage}` });
     }
 
     await db.run('DELETE FROM products WHERE id = ?', [id]);

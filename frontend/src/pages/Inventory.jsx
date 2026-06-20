@@ -982,18 +982,22 @@ export default function Inventory({ token }) {
                               </span>
                             </div>
                             {batch.type !== 'chick' && (batch.femalesQuantity > 0 || batch.malesQuantity > 0) && (
-                              <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'nowrap' }}>
-                                {batch.femalesQuantity > 0 && (
-                                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.2rem', fontSize: '0.8rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
+                              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.8rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
+                                {batch.femalesQuantity > 0 ? (
+                                  <>
                                     <img src="/FemaleQuail.png" alt="♀️" style={{ width: '16px', height: '16px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
-                                    {batch.femalesQuantity} H
-                                  </span>
-                                )}
-                                {batch.malesQuantity > 0 && (
-                                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.2rem', fontSize: '0.8rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
+                                    <span>{batch.femalesQuantity} H</span>
+                                    {batch.malesQuantity > 0 && (
+                                      <span style={{ color: 'var(--text-secondary)', marginLeft: '0.25rem' }}>
+                                        ({batch.malesQuantity} M)
+                                      </span>
+                                    )}
+                                  </>
+                                ) : (
+                                  <>
                                     <img src="/MaleQuail.png" alt="♂️" style={{ width: '16px', height: '16px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
-                                    {batch.malesQuantity} M
-                                  </span>
+                                    <span>{batch.malesQuantity} M</span>
+                                  </>
                                 )}
                               </div>
                             )}
