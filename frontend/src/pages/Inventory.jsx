@@ -165,6 +165,11 @@ export default function Inventory({ token }) {
   
   const [eggData, setEggData] = useState({ history: [], totals: { collected: 0, broken: 0 }, cageCollections: [] });
   const [eggForm, setEggForm] = useState({ date: todayStr, quantityCollected: '', quantityBroken: '', notes: '', cageId: '' });
+  const [eggTimeFilter, setEggTimeFilter] = useState('all'); // 'all' | 'week' | 'month' | 'year' | 'custom'
+  const [eggStartDate, setEggStartDate] = useState('');
+  const [eggEndDate, setEggEndDate] = useState('');
+  const [eggCageFilter, setEggCageFilter] = useState('all'); // 'all' | cageId
+
   const [packForm, setPackForm] = useState({ productId: '', packagesCount: '', eggsPerPackage: '' });
   const [feedForm, setFeedForm] = useState({ type: 'ponedora', action: 'buy', quantity: '', price: '', shippingCost: '', purchaseDate: new Date().toISOString().split('T')[0] });
   const [feedPurchases, setFeedPurchases] = useState([]);
@@ -230,7 +235,8 @@ export default function Inventory({ token }) {
       setSettings(dataSettings);
 
       // 5. Egg production data
-      const resEggs = await fetch('/api/inventory/eggs?limit=100', { headers });
+      const resEggs = await fetch('/api/inventory/eggs?limit=1000', { headers });
+
       const dataEggs = await resEggs.json();
       setEggData(dataEggs);
     } catch (err) {
@@ -1650,11 +1656,88 @@ export default function Inventory({ token }) {
           return `${parts[2]}/${parts[1]}/${parts[0]}`;
         };
 
-        const history = eggData.history || [];
-        const totals = eggData.totals || { collected: 0, broken: 0 };
+        const unfilteredHistory = eggData.history || [];
+        const cageCollections = eggData.cageCollections || [];
 
-        const totalCollected = totals.collected || 0;
-        const totalBroken = totals.broken || 0;
+        // 1. First, apply the cage filter if it's not 'all'
+        let baseHistory = unfilteredHistory;
+        if (eggCageFilter !== 'all') {
+          const selectedCageId = Number(eggCageFilter);
+          baseHistory = unfilteredHistory.map(dayRecord => {
+            const cageCol = cageCollections.find(
+              cc => cc.date === dayRecord.date && cc.cageId === selectedCageId
+            );
+            const collected = cageCol ? cageCol.quantityCollected : 0;
+            const broken = cageCol ? cageCol.quantityBroken : 0;
+            const notes = cageCol ? cageCol.notes : '';
+
+            // Calculate posture rate for this cage on this date
+            const adultCount = (() => {
+              const targetDate = new Date(dayRecord.date + 'T12:00:00');
+              return batches.reduce((sum, batch) => {
+                if (batch.cageId !== selectedCageId) return sum;
+                if (batch.status !== 'active') return sum;
+                const birth = new Date(batch.birthDate + 'T12:00:00');
+                const ageInDays = (targetDate.getTime() - birth.getTime()) / (1000 * 60 * 60 * 24);
+                if (ageInDays >= 35 && ageInDays >= 0) {
+                  return sum + (batch.femalesQuantity || 0);
+                }
+                return sum;
+              }, 0);
+            })();
+
+            const postureRate = adultCount > 0 
+              ? Math.round((collected / adultCount) * 1000) / 10 
+              : 0;
+
+            return {
+              ...dayRecord,
+              quantityCollected: collected,
+              quantityBroken: broken,
+              notes,
+              adultQuailsCount: adultCount,
+              postureRate
+            };
+          });
+        }
+
+        // 2. Next, apply the time filter
+        let history = baseHistory;
+        if (eggTimeFilter !== 'all') {
+          const now = new Date();
+          let limitDate = null;
+          
+          if (eggTimeFilter === 'week') {
+            limitDate = new Date();
+            limitDate.setDate(now.getDate() - 7);
+          } else if (eggTimeFilter === 'month') {
+            limitDate = new Date();
+            limitDate.setDate(now.getDate() - 30);
+          } else if (eggTimeFilter === 'year') {
+            limitDate = new Date();
+            limitDate.setDate(now.getDate() - 365);
+          }
+          
+          if (limitDate) {
+            const limitDateStr = limitDate.toISOString().split('T')[0];
+            history = baseHistory.filter(h => h.date >= limitDateStr);
+          } else if (eggTimeFilter === 'custom') {
+            history = baseHistory.filter(h => {
+              let match = true;
+              if (eggStartDate) {
+                match = match && h.date >= eggStartDate;
+              }
+              if (eggEndDate) {
+                match = match && h.date <= eggEndDate;
+              }
+              return match;
+            });
+          }
+        }
+
+        const totalCollected = history.reduce((sum, h) => sum + h.quantityCollected, 0);
+        const totalBroken = history.reduce((sum, h) => sum + h.quantityBroken, 0);
+
         
         const rates = history.filter(h => h.adultQuailsCount > 0);
         const avgPosture = rates.length 
@@ -1743,11 +1826,15 @@ export default function Inventory({ token }) {
 
         const cageBreakdownByDate = {};
         (eggData.cageCollections || []).forEach(cc => {
+          if (eggCageFilter !== 'all' && cc.cageId !== Number(eggCageFilter)) {
+            return;
+          }
           if (!cageBreakdownByDate[cc.date]) {
             cageBreakdownByDate[cc.date] = [];
           }
           cageBreakdownByDate[cc.date].push(cc);
         });
+
 
         const dailyPoints = history.map((h, i) => {
           const x = 60 + (i / Math.max(1, history.length - 1)) * 680;
@@ -1777,7 +1864,96 @@ export default function Inventory({ token }) {
 
         return (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem', marginBottom: '3rem' }}>
+            
+            {/* Filtros de Historial y Jaulas */}
+            <div className="glass-card" style={{
+              display: 'flex',
+              flexWrap: 'wrap',
+              gap: '1.5rem',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              padding: '1rem 1.5rem'
+            }}>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1.5rem', alignItems: 'center', width: '100%' }}>
+                {/* Filtro de Tiempo */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', minWidth: '160px' }}>
+                  <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: '600' }}>Rango de Tiempo</label>
+                  <select 
+                    value={eggTimeFilter} 
+                    onChange={(e) => setEggTimeFilter(e.target.value)}
+                    className="form-control"
+                    style={{ padding: '0.4rem 0.75rem', fontSize: '0.9rem' }}
+                  >
+                    <option value="all">Todo el Historial</option>
+                    <option value="week">Última Semana</option>
+                    <option value="month">Último Mes</option>
+                    <option value="year">Último Año</option>
+                    <option value="custom">Rango de Fechas</option>
+                  </select>
+                </div>
+
+                {/* Filtros de Fecha Personalizados */}
+                {eggTimeFilter === 'custom' && (
+                  <>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', minWidth: '130px' }}>
+                      <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: '600' }}>Desde</label>
+                      <input 
+                        type="date" 
+                        value={eggStartDate} 
+                        onChange={(e) => setEggStartDate(e.target.value)}
+                        className="form-control"
+                        style={{ padding: '0.3rem 0.5rem', fontSize: '0.85rem', height: 'auto' }}
+                      />
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', minWidth: '130px' }}>
+                      <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: '600' }}>Hasta</label>
+                      <input 
+                        type="date" 
+                        value={eggEndDate} 
+                        onChange={(e) => setEggEndDate(e.target.value)}
+                        className="form-control"
+                        style={{ padding: '0.3rem 0.5rem', fontSize: '0.85rem', height: 'auto' }}
+                      />
+                    </div>
+                  </>
+                )}
+
+                {/* Filtro de Jaula */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', minWidth: '160px' }}>
+                  <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: '600' }}>Jaula</label>
+                  <select 
+                    value={eggCageFilter} 
+                    onChange={(e) => setEggCageFilter(e.target.value)}
+                    className="form-control"
+                    style={{ padding: '0.4rem 0.75rem', fontSize: '0.9rem' }}
+                  >
+                    <option value="all">Todas las Jaulas (Por Defecto)</option>
+                    {cages.map(c => (
+                      <option key={c.id} value={c.id}>Jaula {c.name}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Botón para Limpiar Filtros */}
+                {(eggTimeFilter !== 'all' || eggCageFilter !== 'all' || eggStartDate || eggEndDate) && (
+                  <button 
+                    onClick={() => {
+                      setEggTimeFilter('all');
+                      setEggCageFilter('all');
+                      setEggStartDate('');
+                      setEggEndDate('');
+                    }}
+                    className="btn btn-secondary"
+                    style={{ padding: '0.4rem 0.8rem', fontSize: '0.85rem', marginLeft: 'auto', alignSelf: 'flex-end', height: '36px' }}
+                  >
+                    🧹 Limpiar Filtros
+                  </button>
+                )}
+              </div>
+            </div>
+
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1.5rem' }}>
+
               <div className="glass-card" style={{ borderLeft: '5px solid var(--accent-green)', display: 'flex', alignItems: 'center', gap: '1rem', padding: '1.25rem' }}>
                 <div style={{ fontSize: '2.5rem' }}>🥚</div>
                 <div>
