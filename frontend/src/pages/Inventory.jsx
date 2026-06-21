@@ -908,13 +908,45 @@ export default function Inventory({ token }) {
       </div>
 
       {message && (
-        <div className="glass-card" style={{ borderColor: 'var(--accent-green)', background: 'var(--accent-green-glow)', color: '#a7f3d0', padding: '1rem', marginBottom: '1.5rem' }}>
-          {message}
+        <div className="glass-card animate-slide-in" style={{ 
+          position: 'fixed',
+          top: '20px',
+          right: '20px',
+          zIndex: 10000,
+          borderColor: 'var(--accent-green)',
+          background: 'var(--bg-secondary)',
+          boxShadow: '0 10px 30px rgba(0,0,0,0.5)',
+          color: '#a7f3d0',
+          padding: '1rem 1.5rem',
+          maxWidth: '380px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.75rem',
+          borderLeft: '5px solid var(--accent-green)'
+        }}>
+          <span style={{ fontSize: '1.25rem' }}>✅</span>
+          <div>{message}</div>
         </div>
       )}
       {error && (
-        <div className="glass-card" style={{ borderColor: 'var(--accent-red)', background: 'var(--accent-red-glow)', color: '#f87171', padding: '1rem', marginBottom: '1.5rem' }}>
-          {error}
+        <div className="glass-card animate-slide-in" style={{ 
+          position: 'fixed',
+          top: '20px',
+          right: '20px',
+          zIndex: 10000,
+          borderColor: 'var(--accent-red)',
+          background: 'var(--bg-secondary)',
+          boxShadow: '0 10px 30px rgba(0,0,0,0.5)',
+          color: '#f87171',
+          padding: '1rem 1.5rem',
+          maxWidth: '380px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.75rem',
+          borderLeft: '5px solid var(--accent-red)'
+        }}>
+          <span style={{ fontSize: '1.25rem' }}>⚠️</span>
+          <div>{error}</div>
         </div>
       )}
 
