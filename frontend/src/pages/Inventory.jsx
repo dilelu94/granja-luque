@@ -1955,7 +1955,7 @@ export default function Inventory({ token }) {
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1.5rem' }}>
 
               <div className="glass-card" style={{ borderLeft: '5px solid var(--accent-green)', display: 'flex', alignItems: 'center', gap: '1rem', padding: '1.25rem' }}>
-                <div style={{ fontSize: '2.5rem' }}>🥚</div>
+                <div style={{ fontSize: '2.5rem' }}><img src="/QuailEggEmoji.png" alt="Huevo" style={{ width: '1em', height: '1em', verticalAlign: 'middle' }} /></div>
                 <div>
                   <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Huevos Recolectados (Total)</div>
                   <div style={{ fontSize: '1.6rem', fontWeight: 'bold', color: 'var(--accent-green)' }}>{totalCollected} u</div>
