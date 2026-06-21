@@ -203,7 +203,7 @@ export default function RecolectarHuevos({ token, onBack }) {
             onChange={e => setForm({ ...form, cageId: e.target.value })}
           >
             <option value="">-- Seleccionar Jaula --</option>
-            {cages.filter(c => c.status !== 'inactive').map(cage => (
+            {cages.filter(c => c.status !== 'inactive' && !c.name.toUpperCase().startsWith('C')).map(cage => (
               <option key={cage.id} value={cage.id}>
                 {cage.name} (Capac: {cage.capacity})
               </option>

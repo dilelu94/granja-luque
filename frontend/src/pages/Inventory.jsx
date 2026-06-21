@@ -1928,7 +1928,7 @@ export default function Inventory({ token }) {
                     style={{ padding: '0.4rem 0.75rem', fontSize: '0.9rem' }}
                   >
                     <option value="all">Todas las Jaulas (Por Defecto)</option>
-                    {cages.map(c => (
+                    {cages.filter(c => !c.name.toUpperCase().startsWith('C')).map(c => (
                       <option key={c.id} value={c.id}>Jaula {c.name}</option>
                     ))}
                   </select>
@@ -3175,7 +3175,7 @@ export default function Inventory({ token }) {
                   onChange={e => setEggForm({ ...eggForm, cageId: e.target.value })}
                 >
                   <option value="">-- Seleccionar Jaula --</option>
-                  {cages.filter(c => c.status !== 'inactive').map(cage => (
+                  {cages.filter(c => c.status !== 'inactive' && !c.name.toUpperCase().startsWith('C')).map(cage => (
                     <option key={cage.id} value={cage.id}>
                       {cage.name} (Capac: {cage.capacity})
                     </option>
