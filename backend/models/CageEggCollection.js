@@ -68,10 +68,12 @@ export class CageEggCollection {
       let tempMax = null;
       let tempAvg = null;
       let humidity = null;
+      let daylightDuration = null;
+      let cloudCover = null;
 
       try {
         const weatherRes = await fetch(
-          `https://api.open-meteo.com/v1/forecast?latitude=-34.4754&longitude=-58.6508&daily=temperature_2m_max,temperature_2m_min,temperature_2m_mean,relative_humidity_2m_mean&timezone=America%2FArgentina%2FBuenos_Aires&start_date=${date}&end_date=${date}`
+          `https://api.open-meteo.com/v1/forecast?latitude=-34.4754&longitude=-58.6508&daily=temperature_2m_max,temperature_2m_min,temperature_2m_mean,relative_humidity_2m_mean,daylight_duration,cloudcover_mean&timezone=America%2FArgentina%2FBuenos_Aires&start_date=${date}&end_date=${date}`
         );
         const weatherData = await weatherRes.json();
         
@@ -80,6 +82,12 @@ export class CageEggCollection {
           tempMin = weatherData.daily.temperature_2m_min[0];
           tempAvg = weatherData.daily.temperature_2m_mean[0];
           humidity = weatherData.daily.relative_humidity_2m_mean[0];
+          if (weatherData.daily.daylight_duration) {
+            daylightDuration = Math.round((weatherData.daily.daylight_duration[0] / 3600) * 10) / 10;
+          }
+          if (weatherData.daily.cloudcover_mean) {
+            cloudCover = weatherData.daily.cloudcover_mean[0];
+          }
         }
       } catch (err) {
         console.error('Error fetching weather data from Open-Meteo:', err.message);
@@ -93,7 +101,9 @@ export class CageEggCollection {
         temp_min: tempMin,
         temp_max: tempMax,
         temp_avg: tempAvg,
-        humidity: humidity
+        humidity: humidity,
+        daylight_duration: daylightDuration,
+        cloud_cover: cloudCover
       });
       await globalColl.save();
     }

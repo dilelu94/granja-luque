@@ -143,6 +143,7 @@ export default function Inventory({ token }) {
   const [showEditBatchModal, setShowEditBatchModal] = useState(false);
   const [showMortalityModal, setShowMortalityModal] = useState(false);
   const [showEggModal, setShowEggModal] = useState(false);
+  const [showConsumeModal, setShowConsumeModal] = useState(false);
   const [showPackModal, setShowPackModal] = useState(false);
   const [showFeedModal, setShowFeedModal] = useState(false);
   const [showProductModal, setShowProductModal] = useState(false);
@@ -170,6 +171,7 @@ export default function Inventory({ token }) {
   const [eggEndDate, setEggEndDate] = useState('');
   const [eggCageFilter, setEggCageFilter] = useState('all'); // 'all' | cageId
 
+  const [consumeQuantity, setConsumeQuantity] = useState('');
   const [packForm, setPackForm] = useState({ productId: '', packagesCount: '', eggsPerPackage: '' });
   const [feedForm, setFeedForm] = useState({ type: 'ponedora', action: 'buy', quantity: '', price: '', shippingCost: '', purchaseDate: new Date().toISOString().split('T')[0] });
   const [feedPurchases, setFeedPurchases] = useState([]);
@@ -440,6 +442,30 @@ export default function Inventory({ token }) {
       if (!res.ok) throw new Error(data.error);
 
       showNotification('Stock de huevos sueltos ajustado con éxito.');
+      fetchData();
+    } catch (err) {
+      showNotification(err.message, true);
+    }
+  };
+
+  const handleConsumeEggs = async (e) => {
+    e.preventDefault();
+    if (!consumeQuantity || isNaN(consumeQuantity) || Number(consumeQuantity) <= 0) {
+      showNotification('Ingresa una cantidad válida a descontar.', true);
+      return;
+    }
+    try {
+      const res = await fetch('/api/inventory/eggs/consume', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ quantity: Number(consumeQuantity) })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+
+      showNotification(data.message || 'Huevos descontados con éxito.');
+      setShowConsumeModal(false);
+      setConsumeQuantity('');
       fetchData();
     } catch (err) {
       showNotification(err.message, true);
@@ -817,6 +843,7 @@ export default function Inventory({ token }) {
         <h2 style={{ fontFamily: 'var(--font-heading)', fontSize: '1.8rem' }}>Inventario de Granja 📋</h2>
         <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
           <button className="btn btn-primary" onClick={() => setShowEggModal(true)} title="Hacer clic para recolectar huevos"><img src="/QuailEggEmoji.png" alt="🥚" style={{ width: '1.2em', height: '1.2em', verticalAlign: 'middle', marginRight: '0.4rem' }} /> Recolectar Huevos</button>
+          <button className="btn btn-secondary" onClick={() => setShowConsumeModal(true)} title="Descontar huevos consumidos o cedidos">➖ Descontar Huevos</button>
           <button className="btn btn-secondary" onClick={() => setShowPackModal(true)} title="Descontar huevos sueltos y envases para armar el producto de venta">📦 Empaquetar</button>
           <button className="btn btn-secondary" onClick={() => setShowFeedModal(true)} title="Hacer clic para cargar alimento">🌾 Cargar Alimento</button>
           <button className="btn btn-gold" onClick={() => setShowBatchModal(true)} title="Hacer clic para nuevo lote aves" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}>
@@ -2411,7 +2438,9 @@ export default function Inventory({ token }) {
                             <td style={{ textAlign: 'center', fontSize: '0.85rem', whiteSpace: 'nowrap' }}>
                               {row.tempAvg !== null ? `🌡️ ${row.tempAvg.toFixed(1)}°C` : ''}
                               {row.humidity !== null ? ` | 💧 ${Math.round(row.humidity)}%` : ''}
-                              {row.tempAvg === null && row.humidity === null ? 'N/D' : ''}
+                              {row.daylightDuration !== null ? ` | ☀️ ${row.daylightDuration}h` : ''}
+                              {row.cloudCover !== null ? ` | ☁️ ${Math.round(row.cloudCover)}%` : ''}
+                              {row.tempAvg === null && row.humidity === null && row.daylightDuration === null ? 'N/D' : ''}
                             </td>
                             <td style={{ textAlign: 'center', fontWeight: '600' }}>
                               {row.postureRate > 0 ? `${row.postureRate}%` : '0%'}
@@ -3242,6 +3271,38 @@ export default function Inventory({ token }) {
               <div style={{ display: 'flex', flexDirection: 'row-reverse', gap: '0.75rem', marginTop: '1.5rem' }}>
                 <button type="submit" className="btn btn-primary" style={{ flex: '1' }} title="Confirmar y guardar los datos ingresados">Guardar</button>
                 <button type="button" className="btn btn-secondary" style={{ flex: '1' }} onClick={() => { setShowEggModal(false); setEggDateMode('hoy'); setEggForm({ date: todayStr, quantityCollected: '', quantityBroken: '', notes: '', cageId: '' }); }} title="Cancelar la acción actual sin guardar los cambios">Cancelar</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+
+      {/* =======================================================
+          MODAL: DESCONTAR HUEVOS (CONSUMO/CESIÓN)
+         ======================================================= */}
+      {showConsumeModal && (
+        <div className="modal-overlay">
+          <div className="modal-content">
+            <h3 style={{ marginTop: 0 }}>Descontar Huevos Sueltos</h3>
+            <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>Registra huevos consumidos, regalados o de merma que se restarán del stock de sueltos actual.</p>
+            <form onSubmit={handleConsumeEggs}>
+              <div className="form-group">
+                <label>Cantidad a descontar</label>
+                <input 
+                  type="number" 
+                  className="form-control" 
+                  placeholder="Ej: 10" 
+                  required
+                  min="1"
+                  value={consumeQuantity}
+                  onChange={e => setConsumeQuantity(e.target.value)}
+                />
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'row-reverse', gap: '0.75rem', marginTop: '1.5rem' }}>
+                <button type="submit" className="btn btn-primary" style={{ flex: '1' }} title="Confirmar y descontar">Confirmar</button>
+                <button type="button" className="btn btn-secondary" style={{ flex: '1' }} onClick={() => { setShowConsumeModal(false); setConsumeQuantity(''); }} title="Cancelar">Cancelar</button>
               </div>
             </form>
           </div>

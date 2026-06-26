@@ -11,6 +11,8 @@ export class EggCollection {
     this.tempMax = data.temp_max !== undefined ? data.temp_max : null;
     this.tempAvg = data.temp_avg !== undefined ? data.temp_avg : null;
     this.humidity = data.humidity !== undefined ? data.humidity : null;
+    this.daylightDuration = data.daylight_duration !== undefined ? data.daylight_duration : null;
+    this.cloudCover = data.cloud_cover !== undefined ? data.cloud_cover : null;
   }
 
   /**
@@ -44,15 +46,15 @@ export class EggCollection {
     if (isUpdate) {
       await db.run(
         `UPDATE egg_production 
-         SET quantity_collected = ?, quantity_broken = ?, notes = ?, temp_min = ?, temp_max = ?, temp_avg = ?, humidity = ?
+         SET quantity_collected = ?, quantity_broken = ?, notes = ?, temp_min = ?, temp_max = ?, temp_avg = ?, humidity = ?, daylight_duration = ?, cloud_cover = ?
          WHERE id = ?`,
-        [this.quantityCollected, this.quantityBroken, this.notes, this.tempMin, this.tempMax, this.tempAvg, this.humidity, this.id]
+        [this.quantityCollected, this.quantityBroken, this.notes, this.tempMin, this.tempMax, this.tempAvg, this.humidity, this.daylightDuration, this.cloudCover, this.id]
       );
     } else {
       const result = await db.run(
-        `INSERT INTO egg_production (date, quantity_collected, quantity_broken, notes, temp_min, temp_max, temp_avg, humidity)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-        [this.date, this.quantityCollected, this.quantityBroken, this.notes, this.tempMin, this.tempMax, this.tempAvg, this.humidity]
+        `INSERT INTO egg_production (date, quantity_collected, quantity_broken, notes, temp_min, temp_max, temp_avg, humidity, daylight_duration, cloud_cover)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [this.date, this.quantityCollected, this.quantityBroken, this.notes, this.tempMin, this.tempMax, this.tempAvg, this.humidity, this.daylightDuration, this.cloudCover]
       );
       this.id = result.lastID;
     }
@@ -132,7 +134,9 @@ export class EggCollection {
         tempMin: col.temp_min,
         tempMax: col.temp_max,
         tempAvg: col.temp_avg,
-        humidity: col.humidity
+        humidity: col.humidity,
+        daylightDuration: col.daylight_duration,
+        cloudCover: col.cloud_cover
       });
     }
 

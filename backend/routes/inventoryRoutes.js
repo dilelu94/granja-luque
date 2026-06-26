@@ -467,6 +467,34 @@ router.post('/eggs/loose', authenticateToken, async (req, res) => {
   }
 });
 
+/**
+ * POST /api/inventory/eggs/consume
+ * ADMIN ONLY: Deduct loose eggs (consumption/giveaway).
+ */
+router.post('/eggs/consume', authenticateToken, async (req, res) => {
+  const { quantity } = req.body;
+
+  if (quantity === undefined || Number(quantity) <= 0) {
+    return res.status(400).json({ error: 'Falta la cantidad a descontar o es inválida.' });
+  }
+
+  try {
+    const { Settings } = await import('../models/Settings.js');
+    const current = Number(await Settings.get('loose_eggs_stock') || 0);
+    const toDeduct = Number(quantity);
+    
+    if (current < toDeduct) {
+      return res.status(400).json({ error: `No hay suficientes huevos sueltos (Actual: ${current}).` });
+    }
+    
+    await Settings.set('loose_eggs_stock', current - toDeduct);
+    res.json({ message: `Se descontaron ${toDeduct} huevos correctamente.`, newStock: current - toDeduct });
+  } catch (error) {
+    console.error('Error al descontar huevos:', error);
+    res.status(500).json({ error: 'Error al actualizar el stock.' });
+  }
+});
+
 // ==========================================
 // 5. GESTIÓN DE JAULAS (ADMIN)
 // ==========================================

@@ -140,6 +140,8 @@ export async function initializeDatabase() {
   await addColumnIfNotExists(db, 'egg_production', 'temp_max', 'REAL');
   await addColumnIfNotExists(db, 'egg_production', 'temp_avg', 'REAL');
   await addColumnIfNotExists(db, 'egg_production', 'humidity', 'REAL');
+  await addColumnIfNotExists(db, 'egg_production', 'daylight_duration', 'REAL');
+  await addColumnIfNotExists(db, 'egg_production', 'cloud_cover', 'REAL');
 
   // 7. Tabla de Pedidos de Venta
   await db.exec(`
