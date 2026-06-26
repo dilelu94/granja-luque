@@ -129,12 +129,13 @@ export default function Inventory({ token }) {
   const yesterdayStr = getLocalDateString(yesterday);
 
   const [eggDateMode, setEggDateMode] = useState('hoy'); // 'hoy' | 'ayer' | 'manual'
-  const [activeTab, setActiveTab] = useState('birds'); // 'birds' | 'feed' | 'products' | 'cages'
+  const [activeTab, setActiveTab] = useState('birds'); // 'birds' | 'feed' | 'products' | 'cages' | 'eggLedger'
   const [batches, setBatches] = useState([]);
   const [feed, setFeed] = useState({ initiator: { stock: 0 }, ponedora: { stock: 0 } });
   const [products, setProducts] = useState([]);
   const [settings, setSettings] = useState({ egg_base_cost: '15.0' });
   const [cages, setCages] = useState([]);
+  const [eggLedger, setEggLedger] = useState([]);
   const [showInactiveProducts, setShowInactiveProducts] = useState(false);
   const [cageViewMode, setCageViewMode] = useState('list'); // 'grid' | 'list' | 'table'
   
@@ -238,9 +239,14 @@ export default function Inventory({ token }) {
 
       // 5. Egg production data
       const resEggs = await fetch('/api/inventory/eggs?limit=1000', { headers });
-
       const dataEggs = await resEggs.json();
       setEggData(dataEggs);
+
+      // 6. Egg Ledger
+      const resLedger = await fetch('/api/inventory/eggs/ledger', { headers });
+      const dataLedger = await resLedger.json();
+      setEggLedger(dataLedger);
+      
     } catch (err) {
       console.error('Error al cargar inventario:', err);
       setError('Error al sincronizar datos del inventario.');
@@ -903,6 +909,20 @@ export default function Inventory({ token }) {
          title="Hacer clic para ver el control y gráficos de producción de huevos">
           <img src="/QuailEggEmoji.png" alt="🥚" style={{ width: '1.2em', height: '1.2em', verticalAlign: 'middle' }} />
           Producción de Huevos
+        </button>
+        <button 
+          className="btn" 
+          style={{
+            borderBottom: activeTab === 'eggLedger' ? '2px solid var(--accent-blue)' : 'none',
+            borderRadius: '0', background: 'none', color: activeTab === 'eggLedger' ? 'var(--text-primary)' : 'var(--text-secondary)',
+            fontWeight: '600',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '0.4rem'
+          }}
+          onClick={() => setActiveTab('eggLedger')}
+         title="Hacer clic para ver el libro de entradas y salidas de huevos">
+          📖 Entradas y Salidas
         </button>
         <button 
           className="btn" 
@@ -2464,6 +2484,61 @@ export default function Inventory({ token }) {
           </div>
         );
       })()}
+
+      {/* =======================================================
+          TAB: ENTRADAS Y SALIDAS (HUEVOS)
+         ======================================================= */}
+      {activeTab === 'eggLedger' && (
+        <div className="fade-in">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+            <h3 style={{ margin: 0 }}>📖 Registro de Movimientos de Huevos</h3>
+            <span style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>Últimos 200 movimientos</span>
+          </div>
+
+          <div className="table-responsive">
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>Fecha y Hora</th>
+                  <th>Tipo</th>
+                  <th>Motivo</th>
+                  <th style={{ textAlign: 'right' }}>Cantidad</th>
+                  <th style={{ textAlign: 'right' }}>Stock Final</th>
+                  <th>Notas</th>
+                </tr>
+              </thead>
+              <tbody>
+                {eggLedger.length === 0 ? (
+                  <tr>
+                    <td colSpan="6" style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)' }}>
+                      No hay registros de movimientos de huevos aún.
+                    </td>
+                  </tr>
+                ) : (
+                  eggLedger.map((row) => {
+                    const dateObj = new Date(row.date);
+                    const formattedDate = dateObj.toLocaleDateString() + ' ' + dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                    const isEntry = row.type === 'in';
+                    const color = isEntry ? 'var(--accent-green)' : 'var(--accent-red)';
+                    const sign = isEntry ? '+' : '-';
+                    
+                    return (
+                      <tr key={row.id}>
+                        <td>{formattedDate}</td>
+                        <td style={{ color }}>{isEntry ? 'Entrada' : 'Salida'}</td>
+                        <td style={{ textTransform: 'capitalize' }}>{row.reason.replace('_', ' ')}</td>
+                        <td style={{ textAlign: 'right', fontWeight: 'bold', color }}>{sign} {row.quantity}</td>
+                        <td style={{ textAlign: 'right', fontWeight: 'bold' }}>{row.current_stock}</td>
+                        <td style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>{row.notes}</td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
       {/* =======================================================
           TAB: ALIMENTO

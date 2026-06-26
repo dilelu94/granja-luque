@@ -63,6 +63,15 @@ export class EggCollection {
       const currentLoose = await Settings.get('loose_eggs_stock') || 0;
       const nextLoose = Math.max(0, Number(currentLoose) + delta);
       await Settings.set('loose_eggs_stock', nextLoose);
+
+      try {
+        const { EggLedger } = await import('./EggLedger.js');
+        const type = delta > 0 ? 'in' : 'out';
+        const reason = delta > 0 ? 'recoleccion' : 'ajuste';
+        await EggLedger.logTransaction(type, reason, Math.abs(delta), nextLoose, `Recolección/Ajuste diario (${this.date})`);
+      } catch (err) {
+        console.error('Error logging to ledger', err);
+      }
     }
 
     return this;
@@ -176,7 +185,15 @@ export class EggCollection {
     }
 
     // Actualizar inventarios
-    await Settings.set('loose_eggs_stock', Number(currentLoose) - requiredEggs);
+    const nextLoose = Number(currentLoose) - requiredEggs;
+    await Settings.set('loose_eggs_stock', nextLoose);
+
+    try {
+      const { EggLedger } = await import('./EggLedger.js');
+      await EggLedger.logTransaction('out', 'empaquetado', requiredEggs, nextLoose, `Empaquetados ${packagesCount} unidades (Producto ID: ${productId})`);
+    } catch (err) {
+      console.error('Error logging to ledger', err);
+    }
     
     await db.run(
       'UPDATE products SET stock = stock + ?, container_stock = container_stock - ? WHERE id = ?',

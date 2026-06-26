@@ -143,6 +143,19 @@ export async function initializeDatabase() {
   await addColumnIfNotExists(db, 'egg_production', 'daylight_duration', 'REAL');
   await addColumnIfNotExists(db, 'egg_production', 'cloud_cover', 'REAL');
 
+  // 6.5. Tabla de Registro de Movimientos de Huevos (Ledger)
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS egg_ledger (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      date TEXT NOT NULL,
+      type TEXT CHECK(type IN ('in', 'out')) NOT NULL,
+      reason TEXT NOT NULL,
+      quantity INTEGER NOT NULL,
+      current_stock INTEGER NOT NULL,
+      notes TEXT
+    )
+  `);
+
   // 7. Tabla de Pedidos de Venta
   await db.exec(`
     CREATE TABLE IF NOT EXISTS orders (

@@ -459,7 +459,21 @@ router.post('/eggs/loose', authenticateToken, async (req, res) => {
 
   try {
     const { Settings } = await import('../models/Settings.js');
-    await Settings.set('loose_eggs_stock', Math.max(0, Number(newStock)));
+    const oldStock = Number(await Settings.get('loose_eggs_stock') || 0);
+    const updatedStock = Math.max(0, Number(newStock));
+    await Settings.set('loose_eggs_stock', updatedStock);
+
+    try {
+      const { EggLedger } = await import('../models/EggLedger.js');
+      const diff = updatedStock - oldStock;
+      if (diff !== 0) {
+        const type = diff > 0 ? 'in' : 'out';
+        await EggLedger.logTransaction(type, 'ajuste_manual', Math.abs(diff), updatedStock, 'Ajuste manual de stock');
+      }
+    } catch (err) {
+      console.error('Error logging to ledger', err);
+    }
+
     res.json({ message: 'Stock de huevos sueltos actualizado con éxito.' });
   } catch (error) {
     console.error('Error al actualizar huevos sueltos:', error);
@@ -488,10 +502,34 @@ router.post('/eggs/consume', authenticateToken, async (req, res) => {
     }
     
     await Settings.set('loose_eggs_stock', current - toDeduct);
+
+    try {
+      const { EggLedger } = await import('../models/EggLedger.js');
+      await EggLedger.logTransaction('out', 'descontado', toDeduct, current - toDeduct, 'Consumo o descarte (Huevos Sueltos)');
+    } catch (err) {
+      console.error('Error logging to ledger', err);
+    }
+
     res.json({ message: `Se descontaron ${toDeduct} huevos correctamente.`, newStock: current - toDeduct });
   } catch (error) {
     console.error('Error al descontar huevos:', error);
     res.status(500).json({ error: 'Error al actualizar el stock.' });
+  }
+});
+
+/**
+ * GET /api/inventory/eggs/ledger
+ * ADMIN ONLY: Retrieve egg transaction history.
+ */
+router.get('/eggs/ledger', authenticateToken, async (req, res) => {
+  try {
+    const { EggLedger } = await import('../models/EggLedger.js');
+    const limit = Number(req.query.limit) || 200;
+    const history = await EggLedger.getHistory(limit);
+    res.json(history);
+  } catch (error) {
+    console.error('Error fetching egg ledger:', error);
+    res.status(500).json({ error: 'Error al obtener el historial de movimientos.' });
   }
 });
 
