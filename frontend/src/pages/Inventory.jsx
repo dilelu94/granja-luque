@@ -843,7 +843,6 @@ export default function Inventory({ token }) {
         <h2 style={{ fontFamily: 'var(--font-heading)', fontSize: '1.8rem' }}>Inventario de Granja 📋</h2>
         <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
           <button className="btn btn-primary" onClick={() => setShowEggModal(true)} title="Hacer clic para recolectar huevos"><img src="/QuailEggEmoji.png" alt="🥚" style={{ width: '1.2em', height: '1.2em', verticalAlign: 'middle', marginRight: '0.4rem' }} /> Recolectar Huevos</button>
-          <button className="btn btn-secondary" onClick={() => setShowConsumeModal(true)} title="Descontar huevos consumidos o cedidos">➖ Descontar Huevos</button>
           <button className="btn btn-secondary" onClick={() => setShowPackModal(true)} title="Descontar huevos sueltos y envases para armar el producto de venta">📦 Empaquetar</button>
           <button className="btn btn-secondary" onClick={() => setShowFeedModal(true)} title="Hacer clic para cargar alimento">🌾 Cargar Alimento</button>
           <button className="btn btn-gold" onClick={() => setShowBatchModal(true)} title="Hacer clic para nuevo lote aves" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}>
@@ -1980,6 +1979,17 @@ export default function Inventory({ token }) {
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1.5rem' }}>
+
+              <div className="glass-card" style={{ borderLeft: '5px solid var(--accent-blue)', display: 'flex', alignItems: 'center', gap: '1rem', padding: '1.25rem' }}>
+                <div style={{ fontSize: '2.5rem' }}>🥚</div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Huevos Sueltos Disponibles</div>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem' }}>
+                    <div style={{ fontSize: '1.6rem', fontWeight: 'bold', color: 'var(--accent-blue)' }}>{settings.loose_eggs_stock || 0} u</div>
+                    <button className="btn btn-secondary" style={{ padding: '0.3rem 0.6rem', fontSize: '0.8rem' }} onClick={() => setShowConsumeModal(true)} title="Descontar huevos consumidos o cedidos">➖ Descontar</button>
+                  </div>
+                </div>
+              </div>
 
               <div className="glass-card" style={{ borderLeft: '5px solid var(--accent-green)', display: 'flex', alignItems: 'center', gap: '1rem', padding: '1.25rem' }}>
                 <div style={{ fontSize: '2.5rem' }}><img src="/QuailEggEmoji.png" alt="Huevo" style={{ width: '1em', height: '1em', verticalAlign: 'middle' }} /></div>
