@@ -1980,22 +1980,17 @@ export default function Inventory({ token }) {
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1.5rem' }}>
 
-              <div className="glass-card" style={{ borderLeft: '5px solid var(--accent-blue)', display: 'flex', alignItems: 'center', gap: '1rem', padding: '1.25rem' }}>
-                <div style={{ fontSize: '2.5rem' }}>🥚</div>
+              <div className="glass-card" style={{ borderLeft: '5px solid var(--accent-green)', display: 'flex', alignItems: 'flex-start', gap: '1rem', padding: '1.25rem' }}>
+                <div style={{ fontSize: '2.5rem', marginTop: '0.2rem' }}><img src="/QuailEggEmoji.png" alt="Huevo" style={{ width: '1em', height: '1em', verticalAlign: 'middle' }} /></div>
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Huevos Sueltos Disponibles</div>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem' }}>
-                    <div style={{ fontSize: '1.6rem', fontWeight: 'bold', color: 'var(--accent-blue)' }}>{settings.loose_eggs_stock || 0} u</div>
+                  <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Stock de Huevos Sueltos</div>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem', marginBottom: '0.4rem' }}>
+                    <div style={{ fontSize: '1.6rem', fontWeight: 'bold', color: 'var(--accent-green)' }}>{settings.loose_eggs_stock || 0} u</div>
                     <button className="btn btn-secondary" style={{ padding: '0.3rem 0.6rem', fontSize: '0.8rem' }} onClick={() => setShowConsumeModal(true)} title="Descontar huevos consumidos o cedidos">➖ Descontar</button>
                   </div>
-                </div>
-              </div>
-
-              <div className="glass-card" style={{ borderLeft: '5px solid var(--accent-green)', display: 'flex', alignItems: 'center', gap: '1rem', padding: '1.25rem' }}>
-                <div style={{ fontSize: '2.5rem' }}><img src="/QuailEggEmoji.png" alt="Huevo" style={{ width: '1em', height: '1em', verticalAlign: 'middle' }} /></div>
-                <div>
-                  <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Huevos Recolectados (Total)</div>
-                  <div style={{ fontSize: '1.6rem', fontWeight: 'bold', color: 'var(--accent-green)' }}>{totalCollected} u</div>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                    Total recolectado (periodo): <span style={{ color: 'var(--text-primary)' }}>{totalCollected} u</span>
+                  </div>
                 </div>
               </div>
 
