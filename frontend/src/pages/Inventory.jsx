@@ -2008,17 +2008,10 @@ export default function Inventory({ token }) {
                     <div style={{ fontSize: '1.6rem', fontWeight: 'bold', color: 'var(--accent-green)' }}>{settings.loose_eggs_stock || 0} u</div>
                     <button className="btn btn-secondary" style={{ padding: '0.3rem 0.6rem', fontSize: '0.8rem' }} onClick={() => setShowConsumeModal(true)} title="Descontar huevos consumidos o cedidos">➖ Descontar</button>
                   </div>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-                    Total recolectado (periodo): <span style={{ color: 'var(--text-primary)' }}>{totalCollected} u</span>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'flex', gap: '1rem' }}>
+                    <span>Total recolectado: <strong style={{ color: 'var(--text-primary)' }}>{totalCollected} u</strong></span>
+                    <span>💔 Rotos: <strong style={{ color: 'var(--accent-red)' }}>{totalBroken} u</strong></span>
                   </div>
-                </div>
-              </div>
-
-              <div className="glass-card" style={{ borderLeft: '5px solid var(--accent-red)', display: 'flex', alignItems: 'center', gap: '1rem', padding: '1.25rem' }}>
-                <div style={{ fontSize: '2.5rem' }}>💔</div>
-                <div>
-                  <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Huevos Rotos (Total)</div>
-                  <div style={{ fontSize: '1.6rem', fontWeight: 'bold', color: 'var(--accent-red)' }}>{totalBroken} u</div>
                 </div>
               </div>
 
