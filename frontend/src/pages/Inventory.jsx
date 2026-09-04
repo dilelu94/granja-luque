@@ -675,18 +675,34 @@ export default function Inventory({ token }) {
     printWindow.document.close();
   };
 
-  // 5. Cargar / Ajustar alimento (incluyendo precio y flete)
+  // 5. Cargar / Ajustar alimento (incluyendo precio, flete y ajuste manual de stock)
   const handleUpdateFeed = async (e) => {
     e.preventDefault();
-    const endpoint = feedForm.action === 'buy' ? '/api/inventory/feed/buy' : '/api/inventory/feed/consume';
-    
-    const payload = {
-      type: feedForm.type,
-      quantity: Number(feedForm.quantity),
-      price: feedForm.action === 'buy' ? Number(feedForm.price || 0) : 0,
-      shippingCost: feedForm.action === 'buy' ? Number(feedForm.shippingCost || 0) : 0,
-      purchaseDate: feedForm.action === 'buy' ? feedForm.purchaseDate : new Date().toISOString().split('T')[0]
-    };
+    let endpoint = '/api/inventory/feed/buy';
+    let payload = {};
+
+    if (feedForm.action === 'set') {
+      endpoint = '/api/inventory/feed/set';
+      payload = {
+        type: feedForm.type,
+        newStock: Number(feedForm.quantity || 0)
+      };
+    } else if (feedForm.action === 'consume') {
+      endpoint = '/api/inventory/feed/consume';
+      payload = {
+        type: feedForm.type,
+        quantity: Number(feedForm.quantity)
+      };
+    } else {
+      endpoint = '/api/inventory/feed/buy';
+      payload = {
+        type: feedForm.type,
+        quantity: Number(feedForm.quantity),
+        price: Number(feedForm.price || 0),
+        shippingCost: Number(feedForm.shippingCost || 0),
+        purchaseDate: feedForm.purchaseDate || new Date().toISOString().split('T')[0]
+      };
+    }
 
     try {
       const res = await fetch(endpoint, {
@@ -697,7 +713,7 @@ export default function Inventory({ token }) {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
 
-      showNotification('Movimiento de alimento registrado con éxito.');
+      showNotification('Stock de alimento actualizado con éxito.');
       setShowFeedModal(false);
       setFeedForm({ type: 'ponedora', action: 'buy', quantity: '', price: '', shippingCost: '', purchaseDate: new Date().toISOString().split('T')[0] });
       fetchData();
@@ -2554,8 +2570,22 @@ export default function Inventory({ token }) {
 
             <div className="glass-card" style={{ flex: '1', minWidth: '240px', display: 'flex', alignItems: 'center', gap: '1.5rem', borderLeft: '5px solid var(--accent-gold)' }}>
               <div style={{ fontSize: '3rem' }}>🌾</div>
-              <div>
-                <h3 style={{ fontSize: '1rem', color: 'var(--text-secondary)' }}>Alimento Ponedoras</h3>
+              <div style={{ flex: 1 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                  <h3 style={{ fontSize: '1rem', color: 'var(--text-secondary)' }}>Alimento Ponedoras</h3>
+                  <button 
+                    type="button" 
+                    className="btn btn-secondary" 
+                    style={{ padding: '0.2rem 0.5rem', fontSize: '0.75rem' }}
+                    onClick={() => {
+                      setFeedForm({ type: 'ponedora', action: 'set', quantity: (feed.ponedora?.stock || 0).toString(), price: '', shippingCost: '', purchaseDate: todayStr });
+                      setShowFeedModal(true);
+                    }}
+                    title="Editar / Fijar stock exacto de alimento ponedoras (ej. poner 0 kg)"
+                  >
+                    ✏️ Fijar Stock
+                  </button>
+                </div>
                 <div style={{ fontSize: '1.8rem', fontWeight: 'bold', color: 'var(--accent-gold)' }}>{(feed.ponedora?.stock || 0).toFixed(2)} kg</div>
                 <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
                   Consumo: {(feed.ponedora?.dailyConsumption || 0).toFixed(2)} kg/día
@@ -2565,8 +2595,22 @@ export default function Inventory({ token }) {
 
             <div className="glass-card" style={{ flex: '1', minWidth: '240px', display: 'flex', alignItems: 'center', gap: '1.5rem', borderLeft: '5px solid var(--accent-blue)' }}>
               <div style={{ fontSize: '3rem' }}>🧪</div>
-              <div>
-                <h3 style={{ fontSize: '1rem', color: 'var(--text-secondary)' }}>Alimento Iniciador</h3>
+              <div style={{ flex: 1 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                  <h3 style={{ fontSize: '1rem', color: 'var(--text-secondary)' }}>Alimento Iniciador</h3>
+                  <button 
+                    type="button" 
+                    className="btn btn-secondary" 
+                    style={{ padding: '0.2rem 0.5rem', fontSize: '0.75rem' }}
+                    onClick={() => {
+                      setFeedForm({ type: 'iniciador', action: 'set', quantity: (feed.initiator?.stock || 0).toString(), price: '', shippingCost: '', purchaseDate: todayStr });
+                      setShowFeedModal(true);
+                    }}
+                    title="Editar / Fijar stock exacto de alimento iniciador (ej. poner 0 kg)"
+                  >
+                    ✏️ Fijar Stock
+                  </button>
+                </div>
                 <div style={{ fontSize: '1.8rem', fontWeight: 'bold', color: 'var(--accent-blue)' }}>{(feed.initiator?.stock || 0).toFixed(2)} kg</div>
                 <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
                   Consumo: {(feed.initiator?.dailyConsumption || 0).toFixed(2)} kg/día
@@ -3551,20 +3595,27 @@ export default function Inventory({ token }) {
                 >
                   <option value="buy">Comprar bolsa (+ kg)</option>
                   <option value="consume">Consumo manual / Pérdida (- kg)</option>
+                  <option value="set">⚙️ Ajustar Stock Total (Fijar valor exacto, ej. 0 kg)</option>
                 </select>
               </div>
 
               <div className="form-group">
-                <label>Cantidad (en kg)</label>
+                <label>{feedForm.action === 'set' ? 'Nuevo Stock Total (en kg)' : 'Cantidad (en kg)'}</label>
                 <input 
                   type="number" 
                   step="0.1"
+                  min="0"
                   className="form-control" 
-                  placeholder="25" 
+                  placeholder={feedForm.action === 'set' ? "0" : "25"} 
                   required
                   value={feedForm.quantity}
                   onChange={e => setFeedForm({ ...feedForm, quantity: e.target.value })}
                 />
+                {feedForm.action === 'set' && (
+                  <small style={{ color: 'var(--accent-gold)', display: 'block', marginTop: '0.3rem' }}>
+                    💡 Ingresa 0 si te quedaste completamente sin alimento.
+                  </small>
+                )}
               </div>
 
               {feedForm.action === 'buy' && (

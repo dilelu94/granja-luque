@@ -352,6 +352,28 @@ router.post('/feed/consume', authenticateToken, async (req, res) => {
   }
 });
 
+/**
+ * POST /api/inventory/feed/set
+ * ADMIN ONLY: Set exact feed stock in kg (e.g. setting to 0 or manual count).
+ */
+router.post('/feed/set', authenticateToken, async (req, res) => {
+  const { type, newStock } = req.body;
+
+  if (!type || newStock === undefined || Number(newStock) < 0) {
+    return res.status(400).json({ error: 'Faltan campos (tipo de alimento: iniciador/ponedora, cantidad en kg >= 0).' });
+  }
+
+  try {
+    const feed = await FeedStock.getByType(type);
+    feed.quantity = Number(newStock);
+    await feed.save();
+    res.json({ message: `Stock de alimento ${type} actualizado a ${feed.quantity} kg.`, stock: feed.quantity });
+  } catch (error) {
+    console.error('Error al fijar stock de alimento:', error);
+    res.status(500).json({ error: 'Error al actualizar el stock de alimento.' });
+  }
+});
+
 
 // ==========================================
 // 4. HUEVOS / EGGS (ADMIN)
