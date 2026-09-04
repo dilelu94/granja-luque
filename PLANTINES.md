@@ -1,6 +1,10 @@
 # 🌿 DOCUMENTACIÓN TÉCNICA Y OPERATIVA - HUERTA HOGAREÑA (/plantines)
 
-> **Este documento explica la integración, arquitectura y despliegue del subsistema de plantines (`/plantines`) dentro de la infraestructura de Granja Luque.**
+> [!IMPORTANT]
+> **UBICACIÓN DEL REPOSITORIO LOCAL:**  
+> El código fuente del proyecto de plantines **NO forma parte de este repositorio (`Granja`)**.  
+> Se encuentra en su propio repositorio independiente ubicado localmente en:  
+> 📁 **`/var/home/dilelu/repos/HuertaHogare-a`** (GitHub: `https://github.com/dilelu94/HuertaHogare-a`).
 
 ---
 
@@ -15,19 +19,19 @@
 
 ---
 
-## 📂 2. UBICACIÓN DE CÓDIGO Y REPOSITORIOS
+## 📂 2. UBICACIÓN EXACTA DE CÓDIGO Y REPOSITORIOS
 
-### Repositorio del Proyecto Huerta Hogareña:
-* **Ubicación Local:** `/var/home/dilelu/repos/HuertaHogare-a`
-* **Repositorio GitHub:** `https://github.com/dilelu94/HuertaHogare-a` (rama principal: `main`)
-* **Ubicación en el Servidor (OCI):** `/home/ubuntu/huerta-hogarea`
-* **Proceso PM2 en Servidor:** `huerta-app` (Puerto local `8085`).
+### 🟢 Proyecto Huerta Hogareña (Plantines):
+* 📁 **Carpeta Local:** `/var/home/dilelu/repos/HuertaHogare-a` *(¡Acá está todo el código de /plantines!)*
+* 🐙 **Repositorio GitHub:** `https://github.com/dilelu94/HuertaHogare-a` (rama `main`)
+* ☁️ **Servidor OCI (Ubuntu):** `/home/ubuntu/huerta-hogarea`
+* ⚙️ **Proceso PM2:** `huerta-app` (Puerto local `8085`).
 
-### Repositorio Principal (Granja Luque):
-* **Ubicación Local:** `/var/home/dilelu/repos/Granja`
-* **Repositorio GitHub:** `dilelu94/granja-luque`
-* **Ubicación en el Servidor (OCI):** `/home/ubuntu/granja-luque`
-* **Proceso PM2 en Servidor:** `granja-app` (Puerto local `8080`).
+### 🔵 Proyecto Granja Luque (Sistema Principal):
+* 📁 **Carpeta Local:** `/var/home/dilelu/repos/Granja`
+* 🐙 **Repositorio GitHub:** `https://github.com/dilelu94/granja-luque` (rama `master`)
+* ☁️ **Servidor OCI (Ubuntu):** `/home/ubuntu/granja-luque`
+* ⚙️ **Proceso PM2:** `granja-app` (Puerto local `8080`).
 
 ---
 
