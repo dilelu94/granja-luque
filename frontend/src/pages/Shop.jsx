@@ -144,7 +144,7 @@ export default function Shop({ onAdminLoginClick }) {
             📦 Envasados en Múltiplos de 12
           </div>
           <div style={{ background: 'rgba(0,0,0,0.3)', border: '1px solid var(--border-color)', padding: '0.6rem 1.2rem', borderRadius: '50px', fontSize: '0.9rem', color: 'var(--text-primary)' }}>
-            🚚 Envíos a Domicilio y Retiros
+            🚚 El Talar, La Paloma, Pacheco, Don Torcuato y alrededores
           </div>
         </div>
 
@@ -278,9 +278,6 @@ export default function Shop({ onAdminLoginClick }) {
                       <span style={{ fontSize: '1.8rem', fontWeight: '800', color: 'var(--accent-gold)', fontFamily: 'var(--font-heading)' }}>
                         ${prod.price.toLocaleString('es-AR')}
                       </span>
-                      <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                        Equivale a ${perEggPrice} por huevo
-                      </div>
                     </div>
 
                     <div style={{ textAlign: 'right' }}>
@@ -388,8 +385,8 @@ export default function Shop({ onAdminLoginClick }) {
             Zonas de Entrega y Puntos de Retiro
           </h3>
           <p style={{ fontSize: '0.95rem', color: 'var(--text-secondary)', lineHeight: '1.6' }}>
-            Hacemos entregas a domicilio en <strong>El Talar, La Paloma, General Pacheco, Tigre y San Fernando</strong>. 
-            También podés retirar sin costo directamente por nuestra granja coordinando por WhatsApp.
+            Hacemos entregas en <strong>El Talar, La Paloma, General Pacheco, Don Torcuato y alrededores</strong>. 
+            También podés retirar sin costo directamente por nuestra granja coordinando por WhatsApp. ¡Consulte cualquier duda!
           </p>
         </div>
         <div>
