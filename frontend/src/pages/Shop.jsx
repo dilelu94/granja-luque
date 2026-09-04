@@ -2,195 +2,88 @@ import React, { useState, useEffect } from 'react';
 
 export default function Shop({ onAdminLoginClick }) {
   const [products, setProducts] = useState([]);
-  const [cart, setCart] = useState([]);
-  
-  // Ajustes de envío y contacto
-  const [adminPhone, setAdminPhone] = useState('5491122334455');
-  const [defaultShippingCost, setDefaultShippingCost] = useState(1500);
+  const [loading, setLoading] = useState(true);
 
-  // Formulario de compra
-  const [customerName, setCustomerName] = useState('');
-  const [customerPhone, setCustomerPhone] = useState('');
-  const [customerAddress, setCustomerAddress] = useState('');
-  
-  // Métodos de envío
-  const [deliveryMethod, setDeliveryMethod] = useState('pickup'); // 'pickup' | 'shipping'
-  const [shippingZone, setShippingZone] = useState('');
-  const [shippingCost, setShippingCost] = useState(0);
+  const phoneRaw = '5491127504590';
+  const phoneFormatted = '11 2750-4590';
 
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [successOrder, setSuccessOrder] = useState(null);
-
-  // Cargar productos y teléfono del administrador
   useEffect(() => {
     fetch('/api/inventory/products')
       .then(res => res.json())
-      .then(data => setProducts(data))
-      .catch(err => console.error('Error al cargar productos:', err));
-
-    fetch('/api/settings/public')
-      .then(res => res.json())
       .then(data => {
-        if (data.admin_whatsapp) {
-          setAdminPhone(data.admin_whatsapp);
-        }
-        if (data.shipping_default_cost) {
-          setDefaultShippingCost(Number(data.shipping_default_cost));
-        }
+        // Filtrar solo productos activos y múltiplos de 12
+        const filtered = data.filter(p => p.status === 'active' && p.egg_count > 0 && p.egg_count % 12 === 0);
+        setProducts(filtered.length > 0 ? filtered : data);
+        setLoading(false);
       })
-      .catch(err => console.error('Error al cargar config pública:', err));
+      .catch(err => {
+        console.error('Error al cargar productos:', err);
+        setLoading(false);
+      });
   }, []);
 
-  // Calcular costo de envío dinámico según la localidad
-  useEffect(() => {
-    if (deliveryMethod === 'pickup') {
-      setShippingCost(0);
-      return;
-    }
-
-    const zone = shippingZone.trim().toLowerCase();
-    const freeZones = ['el talar', 'la paloma', 'general pacheco', 'pacheco', 'talar'];
-
-    if (freeZones.some(fz => zone.includes(fz))) {
-      setShippingCost(0);
-    } else {
-      setShippingCost(defaultShippingCost);
-    }
-  }, [deliveryMethod, shippingZone, defaultShippingCost]);
-
-  const addToCart = (product) => {
-    setError('');
-    const existing = cart.find(item => item.id === product.id);
-    if (existing) {
-      if (existing.quantity >= product.stock) {
-        setError(`No hay más stock disponible de ${product.name}`);
-        return;
-      }
-      setCart(cart.map(item => 
-        item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item
-      ));
-    } else {
-      if (product.stock <= 0) {
-        setError(`El producto ${product.name} no tiene stock.`);
-        return;
-      }
-      setCart([...cart, { ...product, quantity: 1 }]);
-    }
+  const getWhatsAppProductLink = (product) => {
+    const text = `Hola Granja Luque! 👋 Quisiera encargar:\n\n🥚 *${product.name}*\n💰 *Precio:* $${product.price}\n📦 *Cantidad:* ${product.egg_count} huevos frescos\n\n¿Me podrías confirmar disponibilidad y acordar la entrega? ¡Muchas gracias!`;
+    return `https://wa.me/${phoneRaw}?text=${encodeURIComponent(text)}`;
   };
 
-  const updateCartQuantity = (productId, amount) => {
-    const item = cart.find(item => item.id === productId);
-    if (!item) return;
-
-    const newQty = item.quantity + amount;
-    if (newQty <= 0) {
-      setCart(cart.filter(item => item.id !== productId));
-    } else {
-      const prod = products.find(p => p.id === productId);
-      if (prod && newQty > prod.stock) {
-        setError(`No hay más stock disponible de ${prod.name}`);
-        return;
-      }
-      setCart(cart.map(item => 
-        item.id === productId ? { ...item, quantity: newQty } : item
-      ));
-    }
+  const getWhatsAppGeneralLink = (extraMsg = '') => {
+    const text = extraMsg || `Hola Granja Luque! 👋 Quisiera consultar por la compra de huevos de codorniz y coordinar entrega.`;
+    return `https://wa.me/${phoneRaw}?text=${encodeURIComponent(text)}`;
   };
-
-  const productsTotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-  const cartTotal = productsTotal + (deliveryMethod === 'shipping' ? shippingCost : 0);
-
-  const handleSubmitOrder = async (e) => {
-    e.preventDefault();
-    if (!customerName || !customerPhone || !customerAddress) {
-      setError('Por favor, completa todos los campos del formulario.');
-      return;
-    }
-    if (deliveryMethod === 'shipping' && !shippingZone) {
-      setError('Por favor, ingresa tu localidad para el envío.');
-      return;
-    }
-    if (cart.length === 0) {
-      setError('El carrito está vacío.');
-      return;
-    }
-
-    setLoading(true);
-    setError('');
-
-    const payload = {
-      customerName,
-      customerPhone,
-      customerAddress,
-      shippingZone: deliveryMethod === 'shipping' ? shippingZone : 'Retiro en granja',
-      shippingCost: deliveryMethod === 'shipping' ? shippingCost : 0,
-      items: cart.map(item => ({
-        product_id: item.id,
-        name: item.name,
-        quantity: item.quantity,
-        price_at_sale: item.price
-      }))
-    };
-
-    try {
-      const res = await fetch('/api/orders', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-      const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data.error || 'Error al procesar el pedido.');
-      }
-
-      setSuccessOrder({
-        id: data.id,
-        total: data.totalPrice,
-        customerName,
-        deliveryMethod,
-        shippingZone: deliveryMethod === 'shipping' ? shippingZone : '',
-        shippingCost: deliveryMethod === 'shipping' ? shippingCost : 0,
-        items: [...cart]
-      });
-
-      // Limpiar carrito
-      setCart([]);
-      setCustomerName('');
-      setCustomerPhone('');
-      setCustomerAddress('');
-      setShippingZone('');
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const getWhatsAppLink = (order) => {
-    const itemsText = order.items.map(item => `* ${item.quantity}x ${item.name} ($${item.price * item.quantity})`).join('\n');
-    const shippingText = order.deliveryMethod === 'shipping'
-      ? `\n*Envío a Domicilio:* ${order.shippingZone} (Costo: ${order.shippingCost === 0 ? '¡GRATIS! 🎁' : `$${order.shippingCost}`})`
-      : `\n*Método:* Retiro en Granja ($0)`;
-
-    const text = `Hola! Realicé una solicitud de pedido en Granja Luque.
-*Pedido ID:* #${order.id}
-*Cliente:* ${order.customerName}${shippingText}
-*Detalle:*
-${itemsText}
-*Total:* $${order.total}
-
-Quedo a la espera de su aprobación para proceder con el pago. ¡Muchas gracias!`;
-
-    return `https://wa.me/${adminPhone}?text=${encodeURIComponent(text)}`;
-  };
-
-  const isFreeShipping = deliveryMethod === 'shipping' && shippingCost === 0 && shippingZone.trim() !== '';
 
   return (
-    <div style={{ paddingBottom: '4rem' }}>
-      {/* Header público */}
+    <div style={{ paddingBottom: '5rem', position: 'relative' }}>
+      
+      {/* --- BOTÓN FLOTANTE DE WHATSAPP --- */}
+      <a
+        href={getWhatsAppGeneralLink()}
+        target="_blank"
+        rel="noopener noreferrer"
+        style={{
+          position: 'fixed',
+          bottom: '1.5rem',
+          right: '1.5rem',
+          backgroundColor: '#25D366',
+          color: '#ffffff',
+          borderRadius: '50px',
+          padding: '0.85rem 1.4rem',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.6rem',
+          boxShadow: '0 10px 25px rgba(37, 211, 102, 0.4)',
+          zIndex: 9999,
+          textDecoration: 'none',
+          fontWeight: 'bold',
+          fontSize: '1rem',
+          transition: 'all 0.3s ease',
+          animation: 'pulseGlow 2s infinite'
+        }}
+        title="Consultar por WhatsApp (11 2750-4590)"
+      >
+        <span style={{ fontSize: '1.4rem' }}>💬</span>
+        <span>WhatsApp: {phoneFormatted}</span>
+      </a>
+
+      {/* --- ANIMACIÓN CSS FLOTANTE --- */}
+      <style>{`
+        @keyframes pulseGlow {
+          0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(37, 211, 102, 0.6); }
+          70% { transform: scale(1.05); box-shadow: 0 0 0 14px rgba(37, 211, 102, 0); }
+          100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(37, 211, 102, 0); }
+        }
+        .product-card:hover {
+          transform: translateY(-6px) !important;
+          border-color: var(--accent-gold) !important;
+          box-shadow: 0 12px 30px rgba(245, 158, 11, 0.15) !important;
+        }
+        .btn-wsp:hover {
+          background-color: #1eb857 !important;
+          transform: scale(1.02) !important;
+        }
+      `}</style>
+
+      {/* --- HEADER PÚBLICO --- */}
       <header style={{
         display: 'flex',
         justifyContent: 'space-between',
@@ -200,285 +93,324 @@ Quedo a la espera de su aprobación para proceder con el pago. ¡Muchas gracias!
         marginBottom: '2rem'
       }}>
         <div>
-          <h1 style={{ color: 'var(--accent-green)', fontSize: '2.2rem', fontFamily: 'var(--font-heading)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+          <h1 style={{ color: 'var(--accent-green)', fontSize: '2.2rem', fontFamily: 'var(--font-heading)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             Granja Luque <img src="/QuailEggEmoji.png" alt="🥚" style={{ width: '1.2em', height: '1.2em' }} />
           </h1>
-          <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
-            Codornices selectas y productos de granja de alta calidad
+          <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem', marginTop: '0.2rem' }}>
+            Codornices selectas y huevos frescos de producción propia
           </p>
         </div>
-        <button className="btn btn-secondary" onClick={onAdminLoginClick} title="Hacer clic para panel administrador">
-          Panel Administrador 🔒
+        <button 
+          className="btn btn-secondary" 
+          onClick={onAdminLoginClick} 
+          title="Hacer clic para ingresar al panel administrador"
+          style={{ fontSize: '0.85rem', padding: '0.5rem 1rem' }}
+        >
+          Acceso Administrador 🔒
         </button>
       </header>
 
-      {successOrder ? (
-        // Pantalla de Pedido Exitoso
-        <div className="glass-card" style={{ maxWidth: '600px', margin: '3rem auto', textAlign: 'center', padding: '3rem 2rem' }}>
-          <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>🎉</div>
-          <h2 style={{ color: 'var(--accent-green)', marginBottom: '1rem' }}>¡Pedido Solicitado con Éxito!</h2>
-          <p style={{ color: 'var(--text-primary)', marginBottom: '1.5rem', fontSize: '1.1rem' }}>
-            Tu pedido **#{successOrder.id}** ha sido registrado con estado **Pendiente de Aprobación**.
-          </p>
-          <div style={{
-            background: 'rgba(0, 0, 0, 0.2)',
-            padding: '1.5rem',
-            borderRadius: 'var(--border-radius-sm)',
-            textAlign: 'left',
-            marginBottom: '2rem',
-            border: '1px solid var(--border-color)'
-          }}>
-            <h4 style={{ marginBottom: '0.5rem' }}>Resumen del Pedido:</h4>
-            {successOrder.items.map(item => (
-              <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.95rem', margin: '0.25rem 0' }}>
-                <span>{item.quantity}x {item.name}</span>
-                <span>${item.price * item.quantity}</span>
-              </div>
-            ))}
-            
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.95rem', margin: '0.25rem 0', color: 'var(--text-secondary)' }}>
-              <span>Entrega: {successOrder.deliveryMethod === 'shipping' ? `Envío a ${successOrder.shippingZone}` : 'Retiro en granja'}</span>
-              <span>{successOrder.shippingCost === 0 ? 'Gratis' : `$${successOrder.shippingCost}`}</span>
-            </div>
-
-            <hr style={{ border: 'none', borderBottom: '1px solid var(--border-color)', margin: '0.75rem 0' }} />
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold', fontSize: '1.1rem' }}>
-              <span>Total a pagar tras aprobación:</span>
-              <span style={{ color: 'var(--accent-gold)' }}>${successOrder.total}</span>
-            </div>
-          </div>
-          <p style={{ color: 'var(--text-secondary)', marginBottom: '2rem', fontSize: '0.95rem' }}>
-            ⚠️ **Importante**: Para que preparemos tu pedido y te enviemos el link de pago de Mercado Pago, debes enviarnos la confirmación por WhatsApp pulsando el siguiente botón:
-          </p>
-          <a href={getWhatsAppLink(successOrder)} target="_blank" rel="noopener noreferrer" className="btn btn-primary" style={{ fontSize: '1.1rem', width: '100%' }}>
-            💬 Enviar Solicitud por WhatsApp
-          </a>
-          <button 
-            className="btn btn-secondary" 
-            style={{ marginTop: '1rem', width: '100%' }}
-            onClick={() => setSuccessOrder(null)}
-           title="Hacer clic para hacer otra compra">
-            Hacer otra compra
-          </button>
+      {/* --- BANNER HERO PRINCIPAL --- */}
+      <div 
+        className="glass-card" 
+        style={{
+          padding: '2.5rem 2rem',
+          marginBottom: '3rem',
+          borderRadius: 'var(--border-radius-lg)',
+          background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(245, 158, 11, 0.08) 100%)',
+          borderColor: 'rgba(16, 185, 129, 0.2)',
+          textAlign: 'center',
+          position: 'relative',
+          overflow: 'hidden'
+        }}
+      >
+        <div style={{ display: 'inline-block', backgroundColor: 'var(--accent-gold-glow)', color: 'var(--accent-gold)', padding: '0.35rem 1rem', borderRadius: '50px', fontSize: '0.85rem', fontWeight: 'bold', marginBottom: '1rem', border: '1px solid rgba(245, 158, 11, 0.3)' }}>
+          🥚 Huevos Seleccionados Diariamente
         </div>
-      ) : (
-        // Contenido de la tienda
-        <div style={{ display: 'flex', gap: '2rem', flexWrap: 'wrap-reverse' }}>
-          
-          {/* Listado de Productos */}
-          <div style={{ flex: '2', minWidth: '320px' }}>
-            <h2 style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              Nuestros Productos 📦
-            </h2>
 
-            {error && (
-              <div className="glass-card" style={{ borderColor: 'var(--accent-red)', background: 'var(--accent-red-glow)', color: '#f87171', padding: '1rem', marginBottom: '1.5rem' }}>
-                {error}
-              </div>
-            )}
+        <h2 style={{ fontSize: '2.4rem', fontFamily: 'var(--font-heading)', marginBottom: '1rem', color: 'white', lineHeight: '1.2' }}>
+          Frescura y Calidad Directo de Nuestra Granja
+        </h2>
 
-            {products.length === 0 ? (
-              <p style={{ color: 'var(--text-secondary)' }}>Cargando catálogo...</p>
-            ) : (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '1.5rem' }}>
-                {products.map(prod => (
-                  <div key={prod.id} className="glass-card" style={{ display: 'flex', flexDirection: 'column', height: '100%', padding: '1.25rem' }}>
-                    {prod.image_url && (
-                      <img 
-                        src={prod.image_url} 
-                        alt={prod.name} 
-                        style={{
-                          width: '100%',
-                          height: '160px',
-                          objectFit: 'cover',
-                          borderRadius: 'var(--border-radius-sm)',
-                          marginBottom: '1rem',
-                          border: '1px solid var(--border-color)'
-                        }}
-                      />
-                    )}
-                    <h3 style={{ fontSize: '1.1rem', marginBottom: '0.5rem', fontFamily: 'var(--font-heading)' }}>{prod.name}</h3>
-                    <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', flexGrow: '1', marginBottom: '1rem' }}>{prod.description}</p>
-                    
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 'auto' }}>
-                      <span style={{ fontSize: '1.25rem', fontWeight: 'bold', color: 'var(--accent-gold)' }}>
-                        ${prod.price}
-                      </span>
-                      <span style={{ fontSize: '0.8rem', color: prod.stock > 0 ? 'var(--accent-green)' : 'var(--accent-red)' }}>
-                        {prod.stock > 0 ? `Stock: ${prod.stock}` : 'Sin stock'}
-                      </span>
-                    </div>
+        <p style={{ fontSize: '1.1rem', color: 'var(--text-secondary)', maxWidth: '750px', margin: '0 auto 2rem auto', lineHeight: '1.6' }}>
+          Producimos y seleccionamos diariamente huevos de codorniz de máxima calidad. Presentaciones exclusivamente en múltiplos de 12 para garantizar frescura y óptima conservación.
+        </p>
 
-                    <button 
-                      className="btn btn-primary" 
-                      style={{ marginTop: '1rem', width: '100%' }}
-                      disabled={prod.stock <= 0}
-                      onClick={() => addToCart(prod)}
-                     title="Hacer clic para añadir al carrito">
-                      🛒 Añadir al carrito
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
+        <div style={{ display: 'flex', justifyContent: 'center', gap: '1rem', flexWrap: 'wrap', marginBottom: '2rem' }}>
+          <div style={{ background: 'rgba(0,0,0,0.3)', border: '1px solid var(--border-color)', padding: '0.6rem 1.2rem', borderRadius: '50px', fontSize: '0.9rem', color: 'var(--text-primary)' }}>
+            🌿 100% Naturales
           </div>
+          <div style={{ background: 'rgba(0,0,0,0.3)', border: '1px solid var(--border-color)', padding: '0.6rem 1.2rem', borderRadius: '50px', fontSize: '0.9rem', color: 'var(--text-primary)' }}>
+            📦 Envasados en Múltiplos de 12
+          </div>
+          <div style={{ background: 'rgba(0,0,0,0.3)', border: '1px solid var(--border-color)', padding: '0.6rem 1.2rem', borderRadius: '50px', fontSize: '0.9rem', color: 'var(--text-primary)' }}>
+            🚚 Envíos a Domicilio y Retiros
+          </div>
+        </div>
 
-          {/* Carrito de Compras */}
-          <div style={{ flex: '1', minWidth: '300px' }}>
-            <div className="glass-card" style={{ position: 'sticky', top: '2rem' }}>
-              <h3 style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '0.75rem', marginBottom: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span>Carrito 🛒</span>
-                <span className="badge badge-pending" style={{ fontSize: '0.85rem' }}>{cart.reduce((s,i) => s + i.quantity, 0)} items</span>
-              </h3>
+        <div>
+          <a
+            href={getWhatsAppGeneralLink()}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="btn btn-wsp"
+            style={{
+              backgroundColor: '#25D366',
+              color: '#ffffff',
+              fontSize: '1.15rem',
+              padding: '0.9rem 2.2rem',
+              borderRadius: '50px',
+              fontWeight: 'bold',
+              textDecoration: 'none',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.75rem',
+              boxShadow: '0 8px 25px rgba(37, 211, 102, 0.3)',
+              transition: 'all 0.3s ease'
+            }}
+          >
+            <span style={{ fontSize: '1.4rem' }}>💬</span>
+            <span>Hacé tu Pedido por WhatsApp ({phoneFormatted})</span>
+          </a>
+        </div>
+      </div>
 
-              {cart.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '2rem 0', color: 'var(--text-secondary)' }}>
-                  <div style={{ marginBottom: '0.5rem' }}><img src="/QuailEggEmoji.png" alt="🥚" style={{ width: '3rem', height: '3rem', verticalAlign: 'middle' }} /></div>
-                  <p>Tu carrito está vacío.</p>
-                  <p style={{ fontSize: '0.8rem' }}>Selecciona productos de la tienda.</p>
-                </div>
-              ) : (
-                <div>
-                  <div style={{ maxHeight: '220px', overflowY: 'auto', marginBottom: '1rem', paddingRight: '0.25rem' }}>
-                    {cart.map(item => (
-                      <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.5rem 0', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                        <div style={{ maxWidth: '60%' }}>
-                          <div style={{ fontSize: '0.9rem', fontWeight: '500', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.name}</div>
-                          <div style={{ fontSize: '0.8rem', color: 'var(--accent-gold)' }}>${item.price} c/u</div>
-                        </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                          <button className="btn" style={{ padding: '0.15rem 0.4rem', background: 'rgba(255,255,255,0.05)', color: 'white' }} onClick={() => updateCartQuantity(item.id, -1)} title="Hacer clic para -">-</button>
-                          <span style={{ fontSize: '0.95rem', fontWeight: 'bold', width: '20px', textAlign: 'center' }}>{item.quantity}</span>
-                          <button className="btn" style={{ padding: '0.15rem 0.4rem', background: 'rgba(255,255,255,0.05)', color: 'white' }} onClick={() => updateCartQuantity(item.id, 1)} title="Hacer clic para +">+</button>
-                        </div>
-                      </div>
-                    ))}
+      {/* --- CATÁLOGO DE PRODUCTOS (SOLO MÚLTIPLOS DE 12) --- */}
+      <div style={{ marginBottom: '3.5rem' }}>
+        <div style={{ textAlign: 'center', marginBottom: '2.5rem' }}>
+          <h2 style={{ fontSize: '2rem', fontFamily: 'var(--font-heading)', color: 'white', marginBottom: '0.5rem' }}>
+            Nuestras Presentaciones y Precios 🏷️
+          </h2>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '1rem' }}>
+            Tocá en el botón de cualquier producto para pedirlo directamente por WhatsApp
+          </p>
+        </div>
+
+        {loading ? (
+          <p style={{ textAlign: 'center', color: 'var(--text-secondary)' }}>Cargando catálogo...</p>
+        ) : (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '2rem' }}>
+            {products.map((prod, idx) => {
+              const perEggPrice = (prod.price / prod.egg_count).toFixed(0);
+              const dozenCount = prod.egg_count / 12;
+
+              let badgeText = '⭐ Excelente Elección';
+              let badgeColor = 'var(--accent-blue)';
+              let badgeBg = 'var(--accent-blue-glow)';
+
+              if (prod.egg_count === 12) {
+                badgeText = '🔥 El Más Vendido (1 Docena)';
+                badgeColor = 'var(--accent-gold)';
+                badgeBg = 'var(--accent-gold-glow)';
+              } else if (prod.egg_count === 24) {
+                badgeText = '⚡ Doble Docena (24 Huevos)';
+                badgeColor = 'var(--accent-green)';
+                badgeBg = 'var(--accent-green-glow)';
+              } else if (prod.egg_count === 36) {
+                badgeText = '📦 Pack Familiar (3 Docenas)';
+                badgeColor = '#a855f7';
+                badgeBg = 'rgba(168, 85, 247, 0.15)';
+              }
+
+              return (
+                <div 
+                  key={prod.id || idx} 
+                  className="glass-card product-card" 
+                  style={{ 
+                    display: 'flex', 
+                    flexDirection: 'column', 
+                    height: '100%', 
+                    padding: '1.75rem',
+                    position: 'relative',
+                    borderRadius: 'var(--border-radius-md)'
+                  }}
+                >
+                  {/* Badge superior */}
+                  <div style={{
+                    display: 'inline-block',
+                    alignSelf: 'flex-start',
+                    backgroundColor: badgeBg,
+                    color: badgeColor,
+                    fontSize: '0.8rem',
+                    fontWeight: 'bold',
+                    padding: '0.3rem 0.8rem',
+                    borderRadius: '50px',
+                    marginBottom: '1rem',
+                    border: `1px solid ${badgeColor}`
+                  }}>
+                    {badgeText}
                   </div>
 
-                  {/* Forma de Entrega */}
-                  <div style={{ marginBottom: '1.25rem', background: 'rgba(0,0,0,0.1)', padding: '0.75rem', borderRadius: 'var(--border-radius-sm)', border: '1px solid var(--border-color)' }}>
-                    <div style={{ fontSize: '0.85rem', fontWeight: 'bold', marginBottom: '0.5rem' }}>Método de Entrega:</div>
-                    <div style={{ display: 'flex', gap: '0.5rem' }}>
-                      <button 
-                        type="button"
-                        className={`btn ${deliveryMethod === 'pickup' ? 'btn-primary' : 'btn-secondary'}`}
-                        style={{ flex: '1', padding: '0.4rem', fontSize: '0.85rem' }}
-                        onClick={() => setDeliveryMethod('pickup')}
-                       title="Hacer clic para retiro en granja">
-                        🏪 Retiro en Granja
-                      </button>
-                      <button 
-                        type="button"
-                        className={`btn ${deliveryMethod === 'shipping' ? 'btn-primary' : 'btn-secondary'}`}
-                        style={{ flex: '1', padding: '0.4rem', fontSize: '0.85rem' }}
-                        onClick={() => setDeliveryMethod('shipping')}
-                       title="Hacer clic para envío a casa">
-                        🚚 Envío a Casa
-                      </button>
-                    </div>
-                  </div>
-
-                  {deliveryMethod === 'shipping' && (
-                    <div className="form-group" style={{ marginBottom: '1.25rem' }}>
-                      <label htmlFor="shippingZone">Localidad para el envío</label>
-                      <input 
-                        type="text" 
-                        id="shippingZone"
-                        className="form-control"
-                        placeholder="Ej: El Talar / Tigre / San Fernando"
-                        required
-                        value={shippingZone}
-                        onChange={(e) => setShippingZone(e.target.value)}
-                      />
-                      {isFreeShipping ? (
-                        <div style={{ color: 'var(--accent-green)', fontSize: '0.8rem', marginTop: '0.25rem', fontWeight: 'bold' }}>
-                          ¡Envío sin cargo a El Talar / La Paloma / Pacheco! 🎉
-                        </div>
-                      ) : shippingZone.trim() !== '' ? (
-                        <div style={{ color: 'var(--accent-gold)', fontSize: '0.8rem', marginTop: '0.25rem' }}>
-                          Costo de Envío: ${shippingCost}
-                        </div>
-                      ) : null}
-                    </div>
+                  {prod.image_url && (
+                    <img 
+                      src={prod.image_url} 
+                      alt={prod.name} 
+                      style={{
+                        width: '100%',
+                        height: '180px',
+                        objectFit: 'cover',
+                        borderRadius: 'var(--border-radius-sm)',
+                        marginBottom: '1.25rem',
+                        border: '1px solid var(--border-color)'
+                      }}
+                    />
                   )}
 
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', borderTop: '1px solid var(--border-color)', paddingTop: '0.75rem', marginBottom: '1.25rem' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
-                      <span>Subtotal Productos:</span>
-                      <span>${productsTotal}</span>
-                    </div>
-                    {deliveryMethod === 'shipping' && (
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
-                        <span>Flete ({shippingZone || 'Domicilio'}):</span>
-                        <span>{shippingCost === 0 ? 'Gratis' : `$${shippingCost}`}</span>
+                  <h3 style={{ fontSize: '1.3rem', marginBottom: '0.5rem', fontFamily: 'var(--font-heading)', color: 'white' }}>
+                    {prod.name}
+                  </h3>
+
+                  <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', flexGrow: '1', marginBottom: '1.5rem', lineHeight: '1.5' }}>
+                    {prod.description}
+                  </p>
+
+                  <div style={{ 
+                    background: 'rgba(0,0,0,0.35)', 
+                    padding: '1rem 1.25rem', 
+                    borderRadius: 'var(--border-radius-sm)', 
+                    marginBottom: '1.5rem',
+                    border: '1px solid var(--border-color)',
+                    display: 'flex',
+                    justify: 'space-between',
+                    alignItems: 'center'
+                  }}>
+                    <div>
+                      <span style={{ fontSize: '1.8rem', fontWeight: '800', color: 'var(--accent-gold)', fontFamily: 'var(--font-heading)' }}>
+                        ${prod.price.toLocaleString('es-AR')}
+                      </span>
+                      <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                        Equivale a ${perEggPrice} por huevo
                       </div>
-                    )}
-                    <hr style={{ border: 'none', borderBottom: '1px solid var(--border-color)', margin: '0.25rem 0' }} />
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '1.1rem', fontWeight: 'bold', color: 'var(--text-primary)' }}>
-                      <span>Total final:</span>
-                      <span style={{ color: 'var(--accent-gold)' }}>${cartTotal}</span>
+                    </div>
+
+                    <div style={{ textAlign: 'right' }}>
+                      <div style={{ fontSize: '0.9rem', fontWeight: 'bold', color: 'white' }}>
+                        {dozenCount} {dozenCount === 1 ? 'Docena' : 'Docenas'}
+                      </div>
+                      <div style={{ fontSize: '0.8rem', color: 'var(--accent-green)' }}>
+                        {prod.egg_count} unidades
+                      </div>
                     </div>
                   </div>
 
-                  {/* Formulario de compra */}
-                  <form onSubmit={handleSubmitOrder}>
-                    <h4 style={{ marginBottom: '1rem', fontSize: '0.95rem', color: 'var(--text-secondary)' }}>Datos de Entrega</h4>
-                    
-                    <div className="form-group">
-                      <label htmlFor="name">Nombre y Apellido</label>
-                      <input 
-                        type="text" 
-                        id="name" 
-                        className="form-control" 
-                        placeholder="Juan Pérez" 
-                        required 
-                        value={customerName}
-                        onChange={(e) => setCustomerName(e.target.value)}
-                      />
-                    </div>
-
-                    <div className="form-group">
-                      <label htmlFor="phone">WhatsApp (con código de país, ej: 5491122334455)</label>
-                      <input 
-                        type="tel" 
-                        id="phone" 
-                        className="form-control" 
-                        placeholder="5491133334444" 
-                        required 
-                        value={customerPhone}
-                        onChange={(e) => setCustomerPhone(e.target.value)}
-                      />
-                    </div>
-
-                    <div className="form-group">
-                      <label htmlFor="address">Dirección de Entrega o Retiro</label>
-                      <input 
-                        type="text" 
-                        id="address" 
-                        className="form-control" 
-                        placeholder="Av. Rivadavia 1234, CABA" 
-                        required 
-                        value={customerAddress}
-                        onChange={(e) => setCustomerAddress(e.target.value)}
-                      />
-                    </div>
-
-                    <button 
-                      type="submit" 
-                      className="btn btn-primary" 
-                      style={{ width: '100%', fontSize: '1rem', marginTop: '0.5rem' }}
-                      disabled={loading}
-                     title="Hacer clic para ejecutar acción">
-                      {loading ? 'Procesando...' : 'Confirmar Pedido'}
-                    </button>
-                  </form>
+                  <a 
+                    href={getWhatsAppProductLink(prod)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="btn btn-wsp"
+                    style={{ 
+                      backgroundColor: '#25D366', 
+                      color: '#ffffff',
+                      fontWeight: 'bold',
+                      fontSize: '1rem',
+                      padding: '0.85rem 1rem',
+                      width: '100%',
+                      textAlign: 'center',
+                      borderRadius: 'var(--border-radius-sm)',
+                      textDecoration: 'none',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '0.5rem',
+                      boxShadow: '0 4px 15px rgba(37, 211, 102, 0.2)',
+                      transition: 'all 0.3s ease'
+                    }}
+                  >
+                    <span>💬</span> Pedir por WhatsApp
+                  </a>
                 </div>
-              )}
-            </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* --- SECCIÓN DE BENEFICIOS --- */}
+      <div 
+        className="glass-card" 
+        style={{ 
+          padding: '2.5rem 2rem', 
+          marginBottom: '3.5rem',
+          borderRadius: 'var(--border-radius-lg)',
+          borderColor: 'rgba(255, 255, 255, 0.08)'
+        }}
+      >
+        <h3 style={{ textAlign: 'center', fontSize: '1.8rem', fontFamily: 'var(--font-heading)', color: 'var(--accent-green)', marginBottom: '2rem' }}>
+          ¿Por qué elegir los Huevos de Codorniz de Granja Luque? 🌟
+        </h3>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '2rem' }}>
+          
+          <div style={{ textAlign: 'center', padding: '1rem' }}>
+            <div style={{ fontSize: '2.5rem', marginBottom: '0.75rem' }}>💪</div>
+            <h4 style={{ fontSize: '1.1rem', color: 'white', marginBottom: '0.5rem' }}>Máximo Valor Nutritivo</h4>
+            <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', lineHeight: '1.5' }}>
+              Concentran altos niveles de proteínas de excelente calidad, hierro, fósforo, vitamina A, B12 y antioxidantes naturales.
+            </p>
+          </div>
+
+          <div style={{ textAlign: 'center', padding: '1rem' }}>
+            <div style={{ fontSize: '2.5rem', marginBottom: '0.75rem' }}>🍃</div>
+            <h4 style={{ fontSize: '1.1rem', color: 'white', marginBottom: '0.5rem' }}>Fácil Digestión</h4>
+            <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', lineHeight: '1.5' }}>
+              Son altamente tolerados, ideales para la alimentación de niños, deportistas y personas que buscan cuidar su digestión diaria.
+            </p>
+          </div>
+
+          <div style={{ textAlign: 'center', padding: '1rem' }}>
+            <div style={{ fontSize: '2.5rem', marginBottom: '0.75rem' }}>🥗</div>
+            <h4 style={{ fontSize: '1.1rem', color: 'white', marginBottom: '0.5rem' }}>Versatilidad en Cocina</h4>
+            <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', lineHeight: '1.5' }}>
+              Ideales para picadas, ensaladas gourmet, aperitivos, desayunos nutritivos o viandas saludables.
+            </p>
           </div>
 
         </div>
-      )}
+      </div>
+
+      {/* --- SECCIÓN DE ENVÍOS Y ZONAS --- */}
+      <div 
+        className="glass-card" 
+        style={{ 
+          padding: '2rem', 
+          marginBottom: '2rem', 
+          display: 'flex', 
+          alignItems: 'center', 
+          gap: '2rem', 
+          flexWrap: 'wrap',
+          borderRadius: 'var(--border-radius-md)',
+          background: 'rgba(15, 23, 42, 0.7)'
+        }}
+      >
+        <div style={{ fontSize: '3.5rem', flexShrink: 0 }}>📍</div>
+        <div style={{ flex: 1, minWidth: '260px' }}>
+          <h3 style={{ fontSize: '1.4rem', color: 'var(--accent-gold)', marginBottom: '0.5rem' }}>
+            Zonas de Entrega y Puntos de Retiro
+          </h3>
+          <p style={{ fontSize: '0.95rem', color: 'var(--text-secondary)', lineHeight: '1.6' }}>
+            Hacemos entregas a domicilio en <strong>El Talar, La Paloma, General Pacheco, Tigre y San Fernando</strong>. 
+            También podés retirar sin costo directamente por nuestra granja coordinando por WhatsApp.
+          </p>
+        </div>
+        <div>
+          <a 
+            href={getWhatsAppGeneralLink('Hola! Quisiera consultar si hacen envíos a mi dirección en la zona.')}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="btn btn-secondary"
+            style={{ fontSize: '0.95rem', borderColor: 'var(--accent-gold)', color: 'var(--accent-gold)' }}
+          >
+            Consultar por mi zona 🚚
+          </a>
+        </div>
+      </div>
+
+      {/* --- FOOTER DE LA TIENDA --- */}
+      <footer style={{ textAlign: 'center', paddingTop: '2rem', borderTop: '1px solid var(--border-color)', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
+        <p>Granja Luque © {new Date().getFullYear()} — Producción y venta de huevos de codorniz de alta calidad.</p>
+        <p style={{ marginTop: '0.4rem' }}>Contacto directo WhatsApp: <strong>{phoneFormatted}</strong></p>
+      </footer>
+
     </div>
   );
 }
