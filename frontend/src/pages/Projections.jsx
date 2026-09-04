@@ -27,7 +27,7 @@ export default function Projections({ token }) {
   const [projectionMode, setProjectionMode] = useState('eggs'); // 'eggs' o 'birds'
   const [targetEggs, setTargetEggs] = useState(100);
   const [growthMethod, setGrowthMethod] = useState('buy_adults'); // 'buy_adults', 'incubate_own', 'incubate_bought'
-  const [pricePerDozen, setPricePerDozen] = useState(4500);
+  const [pricePerDozen, setPricePerDozen] = useState(3000);
   const [costAdultQuail, setCostAdultQuail] = useState(1200);
   const [costFertileEgg, setCostFertileEgg] = useState(15000);
   const [currentCages, setCurrentCages] = useState(0);

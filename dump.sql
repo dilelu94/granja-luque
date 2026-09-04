@@ -60,9 +60,9 @@ CREATE TABLE products (
       image_url TEXT,
       status TEXT CHECK(status IN ('active', 'inactive')) NOT NULL DEFAULT 'active'
     , container_cost REAL NOT NULL DEFAULT 0.0, label_cost REAL NOT NULL DEFAULT 0.0, egg_count INTEGER NOT NULL DEFAULT 0, container_stock INTEGER NOT NULL DEFAULT 0);
-INSERT INTO products VALUES(1,'Maple de 30 Huevos de Codorniz','Huevos frescos de codorniz, seleccionados diariamente de nuestra granja.',11250.0,0,'eggs','https://images.unsplash.com/photo-1598965402089-897ce52e8355?q=80&w=400&auto=format&fit=crop','active',150.0,30.0,30,0);
-INSERT INTO products VALUES(2,'Paquete de 12 Huevos de Codorniz','Caja plástica de 12 huevos frescos seleccionados.',4500.0,0,'eggs','https://images.unsplash.com/photo-1598965402089-897ce52e8355?q=80&w=400&auto=format&fit=crop','active',80.0,30.0,12,0);
-INSERT INTO products VALUES(3,'Paquete de 6 Huevos de Codorniz','Caja plástica de 6 huevos frescos (tamaño degustación).',2500.0,0,'eggs','https://images.unsplash.com/photo-1598965402089-897ce52e8355?q=80&w=400&auto=format&fit=crop','active',60.0,30.0,6,0);
+INSERT INTO products VALUES(1,'Paquete de 12 Huevos de Codorniz','Caja plástica de 12 huevos frescos seleccionados.',3000.0,0,'eggs','https://images.unsplash.com/photo-1598965402089-897ce52e8355?q=80&w=400&auto=format&fit=crop','active',300.0,50.0,12,0);
+INSERT INTO products VALUES(2,'Paquete de 24 Huevos de Codorniz','Caja plástica de 24 huevos frescos seleccionados.',6000.0,0,'eggs','https://images.unsplash.com/photo-1598965402089-897ce52e8355?q=80&w=400&auto=format&fit=crop','active',600.0,50.0,24,0);
+INSERT INTO products VALUES(3,'Maple de 36 Huevos de Codorniz','Huevos frescos de codorniz, seleccionados diariamente de nuestra granja.',9000.0,0,'eggs','https://images.unsplash.com/photo-1598965402089-897ce52e8355?q=80&w=400&auto=format&fit=crop','active',900.0,50.0,36,0);
 CREATE TABLE orders (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       customer_name TEXT NOT NULL,

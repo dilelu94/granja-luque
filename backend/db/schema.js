@@ -281,43 +281,47 @@ export async function initializeDatabase() {
   await db.run("INSERT OR IGNORE INTO feed_stock (type, quantity, last_updated) VALUES ('iniciador', 0.0, ?)", [now]);
   await db.run("INSERT OR IGNORE INTO feed_stock (type, quantity, last_updated) VALUES ('ponedora', 0.0, ?)", [now]);
 
-  // Insertar productos por defecto si no existen
+  // Eliminar productos que no sean múltiplos de 12 (ej. 6 y 30 huevos)
+  await db.run("DELETE FROM products WHERE egg_count > 0 AND egg_count % 12 != 0");
+  await db.run("DELETE FROM products WHERE name LIKE '%6 Huevos%' OR name LIKE '%30 Huevos%'");
+
+  // Insertar productos por defecto si no existen (solamente múltiplos de 12)
   const defaultProducts = [
-    {
-      name: 'Maple de 30 Huevos de Codorniz',
-      description: 'Huevos frescos de codorniz, seleccionados diariamente de nuestra granja.',
-      price: 11250.0,
-      stock: 0,
-      category: 'eggs',
-      image_url: 'https://images.unsplash.com/photo-1598965402089-897ce52e8355?q=80&w=400&auto=format&fit=crop',
-      status: 'active',
-      container_cost: 150.0, // Envase plástico
-      label_cost: 30.0,      // Etiqueta impresa
-      egg_count: 30
-    },
     {
       name: 'Paquete de 12 Huevos de Codorniz',
       description: 'Caja plástica de 12 huevos frescos seleccionados.',
-      price: 4500.0,
+      price: 3000.0,
       stock: 0,
       category: 'eggs',
       image_url: 'https://images.unsplash.com/photo-1598965402089-897ce52e8355?q=80&w=400&auto=format&fit=crop',
       status: 'active',
-      container_cost: 80.0,
-      label_cost: 30.0,
+      container_cost: 300.0,
+      label_cost: 50.0,
       egg_count: 12
     },
     {
-      name: 'Paquete de 6 Huevos de Codorniz',
-      description: 'Caja plástica de 6 huevos frescos (tamaño degustación).',
-      price: 2500.0,
+      name: 'Paquete de 24 Huevos de Codorniz',
+      description: 'Caja plástica de 24 huevos frescos seleccionados.',
+      price: 6000.0,
       stock: 0,
       category: 'eggs',
       image_url: 'https://images.unsplash.com/photo-1598965402089-897ce52e8355?q=80&w=400&auto=format&fit=crop',
       status: 'active',
-      container_cost: 60.0,
-      label_cost: 30.0,
-      egg_count: 6
+      container_cost: 600.0,
+      label_cost: 50.0,
+      egg_count: 24
+    },
+    {
+      name: 'Maple de 36 Huevos de Codorniz',
+      description: 'Huevos frescos de codorniz, seleccionados diariamente de nuestra granja.',
+      price: 9000.0,
+      stock: 0,
+      category: 'eggs',
+      image_url: 'https://images.unsplash.com/photo-1598965402089-897ce52e8355?q=80&w=400&auto=format&fit=crop',
+      status: 'active',
+      container_cost: 900.0,
+      label_cost: 50.0,
+      egg_count: 36
     }
   ];
 
@@ -331,9 +335,9 @@ export async function initializeDatabase() {
     }
   }
 
-  // Migración de productos existentes con valores genéricos antiguos
-  await db.run("UPDATE products SET price = 11250.0 WHERE name = 'Maple de 30 Huevos de Codorniz' AND price = 1500.0");
-  await db.run("UPDATE products SET price = 4500.0 WHERE name = 'Paquete de 12 Huevos de Codorniz' AND price = 700.0");
-  await db.run("UPDATE products SET price = 2500.0 WHERE name = 'Paquete de 6 Huevos de Codorniz' AND price = 400.0");
+  // Migración de precios de productos existentes a múltiplos de 12
+  await db.run("UPDATE products SET price = 3000.0 WHERE name = 'Paquete de 12 Huevos de Codorniz'");
+  await db.run("UPDATE products SET price = 6000.0 WHERE name = 'Paquete de 24 Huevos de Codorniz'");
+  await db.run("UPDATE products SET price = 9000.0 WHERE name = 'Maple de 36 Huevos de Codorniz'");
 }
 
